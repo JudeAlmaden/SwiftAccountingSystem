@@ -13,7 +13,6 @@ export default function Dashboard() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
-
         </AppLayout>
     );
 }

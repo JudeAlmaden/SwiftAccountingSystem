@@ -16,10 +16,10 @@ import { Link, usePage } from '@inertiajs/react';
 import { LayoutGrid, User, FileText, ShieldCheck } from 'lucide-react';
 import AppLogo from './app-logo';
 import type { SharedData } from '@/types';
+import { route } from 'ziggy-js';
 
 export function AppSidebar() {
     const { user } = usePage<SharedData>().props;
-
     /* ======================
     NAV CONFIG PER ROLE
     ====================== */
@@ -32,8 +32,8 @@ export function AppSidebar() {
     };
 
     const navItemDetails: Record<string, NavItem> = {
-        dashboard: { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
-        users: { title: 'Users and Accounts', href: '', icon: User },
+        dashboard: { title: 'Dashboard', href: route('dashboard'), icon: LayoutGrid },
+        users: { title: 'Users and Accounts', href: route('accounts'), icon: User },
         vouchers: { title: 'Generate Check Vouchers', href: '', icon: FileText },
         chartAccounts: { title: 'Chart of Accounts', href: '', icon: FileText },
         toReview: { title: 'To Review', href: '', icon: ShieldCheck },

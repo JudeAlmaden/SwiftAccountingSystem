@@ -44,6 +44,10 @@
         @viteReactRefresh
         @vite(['resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
         @inertiaHead
+
+        <!-- Inertia Ziggy -->
+        @routes
+        <!-- <script src="{{ mix('js/app.js') }}"></script> -->
     </head>
     <body class="font-sans antialiased">
         @inertia
