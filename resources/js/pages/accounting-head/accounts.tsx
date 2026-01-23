@@ -28,8 +28,22 @@ export default function ChartOfAccounts() {
     const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
     const token = meta?.content || '';
 
+    // State for accounts (paginated data)
     const [accounts, setAccounts] = useState<Account[]>([]);
+    const [pagination, setPagination] = useState({
+        current_page: 1,
+        last_page: 1,
+        next_page_url: null as string | null,
+        prev_page_url: null as string | null,
+        total: 0,
+        from: 0,
+        to: 0,
+    });
     const [isLoading, setIsLoading] = useState(true);
+
+    // Search State
+    const [search, setSearch] = useState('');
+    const [searchQuery, setSearchQuery] = useState(''); // Debounced or triggered search value
 
     // Create Modal State
     const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -47,9 +61,15 @@ export default function ChartOfAccounts() {
     const [accountToDelete, setAccountToDelete] = useState<Account | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    const fetchAccounts = () => {
+    const fetchAccounts = (url?: string | null) => {
         setIsLoading(true);
-        fetch(route('accounts.index'), {
+        // Construct URL with search param
+        const targetUrl = new URL(url || route('accounts.index'));
+        if (searchQuery) {
+            targetUrl.searchParams.set('search', searchQuery);
+        }
+
+        fetch(targetUrl.toString(), {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -60,6 +80,15 @@ export default function ChartOfAccounts() {
             .then(res => res.json())
             .then(data => {
                 setAccounts(data.data);
+                setPagination({
+                    current_page: data.current_page,
+                    last_page: data.last_page,
+                    next_page_url: data.next_page_url,
+                    prev_page_url: data.prev_page_url,
+                    total: data.total,
+                    from: data.from,
+                    to: data.to,
+                });
                 setIsLoading(false);
             })
             .catch(err => {
@@ -68,9 +97,18 @@ export default function ChartOfAccounts() {
             });
     };
 
+    // Debounce search effect or just simple effect for now
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            setSearchQuery(search);
+        }, 1000);
+        return () => clearTimeout(timeoutId);
+    }, [search]);
+
+    // Fetch when searchQuery changes
     useEffect(() => {
         fetchAccounts();
-    }, []);
+    }, [searchQuery]);
 
     const handleCreateSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -106,7 +144,7 @@ export default function ChartOfAccounts() {
                     account_type: '',
                     account_description: '',
                 });
-                fetchAccounts();
+                fetchAccounts(); // Refresh current list
             })
             .catch(() => { })
             .finally(() => setIsCreating(false));
@@ -128,7 +166,7 @@ export default function ChartOfAccounts() {
                 if (res.ok) {
                     setIsDeleteOpen(false);
                     setAccountToDelete(null);
-                    fetchAccounts();
+                    fetchAccounts(); // Refresh
                 } else {
                     alert('Failed to delete account');
                 }
@@ -151,6 +189,15 @@ export default function ChartOfAccounts() {
                         <h2 className="text-2xl font-bold tracking-tight">Chart of Accounts</h2>
                         <p className="text-muted-foreground">Manage your financial accounts and structure.</p>
                     </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-4">
+                    <Input
+                        placeholder="Search accounts..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="max-w-sm"
+                    />
 
                     <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                         <DialogTrigger asChild>
@@ -232,11 +279,11 @@ export default function ChartOfAccounts() {
                         <TableBody>
                             {isLoading ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center h-24">Loading accounts...</TableCell>
+                                    <TableCell colSpan={6} className="text-center h-24">Loading accounts...</TableCell>
                                 </TableRow>
                             ) : accounts.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">No accounts found.</TableCell>
+                                    <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">No accounts found.</TableCell>
                                 </TableRow>
                             ) : (
                                 accounts.map((account) => (
@@ -260,6 +307,31 @@ export default function ChartOfAccounts() {
                             )}
                         </TableBody>
                     </Table>
+                </div>
+
+                {/* Pagination Controls */}
+                <div className="flex items-center justify-between space-x-2 py-4">
+                    <div className="text-sm text-muted-foreground">
+                        Showing {pagination.from} to {pagination.to} of {pagination.total} entries
+                    </div>
+                    <div className="space-x-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => fetchAccounts(pagination.prev_page_url)}
+                            disabled={!pagination.prev_page_url}
+                        >
+                            Previous
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => fetchAccounts(pagination.next_page_url)}
+                            disabled={!pagination.next_page_url}
+                        >
+                            Next
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Delete Confirmation Dialog */}
