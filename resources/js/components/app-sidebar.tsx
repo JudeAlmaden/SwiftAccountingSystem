@@ -24,7 +24,7 @@ export function AppSidebar() {
     NAV CONFIG PER ROLE
     ====================== */
     const navItemsByRole: Record<string, string[]> = {
-        'admin': ['dashboard', 'users', 'accounts'],
+        'admin': ['dashboard', 'users', 'chartAccounts'],
         'accounting assistant': ['dashboard', 'disbursements'],
         'accounting head': ['dashboard', 'chartAccounts', 'toReview', 'disbursements'],
         'auditor': ['dashboard', 'toReview'],
