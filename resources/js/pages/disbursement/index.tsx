@@ -122,7 +122,7 @@ export default function Disbursements() {
         })
             .then(res => res.json())
             .then(data => {
-                setDisbursements(data.data);
+                setDisbursements(data.data || []);
                 setPagination({
                     current_page: data.current_page,
                     last_page: data.last_page,
@@ -142,6 +142,7 @@ export default function Disbursements() {
             })
             .catch(err => {
                 console.error('Failed to fetch disbursements', err);
+                setDisbursements([]);
                 setIsLoading(false);
             });
     };
