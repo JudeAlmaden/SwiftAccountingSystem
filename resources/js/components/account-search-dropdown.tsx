@@ -68,9 +68,9 @@ export default function AccountSearchDropdown({
             } else {
                 const query = searchQuery.toLowerCase();
                 const filtered = accounts.filter(account =>
-                    account.account_name.toLowerCase().includes(query) ||
-                    account.account_code.toLowerCase().includes(query) ||
-                    account.account_type.toLowerCase().includes(query)
+                    account.account_name.toLowerCase().startsWith(query) ||
+                    account.account_code.toLowerCase().startsWith(query) ||
+                    account.account_type.toLowerCase().startsWith(query)
                 );
                 setFilteredAccounts(filtered);
             }
@@ -82,7 +82,7 @@ export default function AccountSearchDropdown({
     return (
         <div
             ref={dropdownRef}
-            className="absolute top-full left-0 z-50 mt-2 w-full max-w-sm rounded-lg border border-border bg-card shadow-xl"
+            className="absolute top-full left-0 z-[10] mt-2 w-full max-w-sm rounded-lg border border-border bg-card shadow-xl"
         >
             <div className="border-b border-border p-3">
                 <div className="flex items-center gap-2 rounded-lg bg-secondary/30 px-3 py-2">
@@ -113,7 +113,7 @@ export default function AccountSearchDropdown({
                         Loading accounts...
                     </div>
                 ) : filteredAccounts.length > 0 ? (
-                    filteredAccounts.map((account) => (
+                    filteredAccounts.slice(0, 3).map((account) => (
                         <button
                             key={account.id}
                             onClick={() => onSelect(account)}
@@ -133,9 +133,9 @@ export default function AccountSearchDropdown({
                 )}
             </div>
 
-            {!isLoading && filteredAccounts.length > 0 && (
+            {!isLoading && filteredAccounts.length > 0 && filteredAccounts.length <= 3 && (
                 <div className="border-t border-border/50 bg-secondary/20 px-3 py-2 text-center text-xs text-muted-foreground">
-                    {filteredAccounts.length} account{filteredAccounts.length !== 1 ? 's' : ''} available
+                    {filteredAccounts.length} account{filteredAccounts.length !== 1 ? 's' : ''} found
                 </div>
             )}
         </div>

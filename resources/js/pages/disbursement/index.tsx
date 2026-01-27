@@ -200,7 +200,6 @@ export default function Disbursements() {
             <Head title="Disbursements" />
 
             <div className="flex flex-col gap-6">
-                {/* Header Section */}
                 <div className="flex items-center justify-between">
                     <div className="flex flex-col gap-2">
                         <h2 className="text-3xl text-header">Disbursements</h2>
@@ -211,15 +210,14 @@ export default function Disbursements() {
                             <Inbox className="mr-2 h-4 w-4" />
                             Inbox
                         </Button>
-                        <div className="flex gap-2 variant=[default] ">
+                        <Button asChild>
                             <Link href={route('disbursement.generate')}>
                                 Generate Disbursement
                             </Link>
-                        </div>
+                        </Button>
                     </div>
                 </div>
 
-                {/* Statistics Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <Card className="bg-card">
                         <CardHeader className="pb-2">
@@ -259,9 +257,7 @@ export default function Disbursements() {
                 </div>
 
 
-                {/* Filters Section - Ultra Compact */}
                 <div className="flex items-center gap-2">
-                    {/* Search Bar */}
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                         <Input
@@ -272,7 +268,6 @@ export default function Disbursements() {
                         />
                     </div>
 
-                    {/* Status Select - Kept outside as it's common */}
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
                         <SelectTrigger className="w-[120px] h-9">
                             <SelectValue placeholder="Status" />
@@ -285,7 +280,6 @@ export default function Disbursements() {
                         </SelectContent>
                     </Select>
 
-                    {/* More Filters - The "three dotted thingy" */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="sm" className="h-9 px-3 gap-2">
@@ -367,7 +361,6 @@ export default function Disbursements() {
                     </DropdownMenu>
                 </div>
 
-                {/* Disbursements Table */}
                 <div className="rounded-md border bg-card">
                     <Table>
                         <TableHeader>
@@ -428,7 +421,6 @@ export default function Disbursements() {
                     </Table>
                 </div>
 
-                {/* Pagination Controls */}
                 <div className="flex items-center justify-between space-x-2 py-4">
                     <div className="text-sm text-muted-foreground">
                         Showing {pagination.from || 0} to {pagination.to || 0} of {pagination.total} entries
