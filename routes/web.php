@@ -33,9 +33,26 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('accounting-head/accounts');
     })->name('accounts');
 
+    //Disbursement routes
     Route::get('/dashboard/disbursements', function(){
         return Inertia::render('disbursement/index');
     })->name('disbursements');
+
+    Route::get('dashboard/disbursements/generate', function(){
+        return Inertia::render('disbursement/generate');
+    })->name('disbursement.generate');
+
+    Route::get('dashboard/disbursements/{id}', function($id){
+        return("disbursement.view");
+    });
+
+    Route::get('dashboard/disbursements/inbox', function(){
+        return;
+    });
+
+    Route::get('dashboard/disbursements/inbox/{id}', function($id){
+        return;
+    });
 });
 
 

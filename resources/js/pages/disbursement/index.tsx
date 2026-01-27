@@ -14,12 +14,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
     DropdownMenu,
     DropdownMenuContent,
-    DropdownMenuGroup,
-    DropdownMenuItem,
-    DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import { Link } from '@inertiajs/react'
 import { Calendar, Search, Filter, ArrowUpDown, Inbox, MoreHorizontal } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -212,9 +210,11 @@ export default function Disbursements() {
                             <Inbox className="mr-2 h-4 w-4" />
                             Inbox
                         </Button>
-                        <Button>
-                            Generate Disbursement
-                        </Button>
+                        <div className="flex gap-2 variant=[default] ">
+                            <Link href={route('disbursement.generate')}>
+                                Generate Disbursement
+                            </Link>
+                        </div>
                     </div>
                 </div>
 
@@ -457,6 +457,6 @@ export default function Disbursements() {
                     </div>
                 </div>
             </div>
-        </AppLayout>
+        </AppLayout >
     );
 }
