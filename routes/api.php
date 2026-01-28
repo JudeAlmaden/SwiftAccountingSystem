@@ -43,5 +43,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Disbursement Management
     Route::get('/disbursements', [DisbursementController::class, 'index'])->name('disbursements.index'); // List all disbursements
     Route::post('/disbursements', [DisbursementController::class, 'store'])->name('disbursements.store');      // Save new disbursement
-     Route::delete('/disbursements/{disbursement}', [DisbursementController::class, 'destroy'])->name('disbursements.destroy');   // Delete disbursement
+    Route::get('/disbursements/{id}', [DisbursementController::class, 'show'])->name('disbursements.show'); // Show specific disbursement
+    Route::delete('/disbursements/{id}', [DisbursementController::class, 'destroy'])->name('disbursements.destroy');   // Delete disbursement
 });

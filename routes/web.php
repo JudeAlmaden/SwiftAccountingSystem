@@ -43,7 +43,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('disbursement.generate');
 
     Route::get('dashboard/disbursements/{id}', function($id){
-        return Inertia::render('disbursement/view');
+        return Inertia::render('disbursement/view', ['id' => $id]);
     })->name('disbursement.view');
 
     Route::get('dashboard/disbursements/inbox', function(){

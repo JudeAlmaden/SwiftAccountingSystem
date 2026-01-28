@@ -86,6 +86,13 @@ class DisbursementController extends Controller
         ]);
     }
 
+    public function show($id){
+        $disbursement = Disbursement::with('items')->findOrFail($id);
+        return response()->json([
+            'disbursement' => $disbursement
+        ]);
+    }
+
     public function store(Request $request){
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -118,7 +125,7 @@ class DisbursementController extends Controller
         ]);
         return response()->json($disbursement);
     }
-    
+
     /**
      * Calculate statistics for disbursements
      */
