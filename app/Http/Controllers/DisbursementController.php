@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Disbursement;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class DisbursementController extends Controller
 {
@@ -85,6 +86,39 @@ class DisbursementController extends Controller
         ]);
     }
 
+    public function store(Request $request){
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            
+            //Accoutns row
+            'accounts' => 'required|array|min:1',
+            'accounts.*.account_id' => 'required|exists:accounts,id',
+            'accounts.*.type' => 'required|in:debit,credit',
+            'accounts.*.amount' => 'required|numeric|min:0',
+            'accounts.*.order_number' => 'required|integer|min:1',
+        ]);
+
+        $controlNumber = 'DV-' . date('Y') . '-' . Str::upper(Str::random(6));
+        // DV-2026-A9XKQ2
+
+        $disbursement = Disbursement::create([
+            'control_number' => $controlNumber,
+            'title' => $validated['title'],
+            'description' => $validated['description'],
+            'step' => 1,
+            'status' => 'pending',
+        ]);
+
+        $disbursement->items()->create([
+            'account_id' => $validated['account_id'],
+            'type' => $validated['type'],
+            'amount' => $validated['amount'],
+            'order_number' => $validated['order_number'],
+        ]);
+        return response()->json($disbursement);
+    }
+    
     /**
      * Calculate statistics for disbursements
      */
