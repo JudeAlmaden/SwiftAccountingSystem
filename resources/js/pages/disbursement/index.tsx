@@ -406,9 +406,9 @@ export default function Disbursements() {
                                         <TableCell>{formatDate(disbursement.created_at)}</TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
-                                                <Button variant="outline" size="sm">
+                                                <Link href={route('disbursement.view', disbursement.id)}>
                                                     View
-                                                </Button>
+                                                </Link>
                                                 <Button variant="outline" size="sm">
                                                     Edit
                                                 </Button>

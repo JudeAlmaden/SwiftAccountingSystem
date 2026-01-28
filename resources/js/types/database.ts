@@ -16,9 +16,18 @@ export interface Account {
     status: string;
 }
 
-// Keeping Account alias for backward compatibility if needed, but User seems more appropriate given fields. 
-// However, to fix the lint error quickly without touching other files, I should probably check what 'users.tsx' imports.
-// If 'users.tsx' imports 'Account', I should keep 'Account' or export 'Account' as 'User'.
+//Used in view
+export interface Disbursement {
+    id: number;
+    control_number?: string;
+    title?: string;
+    description?: string;
+    status?: string;
+    created_at?: string;
+    updated_at?: string;
+    total_amount?: number;
+    items?: Account[];
+}
 
 export interface Role {
     id: number;
