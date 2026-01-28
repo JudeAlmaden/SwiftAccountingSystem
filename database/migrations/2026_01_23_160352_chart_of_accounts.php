@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('account_description');
             $table->string('account_code');
             $table->string('account_type');
+            $table->enum('normal_side', ['debit', 'credit']);
             $table->string('status')->default('active');
             $table->timestamps();
         });

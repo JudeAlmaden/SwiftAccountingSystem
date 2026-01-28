@@ -47,11 +47,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::get('dashboard/disbursements/inbox', function(){
-        return;
+        return('inbox');
     });
 
     Route::get('dashboard/disbursements/inbox/{id}', function($id){
-        return;
+        return('inbox.view');
     });
 });
 

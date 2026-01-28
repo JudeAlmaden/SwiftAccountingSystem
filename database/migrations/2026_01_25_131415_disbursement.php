@@ -26,6 +26,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('disbursement_id')->constrained('disbursements')->cascadeOnDelete();
             $table->foreignId('account_id')->constrained('accounts')->cascadeOnDelete();
+            $table->enum('type', ['debit', 'credit']);
             $table->decimal('amount', 10, 2);
             $table->integer('order_number');
             $table->timestamps();

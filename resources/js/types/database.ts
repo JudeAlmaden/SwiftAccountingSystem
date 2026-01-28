@@ -2,7 +2,7 @@ export interface User {
     id: number;
     name: string;
     email: string;
-    roles: Role[];                                                                                  
+    roles: Role[];
     status: string;
 }
 
@@ -12,6 +12,7 @@ export interface Account {
     account_description: string;
     account_code: string;
     account_type: string;
+    account_normal_side: string;
     status: string;
 }
 

@@ -54,6 +54,7 @@ export default function ChartOfAccounts() {
         account_code: '',
         account_type: '',
         account_description: '',
+        account_normal_side: '',
     });
     const [isCreating, setIsCreating] = useState(false);
     const [createErrors, setCreateErrors] = useState<any>({});
@@ -145,6 +146,7 @@ export default function ChartOfAccounts() {
                     account_code: '',
                     account_type: '',
                     account_description: '',
+                    account_normal_side: '',
                 });
                 fetchAccounts(); // Refresh current list
             })
@@ -247,6 +249,17 @@ export default function ChartOfAccounts() {
                                     {createErrors.account_type && <p className="text-red-500 text-sm">{createErrors.account_type[0]}</p>}
                                 </div>
                                 <div className="grid gap-2">
+                                    <Label htmlFor="account_normal_side">Normal Side</Label>
+                                    <Input
+                                        id="account_normal_side"
+                                        value={createForm.account_normal_side}
+                                        onChange={e => setCreateForm({ ...createForm, account_normal_side: e.target.value })}
+                                        placeholder="e.g. Debit"
+                                        required
+                                    />
+                                    {createErrors.account_normal_side && <p className="text-red-500 text-sm">{createErrors.account_normal_side[0]}</p>}
+                                </div>
+                                <div className="grid gap-2">
                                     <Label htmlFor="account_description">Description (Optional)</Label>
                                     <Input
                                         id="account_description"
@@ -274,6 +287,7 @@ export default function ChartOfAccounts() {
                                 <TableHead>Name</TableHead>
                                 <TableHead>Type</TableHead>
                                 <TableHead>Description</TableHead>
+                                <TableHead>Normal Side</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
@@ -294,6 +308,7 @@ export default function ChartOfAccounts() {
                                         <TableCell>{account.account_name}</TableCell>
                                         <TableCell>{account.account_type}</TableCell>
                                         <TableCell className="text-muted-foreground">{account.account_description || '-'}</TableCell>
+                                        <TableCell>{account.account_normal_side}</TableCell>
                                         <TableCell>
                                             <Badge variant={account.status === 'active' ? 'default' : 'secondary'}>
                                                 {account.status}
