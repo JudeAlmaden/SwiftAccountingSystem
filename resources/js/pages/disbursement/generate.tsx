@@ -148,9 +148,8 @@ export default function GenerateDisbursement() {
                                 return (
                                     <tr
                                         key={row.id}
-                                        className={`border-b border-border ${
-                                            index % 2 === 0 ? 'bg-white' : 'bg-green-50'
-                                        } hover:bg-green-100`}
+                                        className={`border-b border-border ${index % 2 === 0 ? 'bg-white' : 'bg-green-50'
+                                            } hover:bg-green-100`}
                                     >
                                         <td className="px-6 py-4 static">
                                             <div className="flex items-center gap-2 relative">
@@ -178,7 +177,7 @@ export default function GenerateDisbursement() {
                                                     />
                                                 )}
                                             </div>
-                                                </td>
+                                        </td>
                                         <td className="px-6 py-4 text-center border-l border-r border-border">
                                             {hasCredit ? (
                                                 <span className="text-muted-foreground">---</span>
@@ -213,48 +212,48 @@ export default function GenerateDisbursement() {
                                                 />
                                             )}
                                         </td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <button
-                                                        onClick={() => deleteRow(row.id)}
-                                                        className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground transition-colors hover:text-destructive"
-                                                        title="Delete row"
-                                                    >
-                                                        <X size={16} />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-
-                                    <tr className="bg-white">
-                                        <td colSpan={4} className="px-6 py-4">
-                                            <Button onClick={addNewRow} variant="ghost" className="gap-2 text-green-500 hover:text-green-600 hover:bg-transparent shadow-none border-0">
-                                                <Plus size={16} />
-                                                Add Entry
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                                <tfoot>
-                                    <tr className="border-t-2 border-border bg-green-500">
-                                        <td className="px-6 py-4 text-left font-bold text-white">
-                                            Total
-                                        </td>
-                                        <td className="px-6 py-4 text-center border-l border-r border-white/20">
-                                            <span className="text-lg font-bold text-white">
-                                                {totals.debitSum.toLocaleString()}
-                                            </span>
-                                        </td>
                                         <td className="px-6 py-4 text-center">
-                                            <span className="text-lg font-bold text-white">
-                                                {totals.creditSum.toLocaleString()}
-                                            </span>
+                                            <button
+                                                onClick={() => deleteRow(row.id)}
+                                                className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground transition-colors hover:text-destructive"
+                                                title="Delete row"
+                                            >
+                                                <X size={16} />
+                                            </button>
                                         </td>
-                                        <td className="bg-green-500" />
                                     </tr>
-                                </tfoot>
-                            </table>
-                        </div>
+                                );
+                            })}
+
+                            <tr className="bg-white">
+                                <td colSpan={4} className="px-6 py-4">
+                                    <Button onClick={addNewRow} variant="ghost" className="gap-2 text-green-500 hover:text-green-600 hover:bg-transparent shadow-none border-0">
+                                        <Plus size={16} />
+                                        Add Entry
+                                    </Button>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr className="border-t-2 border-border bg-green-500">
+                                <td className="px-6 py-4 text-left font-bold text-white">
+                                    Total
+                                </td>
+                                <td className="px-6 py-4 text-center border-l border-r border-white/20">
+                                    <span className="text-lg font-bold text-white">
+                                        {totals.debitSum.toLocaleString()}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4 text-center">
+                                    <span className="text-lg font-bold text-white">
+                                        {totals.creditSum.toLocaleString()}
+                                    </span>
+                                </td>
+                                <td className="bg-green-500" />
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
 
 
                 <div className="p-4 border-t border-border bg-card flex justify-end gap-3">
@@ -265,7 +264,7 @@ export default function GenerateDisbursement() {
                         Save Disbursement
                     </Button>
                 </div>
-                    </Card>
+            </Card>
         </AppLayout>
     );
 }
