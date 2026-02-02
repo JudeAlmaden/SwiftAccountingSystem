@@ -17,25 +17,25 @@ export function UserStats({ stats }: UserStatsProps) {
             <div className="flex-1 flex items-center px-5 first:pl-0">
                 <div>
                     <p className="text-sm font-medium text-muted-foreground">Total Users</p>
-                    <p className="text-3xl font-bold text-black">{stats.total_users}</p>
+                    <p className="text-3xl font-bold text-[#3e8736]">{stats.total_users}</p>
                 </div>
             </div>
             <div className="flex-1 flex items-center px-4">
                 <div>
                     <p className="text-sm font-medium text-muted-foreground">Active Users</p>
-                    <p className="text-3xl font-bold text-black">{stats.active_users}</p>
+                    <p className="text-3xl font-bold text-[#3e8736]">{stats.active_users}</p>
                 </div>
             </div>
             <div className="flex-1 flex items-center px-4">
                 <div>
                     <p className="text-sm font-medium text-muted-foreground">Inactive Users</p>
-                    <p className="text-3xl font-bold text-black">{stats.inactive_users}</p>
+                    <p className="text-3xl font-bold text-[#3e8736]">{stats.inactive_users}</p>
                 </div>
             </div>
             <div className="flex-1 flex items-center px-4 last:pr-0">
                 <div>
                     <p className="text-sm font-medium text-muted-foreground">Admin Users</p>
-                    <p className="text-3xl font-bold text-black">{stats.admin_users}</p>
+                    <p className="text-3xl font-bold text-[#3e8736]">{stats.admin_users}</p>
                 </div>
             </div>
         </div>

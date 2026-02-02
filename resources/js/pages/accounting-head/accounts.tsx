@@ -1,5 +1,4 @@
 import AppLayout from '@/layouts/app-layout';
-import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -11,7 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useEffect, useState } from 'react';
 import type { Account } from '@/types/database';
 import { route } from 'ziggy-js';
-import { Badge } from '@/components/ui/badge';
+import { StatusIndicator } from '@/components/status-indicator';
+import { Trash2, Check, Search } from 'lucide-react';
+import { DottedSeparator } from '@/components/dotted-line';
 
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -150,7 +151,7 @@ export default function ChartOfAccounts() {
                     account_description: '',
                     account_normal_side: '',
                 });
-                fetchAccounts(); // Refresh current list
+                fetchAccounts();
             })
             .catch(() => { })
             .finally(() => setIsCreating(false));
@@ -217,12 +218,13 @@ export default function ChartOfAccounts() {
                     </div>
                 </div>
 
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center justify-between gap-4 mb-2 relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                     <Input
                         placeholder="Search accounts..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="max-w-sm"
+                        className="max-w-lg rounded-sm border-gray-300 border-[1.7px] bg-white pl-9"
                     />
 
                     <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
@@ -230,13 +232,14 @@ export default function ChartOfAccounts() {
                             <Button>Add Account</Button>
                         </DialogTrigger>
                         <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Create New Account</DialogTitle>
-                                <DialogDescription>
-                                    Add a new account to your chart of accounts. Click save when you're done.
+                            <DialogHeader className='gap-1'>
+                                <DialogTitle className='text-2xl text-table-head pt-1'>Create New Account</DialogTitle>
+                                <DialogDescription className='text-sm'>
+                                    Add a new account to your chart of account
                                 </DialogDescription>
                             </DialogHeader>
-                            <form onSubmit={handleCreateSubmit} className="space-y-4 py-4">
+                            <DottedSeparator className='mb-2'/>
+                            <form onSubmit={handleCreateSubmit} className="space-y-6">
                                 <div className="grid gap-2">
                                     <Label htmlFor="account_name">Account Name</Label>
                                     <Input
@@ -245,6 +248,7 @@ export default function ChartOfAccounts() {
                                         onChange={e => setCreateForm({ ...createForm, account_name: e.target.value })}
                                         placeholder="e.g. Cash on Hand"
                                         required
+                                        className='border-gray-300 border-[1.7px] rounded-sm'
                                     />
                                     {createErrors.account_name && <p className="text-red-500 text-sm">{createErrors.account_name[0]}</p>}
                                 </div>
@@ -256,6 +260,7 @@ export default function ChartOfAccounts() {
                                         onChange={e => setCreateForm({ ...createForm, account_code: e.target.value })}
                                         placeholder="e.g. 1001"
                                         required
+                                        className='border-gray-300 border-[1.7px] rounded-sm'
                                     />
                                     {createErrors.account_code && <p className="text-red-500 text-sm">{createErrors.account_code[0]}</p>}
                                 </div>
@@ -267,6 +272,7 @@ export default function ChartOfAccounts() {
                                         onChange={e => setCreateForm({ ...createForm, account_type: e.target.value })}
                                         placeholder="e.g. Asset"
                                         required
+                                        className='border-gray-300 border-[1.7px] rounded-sm'
                                     />
                                     {createErrors.account_type && <p className="text-red-500 text-sm">{createErrors.account_type[0]}</p>}
                                 </div>
@@ -282,7 +288,7 @@ export default function ChartOfAccounts() {
                                             <SelectValue placeholder="e.g. Debit" />
                                         </SelectTrigger>
 
-                                        <SelectContent>
+                                        <SelectContent className='border-gray-300 border-[1.7px] rounded-sm'>
                                             <SelectItem value="debit">Debit</SelectItem>
                                             <SelectItem value="credit">Credit</SelectItem>
                                         </SelectContent>
@@ -297,6 +303,7 @@ export default function ChartOfAccounts() {
                                         value={createForm.account_description}
                                         onChange={e => setCreateForm({ ...createForm, account_description: e.target.value })}
                                         placeholder="Brief description"
+                                        className='border-gray-300 border-[1.7px] rounded-sm'
                                     />
                                 </div>
                                 <DialogFooter>
@@ -310,57 +317,60 @@ export default function ChartOfAccounts() {
                     </Dialog>
                 </div>
 
-                <div className="rounded-md border bg-card">
+                <div className="rounded-sm border bg-card overflow-hidden py-0 pb-6">
                     <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Code</TableHead>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Type</TableHead>
-                                <TableHead>Description</TableHead>
-                                <TableHead>Normal Side</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
+                        <TableHeader className="border-0">
+                            <TableRow className="bg-table-head hover:bg-table-head border-0">
+                                <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head first:rounded-tl-sm">Code</TableHead>
+                                <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Name</TableHead>
+                                <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Type</TableHead>
+                                <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Description</TableHead>
+                                <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Normal Side</TableHead>
+                                <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Status</TableHead>
+                                <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head text-right last:rounded-tr-sm">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center h-24">Loading accounts...</TableCell>
+                                    <TableCell colSpan={7} className="text-center h-24 px-4">Loading accounts...</TableCell>
                                 </TableRow>
                             ) : accounts.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">No accounts found.</TableCell>
+                                    <TableCell colSpan={7} className="text-center h-24 text-muted-foreground px-4">No accounts found.</TableCell>
                                 </TableRow>
                             ) : (
                                 accounts.map((account) => (
-                                    <TableRow key={account.id}>
-                                        <TableCell className="font-medium">{account.account_code}</TableCell>
-                                        <TableCell>{account.account_name}</TableCell>
-                                        <TableCell>{account.account_type}</TableCell>
-                                        <TableCell className="text-muted-foreground">{account.account_description || '-'}</TableCell>
-                                        <TableCell>{account.account_normal_side}</TableCell>
-                                        <TableCell>
+                                    <TableRow key={account.id} className="h-16">
+                                        <TableCell className="font-medium px-4">{account.account_code}</TableCell>
+                                        <TableCell className="px-4">{account.account_name}</TableCell>
+                                        <TableCell className="px-4">{account.account_type}</TableCell>
+                                        <TableCell className="text-muted-foreground px-4">{account.account_description || '-'}</TableCell>
+                                        <TableCell className="px-4">{account.account_normal_side}</TableCell>
+                                        <TableCell className="px-4">
                                             <button
                                                 onClick={() => handleToggleStatus(account.id)}
                                                 className="hover:opacity-80 transition-opacity"
                                                 title={`Click to make ${account.status === 'active' ? 'inactive' : 'active'}`}
                                             >
-                                                <Badge variant={account.status === 'active' ? 'default' : 'secondary'} className="cursor-pointer">
-                                                    {account.status}
-                                                </Badge>
+                                                <StatusIndicator status={account.status as 'active' | 'inactive'} />
                                             </button>
                                         </TableCell>
-                                        <TableCell className="text-right">
-                                            <Button
-                                                variant="destructive"
-                                                size="sm"
-                                                onClick={() => confirmDelete(account)}
-                                                disabled={account.disbursement_items_count ? account.disbursement_items_count > 0 : false}
-                                                title={account.disbursement_items_count && account.disbursement_items_count > 0 ? "Cannot delete used account" : "Delete account"}
-                                            >
-                                                Delete
-                                            </Button>
+                                        <TableCell className="text-right px-4">
+                                            {account.disbursement_items_count && account.disbursement_items_count > 0 ? (
+                                                <div className="flex justify-end" title="Account is in use">
+                                                    <Check className="size-5 text-green-600 opacity-50" />
+                                                </div>
+                                            ) : (
+                                                <Button
+                                                    variant="destructive"
+                                                    size="icon"
+                                                    onClick={() => confirmDelete(account)}
+                                                    title="Delete account"
+                                                >
+                                                    <Trash2 className="size-4" />
+                                                </Button>
+                                            )}
                                         </TableCell>
                                     </TableRow>
                                 ))

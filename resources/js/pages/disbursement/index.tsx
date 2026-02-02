@@ -1,5 +1,4 @@
 import AppLayout from '@/layouts/app-layout';
-import { dashboard } from '@/routes';
 import { BreadcrumbItem } from '@/types';
 import { Head, usePage } from '@inertiajs/react';
 import type { SharedData } from '@/types';
@@ -9,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useEffect, useState } from 'react';
 import { route } from 'ziggy-js';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -146,6 +144,7 @@ export default function Disbursements() {
 
     const getStatusBadgeVariant = (status: string) => {
         switch (status?.toLowerCase()) {
+            case 'approved':
             case 'completed':
                 return 'default';
             case 'pending':
@@ -202,14 +201,14 @@ export default function Disbursements() {
                     )}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 mb-2">
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                         <Input
                             placeholder="Search disbursements..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="pl-9 h-9"
+                            className="max-w-lg pl-9 bg-white border-gray-300 border-[1.6px]"
                         />
                     </div>
 
@@ -306,44 +305,52 @@ export default function Disbursements() {
                     </DropdownMenu>
                 </div>
 
-                <div className="rounded-md border bg-card">
+                <div className="rounded-sm border bg-card overflow-hidden py-0 pb-6">
                     <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Control Number</TableHead>
-                                <TableHead>Title</TableHead>
-                                <TableHead>Description</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Date Created</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
+                        <TableHeader className="border-0">
+                            <TableRow className="bg-table-head hover:bg-table-head border-0">
+                                <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head first:rounded-tl-sm">Control Number</TableHead>
+                                <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Title</TableHead>
+                                <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Description</TableHead>
+                                <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Status</TableHead>
+                                <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Date Created</TableHead>
+                                <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head text-right last:rounded-tr-sm">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                <TableRow>
-                                    <TableCell colSpan={7} className="text-center h-24">Loading disbursements...</TableCell>
+                                <TableRow className="h-16">
+                                    <TableCell colSpan={6} className="text-center h-24 px-4">Loading disbursements...</TableCell>
                                 </TableRow>
                             ) : disbursements.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
+                                <TableRow className="h-16">
+                                    <TableCell colSpan={6} className="text-center h-24 text-muted-foreground px-4">
                                         No disbursements found.
                                     </TableCell>
                                 </TableRow>
                             ) : (
                                 disbursements.map((disbursement) => (
-                                    <TableRow key={disbursement.id}>
-                                        <TableCell className="font-medium">{disbursement.control_number}</TableCell>
-                                        <TableCell>{disbursement.title}</TableCell>
-                                        <TableCell className="text-muted-foreground max-w-xs truncate">
+                                    <TableRow key={disbursement.id} className="h-16">
+                                        <TableCell className="font-medium px-4">{disbursement.control_number}</TableCell>
+                                        <TableCell className="px-4">{disbursement.title}</TableCell>
+                                        <TableCell className="text-muted-foreground max-w-xs truncate px-4">
                                             {disbursement.description}
                                         </TableCell>
-                                        <TableCell>
-                                            <Badge variant={getStatusBadgeVariant(disbursement.status)}>
+                                        <TableCell className="px-4">
+                                            <span 
+                                                className={`inline-flex items-center justify-center rounded-full border px-3 py-0.5 text-xs font-semibold ${
+                                                    disbursement.status.toLowerCase() === 'approved' 
+                                                        ? 'bg-green-100 text-green-700 border-green-200' 
+                                                        : disbursement.status.toLowerCase() === 'pending'
+                                                        ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                                                        : 'bg-red-100 text-red-700 border-red-200'
+                                                }`}
+                                            >
                                                 {disbursement.status}
-                                            </Badge>
+                                            </span>
                                         </TableCell>
-                                        <TableCell>{formatDate(disbursement.created_at)}</TableCell>
-                                        <TableCell className="text-right">
+                                        <TableCell className="px-4">{formatDate(disbursement.created_at)}</TableCell>
+                                        <TableCell className="text-right px-4">
                                             <div className="flex justify-end gap-2">
                                                 <Link href={route('disbursement.view', disbursement.id)}>
                                                     View

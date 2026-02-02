@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { UserPlus } from 'lucide-react';
 import type { User } from '@/types/database';
 import { DottedSeparator } from '@/components/dotted-line';
+import { StatusIndicator } from '@/components/status-indicator';
 
 interface SpecialUserCardProps {
     title: string;
@@ -48,12 +49,7 @@ export function SpecialUserCard({
                                     <p className="font-medium text-base">{user.name}</p>
                                     <p className="text-sm text-muted-foreground">{user.email}</p>
                                 </div>
-                                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${user.status === 'active'
-                                    ? 'bg-green-50 text-green-700 border border-green-200'
-                                    : 'bg-red-50 text-red-700 border border-red-200'
-                                    }`}>
-                                    {user.status}
-                                </span>
+                                <StatusIndicator status={user.status as 'active' | 'inactive'} />
                             </div>
                         </div>
                         <Button variant="outline" size="sm" className="w-full" onClick={() => onEdit(user)}>

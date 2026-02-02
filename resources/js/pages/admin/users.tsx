@@ -9,11 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from "@/components/ui/input";
-import { Shield, Briefcase, FileText } from 'lucide-react';
+import { Shield, Briefcase, FileText, Search } from 'lucide-react';
 import { SpecialUserCard } from './components/special-user-card';
 import { UserFormModal } from './components/user-form-modal';
 import { UserStats } from './components/user-stats';
-import { describe } from 'node:test';
+import { StatusIndicator } from '@/components/status-indicator';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -27,14 +27,13 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function Users() {
-    //This current user
+ 
     const { user } = usePage().props as any;
 
     //Get the CSRF token from the meta tag
     const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
     const token = meta?.content || '';
 
-    //Get the accounts from the API
     const [users, setUsers] = useState<User[]>([]);
     const [pagination, setPagination] = useState({
         current_page: 1,
@@ -52,7 +51,6 @@ export default function Users() {
         admin_users: 0,
     });
 
-    //Special Users States
     const [specialUsers, setSpecialUsers] = useState<{
         accounting_head: User[];
         svp: User[];
@@ -272,26 +270,27 @@ export default function Users() {
                         </div>
                     </div>
 
-                    <div className="flex justify-between items-center gap-4">
+                    <div className="flex justify-between items-center gap-4 relative mb-4">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                         <Input
                             placeholder="Search users..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="max-w-sm"
+                            className="max-w-lg border-gray-300 border-[1.7px] rounded-sm bg-white pl-9"
                         />
                         <Button onClick={openCreateModal} variant="default" >Add User</Button>
                     </div>
 
-                    <Card>
+                    <Card className="overflow-hidden rounded-sm py-0 pb-6">
                         <CardContent className="p-0">
                             <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Name</TableHead>
-                                        <TableHead>Email</TableHead>
-                                        <TableHead>Role</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Actions</TableHead>
+                                <TableHeader className="border-0">
+                                    <TableRow className="bg-table-head hover:bg-table-head border-0">
+                                        <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head first:rounded-tl-sm">Name</TableHead>
+                                        <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Email</TableHead>
+                                        <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Role</TableHead>
+                                        <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Status</TableHead>
+                                        <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head last:rounded-tr-sm">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -304,20 +303,17 @@ export default function Users() {
                                     ) : (
                                         users.map((user) => (
                                             <TableRow key={user.id}>
-                                                <TableCell className="font-medium">{user.name}</TableCell>
-                                                <TableCell>{user.email}</TableCell>
-                                                <TableCell>
+                                                <TableCell className="font-medium px-4">{user.name}</TableCell>
+                                                <TableCell className="px-4">{user.email}</TableCell>
+                                                <TableCell className="px-4">
                                                     <span className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700">
                                                         {user.roles?.map((role) => role.name).join(', ') || 'No role'}
                                                     </span>
                                                 </TableCell>
-                                                <TableCell>
-                                                    <span className="inline-flex items-center gap-2 text-xs font-medium">
-                                                        <span className={user.status === 'active' ? 'status-dot-active' : 'status-dot-inactive'}></span>
-                                                        {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
-                                                    </span>
+                                                <TableCell className="px-4">
+                                                    <StatusIndicator status={user.status as 'active' | 'inactive'} />
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell className="px-4">
                                                     <Button variant="outline" size="sm" onClick={() => openEditModal(user)}>Edit</Button>
                                                 </TableCell>
                                             </TableRow>
