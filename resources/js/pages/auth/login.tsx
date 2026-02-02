@@ -48,6 +48,7 @@ export default function Login({
                                     tabIndex={1}
                                     autoComplete="email"
                                     placeholder="email@example.com"
+                                    className='border-gray-400 border-[1.5px]'
                                 />
                                 <InputError message={errors.email} />
                             </div>
@@ -64,6 +65,7 @@ export default function Login({
                                     tabIndex={2}
                                     autoComplete="current-password"
                                     placeholder="Password"
+                                     className='border-gray-400 border-[1.5px]'
                                 />
                                 <InputError message={errors.password} />
                             </div>
@@ -73,6 +75,7 @@ export default function Login({
                                     id="remember"
                                     name="remember"
                                     tabIndex={3}
+                                    className='border-gray-400 border-[1.5px]'
                                 />
                                 <Label htmlFor="remember">Remember me</Label>
                             </div>

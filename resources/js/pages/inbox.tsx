@@ -100,7 +100,7 @@ export default function Inbox() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Inbox" />
 
-            <div className="flex flex-col gap-6 max-w-4xl mx-auto py-8 px-4 sm:px-6">
+            <div className="flex flex-col gap-6">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-primary/10 rounded-lg">

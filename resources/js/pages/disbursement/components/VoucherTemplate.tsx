@@ -22,7 +22,6 @@ export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
 
     return (
         <div id="voucher-paper" className="bg-white text-black pt-[1cm] px-[2.5cm] pb-[2.5cm] shadow-2xl mx-auto w-[210mm] min-h-[297mm] flex flex-col font-serif shrink-0 mb-8" style={{ color: '#1a1a1a' }}>
-            {/* Header */}
             <div className="flex flex-col items-center mb-0 relative">
                 <h1 className="text-xl font-bold uppercase text-center leading-tight">St. Anne College Lucena, Inc.</h1>
                 <p className="text-[10px] text-center italic">Diversion Rd., Brgy. Gulang-Gulang</p>
@@ -45,7 +44,6 @@ export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
                     </span>
                 </div>
             </div>
-            {/* Table */}
             <div className="border-2 border-black flex-grow flex flex-col mt-2">
                 <div className="grid grid-cols-[1fr_2.5fr_0.8fr_1fr_1fr] border-b-2 border-black font-bold text-center text-xs uppercase">
                     <div className="p-2 border-r-2 border-black">Account No.</div>
@@ -56,7 +54,7 @@ export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
                 </div>
 
                 <div className="flex-grow flex flex-col bg-white">
-                    {/* Items */}
+                
                     <div className="grid grid-cols-[1fr_2.5fr_0.8fr_1fr_1fr] text-sm flex-grow">
                         <div className="border-r-2 border-black flex flex-col">
                             {disbursement.items?.map((item) => (
@@ -91,7 +89,7 @@ export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
                         </div>
                     </div>
 
-                    {/* Total Row */}
+             
                     <div className="grid grid-cols-[1fr_2.5fr_0.8fr_1fr_1fr] border-t-2 border-black font-bold text-xs uppercase bg-gray-50/50">
                         <div className="p-2 border-r-2 border-black">TOTAL</div>
                         <div className="p-2 border-r-2 border-black"></div>
@@ -107,7 +105,7 @@ export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
             </div>
 
 
-            {/* Footer / Signatures */}
+         
             <div className="mt-10 grid grid-cols-2 gap-x-12 gap-y-8 text-[10px] uppercase font-bold">
                 <div className="space-y-6">
                     <div className="flex items-end gap-2">
