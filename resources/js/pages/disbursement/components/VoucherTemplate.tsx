@@ -153,8 +153,8 @@ export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
                             { label: 'APPROVED BY', step: 2 }
                         ],
                         [
-                            { label: 'CHECKED BY', step: 3 },
-                            { label: 'PAID BY', step: 4 }
+                            { label: 'CHECKED BY', step: 4 },
+                            { label: 'PAID BY', step: 5 }
                         ],
                         [
                             { label: 'RECOMMENDED BY', step: null },

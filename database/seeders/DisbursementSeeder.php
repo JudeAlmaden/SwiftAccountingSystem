@@ -98,7 +98,7 @@ class DisbursementSeeder extends Seeder
         ]);
     }
 
-    /** DV-002: Pending at accounting head (step 1 done). */
+    /** DV-002:  accounting head (step 1 done). */
     private function seedDisbursement2(): void
     {
         $d = Disbursement::create([
@@ -106,7 +106,7 @@ class DisbursementSeeder extends Seeder
             'title' => 'Supplier Payment - ABC Corp',
             'description' => 'Payment for office supplies and equipment',
             'step_flow' => Disbursement::defaultStepFlow(),
-            'current_step' => 2,
+            'current_step' => 3,
             'status' => 'pending',
         ]);
 
@@ -117,7 +117,7 @@ class DisbursementSeeder extends Seeder
 
         $this->createTracking($d->id, [
             ['handled_by' => $this->assistant->id, 'step' => 1, 'role' => 'accounting assistant', 'action' => 'approved', 'remarks' => 'Documents verified and complete.', 'acted_at' => Carbon::now()->subDays(2)],
-            ['handled_by' => null, 'step' => 2, 'role' => 'accounting head', 'action' => 'pending', 'remarks' => null, 'acted_at' => null],
+            ['handled_by' => null, 'step' => 2, 'role' => 'accounting head', 'action' => 'approved', 'remarks' => null, 'acted_at' => null],
         ]);
     }
 
@@ -126,10 +126,10 @@ class DisbursementSeeder extends Seeder
     {
         $d = Disbursement::create([
             'control_number' => 'DV-2026-003',
-            'title' => 'Utility Bills Payment',
-            'description' => 'Electricity and water bills for January 2026',
+            'title' => 'Supplier Payment - ABC Corp',
+            'description' => 'Payment for office supplies and equipment',
             'step_flow' => Disbursement::defaultStepFlow(),
-            'current_step' => 1,
+            'current_step' => 2,
             'status' => 'pending',
         ]);
 
@@ -139,8 +139,10 @@ class DisbursementSeeder extends Seeder
         ]);
 
         $this->createTracking($d->id, [
-            ['handled_by' => null, 'step' => 1, 'role' => 'accounting assistant', 'action' => 'pending', 'remarks' => null, 'acted_at' => null],
+            ['handled_by' => $this->assistant->id, 'step' => 1, 'role' => 'accounting assistant', 'action' => 'approved', 'remarks' => null, 'acted_at' => null],
         ]);
+
+        
     }
 
     /** DV-004: Rejected at auditor (steps 1–2 approved, step 3 rejected). */
@@ -151,7 +153,7 @@ class DisbursementSeeder extends Seeder
             'title' => 'Equipment Purchase',
             'description' => 'New computer equipment for accounting department',
             'step_flow' => Disbursement::defaultStepFlow(),
-            'current_step' => 3,
+            'current_step' => 2,
             'status' => 'rejected',
         ]);
 

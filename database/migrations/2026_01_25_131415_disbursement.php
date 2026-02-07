@@ -39,7 +39,7 @@ return new class extends Migration
             $table->foreignId('handled_by')->nullable()->constrained('users')->cascadeOnDelete();
             $table->integer('step'); // 1=assistant, 2=head, 3=auditor, 4=svp
             $table->enum('role', ['accounting assistant', 'accounting head', 'auditor', 'svp']);
-            $table->enum('action', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->enum('action', ['approved', 'rejected'])->nullable()->default(null);
             $table->text('remarks')->nullable();
             $table->timestamp('acted_at')->nullable();
             $table->timestamps();

@@ -27,6 +27,9 @@ interface StatusTrackingProps {
 
 export function DisbursementStatusTracking({ currentStep = 1, stepFlow, tracking = [] }: StatusTrackingProps) {
     const [expandedRemarks, setExpandedRemarks] = useState<number[]>([]);
+    const currentStepNum = Number(currentStep) || 1;
+    const pendingStep = tracking.find(t => t.action === 'pending')?.step;
+    const effectiveCurrentStep = pendingStep != null ? Math.min(currentStepNum, pendingStep) : currentStepNum;
     const steps = Array.from({ length: 4 }, (_, i) => ({
         name: stepLabel(stepFlow, i),
         role: (stepFlow && stepFlow[i]?.role) || (i === 0 ? 'accounting assistant' : ['accounting head', 'auditor', 'svp'][i - 1]),
@@ -60,9 +63,9 @@ export function DisbursementStatusTracking({ currentStep = 1, stepFlow, tracking
                         const stepNum = index + 1;
                         const trackingInfo = tracking.find(t => t.step === stepNum);
                         const isCompleted = trackingInfo?.action === 'approved';
-                        const isPending = currentStep === stepNum && (!trackingInfo || trackingInfo.action === 'pending');
+                        const isPending = effectiveCurrentStep === stepNum && (!trackingInfo || trackingInfo.action === 'pending');
                         const isRejected = trackingInfo?.action === 'rejected';
-                        const isFuture = currentStep < stepNum;
+                        const isFuture = effectiveCurrentStep < stepNum;
                         const actorName = trackingInfo?.handler?.name ?? (stepFlow?.[index]?.user_name ?? null);
 
                         let circleClass = 'bg-muted border-muted';

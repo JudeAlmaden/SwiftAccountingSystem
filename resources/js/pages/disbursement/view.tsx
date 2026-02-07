@@ -131,7 +131,7 @@ export default function View() {
     const canPerformAction = () => {
         if (!disbursement || disbursement.status !== 'pending') return false;
 
-        const currentStep = disbursement.current_step ?? 1;
+        const currentStep = Number(disbursement.current_step) || 1;
         const stepFlow = disbursement.step_flow ?? [];
         const stepConfig = stepFlow[currentStep - 1];
         const stepRole = stepConfig?.role ?? (currentStep === 1 ? null : null);
@@ -349,7 +349,7 @@ export default function View() {
                     {/* Sidebar */}
                     <div className="sticky top-6">
                         <DisbursementSidebar
-                            currentStep={disbursement.current_step}
+                            currentStep={Number(disbursement.current_step) || 1}
                             stepFlow={disbursement.step_flow}
                             tracking={disbursement.tracking}
                             attachments={disbursement.attachments}

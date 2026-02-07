@@ -23,6 +23,7 @@ class Disbursement extends Model
 
     protected $casts = [
         'step_flow' => 'array',
+        'current_step' => 'integer',
     ];
 
     /**
