@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             RolesSeeder::class,
             UsersSeeder::class,
             ChartOfAccountsSeeder::class,
+            ControlNumberPrefixSeeder::class,
             DisbursementSeeder::class,
         ]);
     }

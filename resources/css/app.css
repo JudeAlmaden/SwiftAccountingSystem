@@ -168,3 +168,34 @@
         scrollbar-color: rgb(34 197 94) transparent;
     }
 }
+
+/* Print: show only report content when printing from disbursement report page */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .report-print-root {
+        visibility: visible;
+    }
+    .report-print-root > *:not(#report-paper) {
+        visibility: hidden;
+    }
+    .report-print-root #report-paper,
+    .report-print-root #report-paper * {
+        visibility: visible;
+    }
+    .report-print-root #report-paper {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        max-width: none;
+        overflow: visible;
+        padding: 0;
+    }
+    .report-print-root #report-paper [data-slot="card"] {
+        break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #e5e7eb;
+    }
+}

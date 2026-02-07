@@ -1,8 +1,10 @@
 export interface User {
     id: number;
     name: string;
-    email: string;
+    account_number: string;
+    email?: string;
     roles: Role[];
+    permissions?: Permission[];
     status: string;
 }
 
@@ -56,6 +58,7 @@ export interface Disbursement {
     description?: string;
     status?: string;
     step?: number;
+    recommended_by?: string;
     created_at?: string;
     updated_at?: string;
     total_amount?: number;
@@ -67,4 +70,10 @@ export interface Disbursement {
 export interface Role {
     id: number;
     name: string;
+}
+
+export interface Permission {
+    id: number;
+    name: string;
+    guard_name: string;
 }

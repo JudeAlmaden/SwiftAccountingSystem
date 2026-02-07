@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use App\Models\User;
 use App\Models\Notification;
+use App\Models\ControlNumberPrefix;
 
 class DisbursementController extends Controller
 {
@@ -100,6 +101,8 @@ class DisbursementController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'recommended_by' => 'nullable|string|max:255',
+            'control_number_prefix_id' => 'required|exists:control_number_prefixes,id',
             'accounts' => 'required|array|min:1',
             'accounts.*.account_id' => 'required|exists:accounts,id',
             'accounts.*.type' => 'required|in:debit,credit',
@@ -109,12 +112,17 @@ class DisbursementController extends Controller
             'attachments.*' => 'string', // These are now temp folder IDs/UUIDs
         ]);
 
-        $controlNumber = 'DV-' . date('Y') . '-' . Str::upper(Str::random(6));
+        $prefix = ControlNumberPrefix::findOrFail($validated['control_number_prefix_id']);
+        $prefixCode = Str::upper($prefix->code);
+        $yearTwo = substr((string) date('Y'), -2);
+        $random = Str::upper(Str::random(6));
+        $controlNumber = "{$prefixCode}-{$yearTwo}-{$random}";
         
         $disbursement = Disbursement::create([
             'control_number' => $controlNumber,
             'title' => $validated['title'],
             'description' => $validated['description'] ?? '',
+            'recommended_by' => $validated['recommended_by'] ?? null,
             'step' => 2, // Waiting for Accounting Head
             'status' => 'pending',
         ]);

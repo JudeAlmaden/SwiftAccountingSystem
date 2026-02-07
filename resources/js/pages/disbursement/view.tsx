@@ -44,11 +44,12 @@ type PageProps = {
 }
 
 export default function View() {
-    const { id, user } = usePage<any>().props
+    const { id, user } = usePage<any>().props;
     const userRoles = user?.roles || [];
 
     const [disbursement, setDisbursement] = useState<Disbursement | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+
     const [isActionLoading, setIsActionLoading] = useState(false);
     const [isDeclineModalOpen, setIsDeclineModalOpen] = useState(false);
     const [declineRemarks, setDeclineRemarks] = useState('');
@@ -210,19 +211,24 @@ export default function View() {
         if (!rejectionTracking) return null;
 
         return (
-            <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive mb-6 shadow-sm">
-                <XCircle className="h-4 w-4" />
-                <AlertTitle className="font-bold flex items-center gap-2">
-                    Disbursement Rejected
-                </AlertTitle>
-                <AlertDescription className="mt-2 space-y-2">
-                    <p className="font-medium">Reason: <span className="italic">"{rejectionTracking.remarks}"</span></p>
-                    <div className="flex items-center gap-2 text-[10px] opacity-80 decoration-dotted underline">
-                        <span>Restricted by {rejectionTracking.role}</span>
-                        <span>•</span>
-                        <span>{formatDate(rejectionTracking.acted_at ?? undefined)}</span>
-                    </div>
-                </AlertDescription>
+            <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive mb-6 shadow-md animate-in fade-in slide-in-from-top-4 duration-500">
+                <XCircle className="h-5 w-5" />
+                <div className="ml-2">
+                    <AlertTitle className="font-bold text-lg mb-1 flex items-center gap-2">
+                        Disbursement Rejected
+                    </AlertTitle>
+                    <AlertDescription className="mt-2 space-y-3">
+                        <div className="bg-destructive/5 p-3 rounded-md border border-destructive/10">
+                            <p className="font-semibold text-sm">Reason:</p>
+                            <p className="text-sm italic opacity-90 mt-1">"{rejectionTracking.remarks}"</p>
+                        </div>
+                        <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider opacity-70">
+                            <span className="bg-destructive/20 px-2 py-0.5 rounded">Rejected by {rejectionTracking.role}</span>
+                            <span>•</span>
+                            <span>{formatDate(rejectionTracking.acted_at ?? undefined)}</span>
+                        </div>
+                    </AlertDescription>
+                </div>
             </Alert>
         );
     };
@@ -296,14 +302,14 @@ export default function View() {
                                 </CardTitle>
                                 <p className='ml-7 -mt-1 text-sm opacity-60'>Record of approved fund disbursements</p>
                             </CardHeader>
-                            <DottedSeparator/>
+                            <DottedSeparator />
                             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-6 px-10 pb-1">
                                 <div className="space-y-1">
                                     <p className="text-xs font-medium text-muted-foreground uppercase flex items-center gap-2">
                                         <Tag className="h-3 w-3" />
                                         Title
                                     </p>
-                                    <p className="text-sm ml-5 font-semibold">{disbursement.title}</p>
+                                    <p className="text-sm ml-5 font-semibold text-primary overflow-hidden text-ellipsis whitespace-nowrap">{disbursement.title}</p>
                                 </div>
                                 <div className="space-y-1">
                                     <p className="text-xs font-medium text-muted-foreground uppercase flex items-center gap-2">

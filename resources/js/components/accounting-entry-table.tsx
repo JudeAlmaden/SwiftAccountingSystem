@@ -26,9 +26,11 @@ interface AccountingEntryTableProps {
     title: string;
     date: string;
     description: string;
+    recommended_by: string;
     onTitleChange: (value: string) => void;
     onDateChange: (value: string) => void;
     onDescriptionChange: (value: string) => void;
+    onRecommendedByChange: (value: string) => void;
     onSave?: () => void;
     onCancel?: () => void;
     saveButtonText?: string;
@@ -42,9 +44,11 @@ export default function AccountingEntryTable({
     title,
     date,
     description,
+    recommended_by,
     onTitleChange,
     onDateChange,
     onDescriptionChange,
+    onRecommendedByChange,
     onSave,
     onCancel,
     saveButtonText = 'Save',
@@ -119,6 +123,7 @@ export default function AccountingEntryTable({
             title,
             date,
             description,
+            recommended_by,
             accounts: rows
                 .filter(row => row.account !== null)
                 .map((row, index) => ({
@@ -291,7 +296,7 @@ export default function AccountingEntryTable({
                     </tfoot>
                 </table>
             </div>
-            <DottedSeparator/>
+            <DottedSeparator />
             <div className="px-5 pb-4 border-border bg-card flex items-center justify-between">
                 <div className="text-xs text-muted-foreground italic">
                     {!isBalanced && "Debit and Credit must be balanced."}

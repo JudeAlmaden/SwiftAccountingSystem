@@ -1,0 +1,341 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Disbursement;
+use App\Models\DisbursementItem;
+use App\Models\DisbursementTracking;
+use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+class DisbursementReportController extends Controller
+{
+    /**
+     * Return aggregated disbursement report data (for API).
+     * Supports period (daily|monthly|yearly) and date range.
+     * Requires "view disbursements" permission.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'period'    => 'nullable|string|in:daily,monthly,yearly',
+            'date_from' => 'nullable|date',
+            'date_to'   => 'nullable|date|after_or_equal:date_from',
+        ]);
+
+        $period = $validated['period'] ?? 'monthly';
+        $dateFrom = $validated['date_from'] ?? null;
+        $dateTo = $validated['date_to'] ?? null;
+
+        if (!$dateFrom) {
+            $dateFrom = now()->startOfYear()->toDateString();
+        }
+        if (!$dateTo) {
+            $dateTo = now()->toDateString();
+        }
+
+        $disbursementQuery = Disbursement::query()
+            ->whereDate('created_at', '>=', $dateFrom)
+            ->whereDate('created_at', '<=', $dateTo);
+
+        $itemsBaseQuery = DisbursementItem::query()
+            ->join('disbursements', 'disbursement_items.disbursement_id', '=', 'disbursements.id')
+            ->whereDate('disbursements.created_at', '>=', $dateFrom)
+            ->whereDate('disbursements.created_at', '<=', $dateTo)
+            ->select('disbursement_items.*', 'disbursements.created_at as disbursement_created_at', 'disbursements.status as disbursement_status');
+
+        // --- Per-voucher amounts (credit sum = voucher disbursement amount) ---
+        $voucherAmounts = DisbursementItem::query()
+            ->join('disbursements', 'disbursement_items.disbursement_id', '=', 'disbursements.id')
+            ->whereDate('disbursements.created_at', '>=', $dateFrom)
+            ->whereDate('disbursements.created_at', '<=', $dateTo)
+            ->where('disbursement_items.type', 'credit')
+            ->groupBy('disbursements.id', 'disbursements.control_number', 'disbursements.created_at', 'disbursements.status')
+            ->select(
+                'disbursements.id',
+                'disbursements.control_number',
+                'disbursements.created_at',
+                'disbursements.status',
+                DB::raw('SUM(disbursement_items.amount) as voucher_amount')
+            )
+            ->get();
+
+        $pendingTotal = $voucherAmounts->where('status', 'pending')->sum('voucher_amount');
+        $approvedTotal = $voucherAmounts->where('status', 'approved')->sum('voucher_amount');
+        $rejectedTotal = $voucherAmounts->where('status', 'rejected')->sum('voucher_amount');
+        $totalDisbursed = round($approvedTotal, 2);
+        $totalVouchers = $voucherAmounts->count();
+        $approvedCount = $voucherAmounts->where('status', 'approved')->count();
+        $pendingCount = $voucherAmounts->where('status', 'pending')->count();
+        $rejectedCount = $voucherAmounts->where('status', 'rejected')->count();
+
+        // Largest voucher: among fully approved only
+        $largestVoucher = $voucherAmounts->where('status', 'approved')->sortByDesc('voucher_amount')->first();
+        $avgDisbursementPerVoucher = $approvedCount > 0 ? round($approvedTotal / $approvedCount, 2) : 0;
+
+        // --- Summary counts (existing) ---
+        $byStatus = (clone $disbursementQuery)->selectRaw('status, count(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status')
+            ->all();
+
+        $summaryCounts = [
+            'total'    => (clone $disbursementQuery)->count(),
+            'pending'  => (int) ($byStatus['pending'] ?? 0),
+            'approved' => (int) ($byStatus['approved'] ?? 0),
+            'rejected' => (int) ($byStatus['rejected'] ?? 0),
+            'total_debit' => 0,
+            'total_credit' => 0,
+            'total_expense' => 0,
+            'total_disbursed' => $totalDisbursed,
+            'total_approved_amount' => $totalDisbursed,
+            'pending_total_amount' => round($pendingTotal, 2),
+            'approved_total_amount' => round($approvedTotal, 2),
+            'rejected_total_amount' => round($rejectedTotal, 2),
+            'total_vouchers' => $totalVouchers,
+            'largest_voucher_amount' => $largestVoucher ? round((float) $largestVoucher->voucher_amount, 2) : 0,
+            'largest_voucher_ref' => $largestVoucher?->control_number,
+            'largest_voucher_date' => $largestVoucher?->created_at?->format('Y-m-d'),
+            'avg_disbursement_per_voucher' => $avgDisbursementPerVoucher,
+        ];
+
+        // --- Item-based totals (for existing by_period / by_account) ---
+        $totalsAll = (clone $itemsBaseQuery)
+            ->select(
+                DB::raw("COALESCE(SUM(CASE WHEN disbursement_items.type = 'debit' THEN disbursement_items.amount ELSE 0 END), 0) as total_debit"),
+                DB::raw("COALESCE(SUM(CASE WHEN disbursement_items.type = 'credit' THEN disbursement_items.amount ELSE 0 END), 0) as total_credit")
+            )
+            ->first();
+        $summaryCounts['total_debit'] = round((float) ($totalsAll?->total_debit ?? 0), 2);
+        $summaryCounts['total_credit'] = round((float) ($totalsAll?->total_credit ?? 0), 2);
+        $totalsApproved = (clone $itemsBaseQuery)->where('disbursements.status', 'approved')
+            ->select(
+                DB::raw("COALESCE(SUM(CASE WHEN disbursement_items.type = 'debit' THEN disbursement_items.amount ELSE 0 END), 0) as total_debit"),
+                DB::raw("COALESCE(SUM(CASE WHEN disbursement_items.type = 'credit' THEN disbursement_items.amount ELSE 0 END), 0) as total_credit")
+            )
+            ->first();
+        $summaryCounts['total_expense'] = round((float) ($totalsApproved?->total_debit ?? 0), 2);
+
+        // --- Daily trend: by date with amounts and voucher count, then % change vs previous period ---
+        $from = Carbon::parse($dateFrom);
+        $to = Carbon::parse($dateTo);
+        $daysDiff = $from->diffInDays($to) + 1;
+
+        $prevTo = $from->copy()->subDay();
+        $prevFrom = $prevTo->copy()->subDays($daysDiff - 1);
+
+        $dailyRows = $voucherAmounts->groupBy(fn ($v) => Carbon::parse($v->created_at)->format('Y-m-d'))
+            ->map(function ($vouchers, $date) {
+                $pendingAmt = $vouchers->where('status', 'pending')->sum('voucher_amount');
+                $approvedAmt = $vouchers->where('status', 'approved')->sum('voucher_amount');
+                $rejectedAmt = $vouchers->where('status', 'rejected')->sum('voucher_amount');
+                return [
+                    'date' => $date,
+                    'total_disbursed' => round($approvedAmt, 2),
+                    'pending_amount' => round($pendingAmt, 2),
+                    'approved_amount' => round($approvedAmt, 2),
+                    'rejected_amount' => round($rejectedAmt, 2),
+                    'vouchers' => $vouchers->count(),
+                ];
+            })
+            ->sortKeys()
+            ->values()
+            ->all();
+
+        $prevPeriodVouchers = DisbursementItem::query()
+            ->join('disbursements', 'disbursement_items.disbursement_id', '=', 'disbursements.id')
+            ->whereDate('disbursements.created_at', '>=', $prevFrom->toDateString())
+            ->whereDate('disbursements.created_at', '<=', $prevTo->toDateString())
+            ->where('disbursement_items.type', 'credit')
+            ->where('disbursements.status', 'approved')
+            ->sum('disbursement_items.amount');
+        $currentPeriodDisbursed = $totalDisbursed;
+        $pctChange = $prevPeriodVouchers > 0
+            ? round((($currentPeriodDisbursed - $prevPeriodVouchers) / $prevPeriodVouchers) * 100, 1)
+            : ($currentPeriodDisbursed > 0 ? 100 : 0);
+
+        $daily_trend = [
+            'rows' => $dailyRows,
+            'previous_period_total' => round($prevPeriodVouchers, 2),
+            'current_period_total' => $currentPeriodDisbursed,
+            'pct_change' => $pctChange,
+        ];
+
+        // --- By period (existing) ---
+        $itemsForPeriod = (clone $itemsBaseQuery)->get()
+            ->map(fn ($item) => (object) [
+                'date' => $item->disbursement_created_at,
+                'type' => $item->type,
+                'amount' => (float) $item->amount,
+                'disbursement_status' => $item->disbursement_status,
+            ]);
+        $formatByPeriod = match ($period) {
+            'daily'   => fn ($d) => $d->format('Y-m-d'),
+            'yearly'  => fn ($d) => $d->format('Y'),
+            default   => fn ($d) => $d->format('Y-m'),
+        };
+        $byPeriod = $itemsForPeriod
+            ->groupBy(fn ($i) => $formatByPeriod(Carbon::parse($i->date)))
+            ->map(function ($items) {
+                $approvedCredit = $items->where('disbursement_status', 'approved')->where('type', 'credit')->sum('amount');
+                return [
+                    'total_debit'   => round($items->where('type', 'debit')->sum('amount'), 2),
+                    'total_credit'  => round($items->where('type', 'credit')->sum('amount'), 2),
+                    'total_expense' => round($items->where('disbursement_status', 'approved')->where('type', 'debit')->sum('amount'), 2),
+                    'total_disbursed' => round($approvedCredit, 2),
+                    'count' => $items->pluck('disbursement_id')->unique()->count(),
+                ];
+            });
+
+        // --- Top accounts by disbursement (approved only): account, total disbursed, voucher count, % of total ---
+        $topAccountsRaw = DisbursementItem::query()
+            ->join('disbursements', 'disbursement_items.disbursement_id', '=', 'disbursements.id')
+            ->join('accounts', 'disbursement_items.account_id', '=', 'accounts.id')
+            ->whereDate('disbursements.created_at', '>=', $dateFrom)
+            ->whereDate('disbursements.created_at', '<=', $dateTo)
+            ->where('disbursements.status', 'approved')
+            ->where('disbursement_items.type', 'credit')
+            ->groupBy('accounts.id', 'accounts.account_code', 'accounts.account_name', 'accounts.account_type')
+            ->select(
+                'accounts.id as account_id',
+                'accounts.account_code',
+                'accounts.account_name',
+                'accounts.account_type',
+                DB::raw('SUM(disbursement_items.amount) as total_disbursed'),
+                DB::raw('COUNT(DISTINCT disbursements.id) as vouchers')
+            )
+            ->get();
+
+        $topAccountsTotal = $topAccountsRaw->sum('total_disbursed');
+        $top_accounts = $topAccountsRaw
+            ->map(fn ($row, $i) => [
+                'rank' => $i + 1,
+                'account_id' => $row->account_id,
+                'account_code' => $row->account_code,
+                'account_name' => $row->account_name,
+                'account_type' => $row->account_type,
+                'total_disbursed' => round((float) $row->total_disbursed, 2),
+                'vouchers' => (int) $row->vouchers,
+                'pct_of_total' => $topAccountsTotal > 0 ? round(((float) $row->total_disbursed / $topAccountsTotal) * 100, 1) : 0,
+            ])
+            ->sortByDesc('total_disbursed')
+            ->values()
+            ->map(fn ($row, $i) => array_merge($row, ['rank' => $i + 1]))
+            ->values()
+            ->all();
+
+        // --- By account (all statuses, for existing section) ---
+        $byAccountRows = (clone $itemsBaseQuery)
+            ->join('accounts', 'disbursement_items.account_id', '=', 'accounts.id')
+            ->select(
+                'disbursement_items.account_id',
+                'accounts.account_name',
+                'accounts.account_code',
+                'accounts.account_type',
+                DB::raw("COALESCE(SUM(CASE WHEN disbursement_items.type = 'debit' THEN disbursement_items.amount ELSE 0 END), 0) as total_debit"),
+                DB::raw("COALESCE(SUM(CASE WHEN disbursement_items.type = 'credit' THEN disbursement_items.amount ELSE 0 END), 0) as total_credit")
+            )
+            ->groupBy('disbursement_items.account_id', 'accounts.account_name', 'accounts.account_code', 'accounts.account_type')
+            ->get();
+        $byAccount = $byAccountRows->map(fn ($row) => [
+            'account_id'   => $row->account_id,
+            'account_name' => $row->account_name,
+            'account_code' => $row->account_code,
+            'account_type' => $row->account_type,
+            'total_debit'  => round((float) $row->total_debit, 2),
+            'total_credit' => round((float) $row->total_credit, 2),
+            'total'        => round((float) $row->total_debit + (float) $row->total_credit, 2),
+        ])->values()->all();
+
+        $ranking = collect($byAccount)->sortByDesc('total_debit')->values()->map(fn ($row, $index) => array_merge($row, ['rank' => $index + 1]))->all();
+
+        // --- Voucher-level details (audit list) ---
+        $vouchersForList = Disbursement::query()
+            ->whereDate('created_at', '>=', $dateFrom)
+            ->whereDate('created_at', '<=', $dateTo)
+            ->with(['items.account', 'tracking' => fn ($q) => $q->orderByDesc('acted_at')->with('handler')])
+            ->orderByDesc('created_at')
+            ->get();
+
+        $voucherAmountsById = $voucherAmounts->keyBy('id');
+        $voucher_details = $vouchersForList->map(function ($d) use ($voucherAmountsById) {
+            $amount = $voucherAmountsById->get($d->id);
+            $voucherAmt = $amount ? (float) $amount->voucher_amount : 0;
+            $approval = $d->tracking->where('action', 'approved')->sortByDesc('acted_at')->first();
+            $actedAt = $approval?->acted_at;
+            $created = $d->created_at;
+            $pendingDays = $actedAt ? $created->diffInDays($actedAt) : $created->diffInDays(now());
+            $approverName = $approval && $approval->handler ? $approval->handler->name : '–';
+            $firstAccount = $d->items->first()?->account;
+            $accountLabel = $firstAccount ? "{$firstAccount->account_code} {$firstAccount->account_name}" : '–';
+            return [
+                'id' => $d->id,
+                'control_number' => $d->control_number,
+                'date' => $d->created_at->format('Y-m-d'),
+                'account' => $accountLabel,
+                'amount' => round($voucherAmt, 2),
+                'status' => $d->status,
+                'approver' => $approverName,
+                'pending_days' => $pendingDays,
+                'remarks' => $d->description ?: ($approval?->remarks ?: '–'),
+            ];
+        })->values()->all();
+
+        // --- Workflow insights ---
+        $approvedVouchers = $vouchersForList->where('status', 'approved');
+        $approvalDays = [];
+        foreach ($approvedVouchers as $d) {
+            $approval = $d->tracking->where('action', 'approved')->sortByDesc('acted_at')->first();
+            if ($approval && $approval->acted_at) {
+                $approvalDays[] = $d->created_at->diffInDays($approval->acted_at);
+            }
+        }
+        $pendingVouchers = $vouchersForList->where('status', 'pending');
+        $maxDaysPending = $pendingVouchers->isEmpty()
+            ? (count($approvalDays) > 0 ? max($approvalDays) : 0)
+            : $pendingVouchers->max(fn ($d) => $d->created_at->diffInDays(now()));
+
+        $workflow = [
+            'pending_pct' => $totalVouchers > 0 ? round(($pendingCount / $totalVouchers) * 100, 1) : 0,
+            'rejected_pct' => $totalVouchers > 0 ? round(($rejectedCount / $totalVouchers) * 100, 1) : 0,
+            'approved_pct' => $totalVouchers > 0 ? round(($approvedCount / $totalVouchers) * 100, 1) : 0,
+            'avg_days_to_approve' => count($approvalDays) > 0 ? round(array_sum($approvalDays) / count($approvalDays), 1) : 0,
+            'max_days_pending' => (int) $maxDaysPending,
+            'vouchers_above_100k' => $voucherAmounts->filter(fn ($v) => (float) $v->voucher_amount > 100000)->count(),
+        ];
+
+        $disbursementsByPeriod = (clone $disbursementQuery)
+            ->get(['created_at', 'status'])
+            ->groupBy(fn ($d) => $formatByPeriod($d->created_at))
+            ->map(fn ($items) => [
+                'pending'  => $items->where('status', 'pending')->count(),
+                'approved' => $items->where('status', 'approved')->count(),
+                'rejected' => $items->where('status', 'rejected')->count(),
+                'total'    => $items->count(),
+            ]);
+
+        return response()->json([
+            'period'       => $period,
+            'date_from'    => $dateFrom,
+            'date_to'      => $dateTo,
+            'summary'      => $summaryCounts,
+            'metrics_table' => [
+                ['metric' => 'Total Disbursed', 'amount' => $totalDisbursed, 'notes' => 'Only fully approved vouchers'],
+                ['metric' => 'Total Vouchers', 'amount' => $totalVouchers, 'notes' => 'Count'],
+                ['metric' => 'Pending / Approved / Rejected', 'amount' => "{$pendingCount} / {$approvedCount} / {$rejectedCount}", 'notes' => 'Count by status'],
+                ['metric' => 'Largest Voucher', 'amount' => $summaryCounts['largest_voucher_amount'], 'notes' => $summaryCounts['largest_voucher_ref'] ? ($summaryCounts['largest_voucher_ref'] . ' · ' . $summaryCounts['largest_voucher_date']) : '–'],
+                ['metric' => 'Average Disbursement per Voucher', 'amount' => $avgDisbursementPerVoucher, 'notes' => 'Helps spot unusually large/small vouchers'],
+            ],
+            'daily_trend' => $daily_trend,
+            'top_accounts' => $top_accounts,
+            'by_period'    => $byPeriod,
+            'by_account'   => $byAccount,
+            'account_ranking_by_expense' => $ranking,
+            'voucher_details' => $voucher_details,
+            'workflow' => $workflow,
+            'disbursements_by_period' => $disbursementsByPeriod,
+        ]);
+    }
+}

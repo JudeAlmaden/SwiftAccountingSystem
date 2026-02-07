@@ -38,15 +38,70 @@ class RolesSeeder extends Seeder
         $auditor = Role::create(['name' => 'auditor']);
         $svp = Role::create(['name' => 'SVP']);
 
-        //List of permissions
-        Permission::create(['name' => 'create accounts']);
-        Permission::create(['name' => 'update accounts']);
-        Permission::create(['name' => 'delete accounts']);
-        Permission::create(['name' => 'view accounts']);
+        // Define Permissions
+        $permissions = [
+            // User Management
+            'view users',
+            'create users',
+            'edit users',
+            'delete users',
+            
+            // Chart of Accounts
+            'view accounts',
+            'create accounts',
+            'edit accounts',
+            'delete accounts',
 
+            // Disbursements
+            'view disbursements',
+            'create disbursements',
+            'edit disbursements',
+            'delete disbursements',
+            'approve disbursements',
+            'release disbursements', // If applicable
 
-        //Roles are just labels, we can assign permissions to roles
-        //We can also permissions directly to users
-        //For now we will only focus on admin as the other ones are unlikely to change
+            // Control number prefixes (accounting head)
+            'manage control number prefixes',
+        ];
+
+        foreach ($permissions as $permission) {
+            Permission::create(['name' => $permission]);
+        }
+
+        /*==========================================================================*/
+        // Assign Permissions to Roles
+
+        // Admin: User Management and View Disbursements only + View Accounts
+        $admin->givePermissionTo([
+            'view users', 'create users', 'edit users', 'delete users',
+            'view disbursements',
+            'view accounts'
+        ]);
+
+        // Accounting Head: Accounts & Disbursements (Full access) + manage control number prefixes
+        $accountingHead->givePermissionTo([
+            'view accounts', 'create accounts', 'edit accounts', 'delete accounts',
+            'view disbursements', 'create disbursements', 'edit disbursements', 'delete disbursements', 'approve disbursements', 'release disbursements',
+            'manage control number prefixes'
+        ]);
+
+        // Accounting Assistant: Create/View Disbursements, View Accounts
+        $accountingAssistant->givePermissionTo([
+            'view accounts',
+            'view disbursements', 'create disbursements'
+        ]);
+
+        // Auditor: Read-only access
+        $auditor->givePermissionTo([
+            'view users',
+            'view accounts',
+            'view disbursements'
+        ]);
+
+        // SVP: View & Approve Disbursements
+        $svp->givePermissionTo([
+            'view disbursements',
+            'approve disbursements'
+        ]);
     }
 }

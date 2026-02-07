@@ -21,8 +21,8 @@ export default function Login({
 }: Props) {
     return (
         <AuthLayout
-            title="Log in to your account"
-            description="Enter your email and password below to log in"
+            title="Log in"
+            description="Enter your Employee number and password below to log in"
         >
             <Head title="Log in" />
 
@@ -35,19 +35,19 @@ export default function Login({
                     <>
                         <div className="grid gap-6">
                             <div className="grid gap-2">
-                                <Label htmlFor="email">Email address</Label>
+                                <Label htmlFor="account_number">Employee Number</Label>
                                 <Input
-                                    id="email"
-                                    type="email"
-                                    name="email"
+                                    id="account_number"
+                                    type="text"
+                                    name="account_number"
                                     required
                                     autoFocus
                                     tabIndex={1}
-                                    autoComplete="email"
-                                    placeholder="email@example.com"
+                                    autoComplete="account_number"
+                                    placeholder="000-0000"
                                     className='border-gray-400 border-[1.5px]'
                                 />
-                                <InputError message={errors.email} />
+                                <InputError message={errors.account_number} />
                             </div>
 
                             <div className="grid gap-2">
@@ -62,7 +62,7 @@ export default function Login({
                                     tabIndex={2}
                                     autoComplete="current-password"
                                     placeholder="Password"
-                                     className='border-gray-400 border-[1.5px]'
+                                    className='border-gray-400 border-[1.5px]'
                                 />
                                 <InputError message={errors.password} />
                             </div>

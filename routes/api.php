@@ -5,10 +5,24 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AccountsController;
 use App\Http\Controllers\DisbursementController;
+use App\Http\Controllers\DisbursementReportController;
+use App\Http\Controllers\AccountReportController;
+use App\Http\Controllers\ControlNumberPrefixController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
+
+/*==================
+  Report API Routes (permission-gated)
+===================*/
+Route::middleware(['auth:sanctum', 'can:view disbursements'])->group(function () {
+    Route::get('/reports/disbursements', [DisbursementReportController::class, 'index'])->name('api.reports.disbursements');
+});
+
+Route::middleware(['auth:sanctum', 'can:view accounts'])->group(function () {
+    Route::get('/reports/accounts', [AccountReportController::class, 'index'])->name('api.reports.accounts');
+});
 
 /*==================
   Admin API Routes
@@ -34,6 +48,18 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/accounts', [AccountsController::class, 'store'])->name('accounts.store');      // Save new account
      Route::delete('/accounts/{account}', [AccountsController::class, 'destroy'])->name('accounts.destroy');   // Delete account
      Route::post('/accounts/{id}/toggle-status', [AccountsController::class, 'toggleStatus'])->name('accounts.toggleStatus');
+});
+
+/*==================
+  Control Number Prefixes (list for dropdown; accounting head manages)
+===================*/
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/control-number-prefixes', [ControlNumberPrefixController::class, 'index'])->name('api.control-number-prefixes.index');
+});
+Route::middleware(['auth:sanctum', 'role:accounting head'])->group(function () {
+    Route::post('/control-number-prefixes', [ControlNumberPrefixController::class, 'store'])->name('api.control-number-prefixes.store');
+    Route::put('/control-number-prefixes/{controlNumberPrefix}', [ControlNumberPrefixController::class, 'update'])->name('api.control-number-prefixes.update');
+    Route::delete('/control-number-prefixes/{controlNumberPrefix}', [ControlNumberPrefixController::class, 'destroy'])->name('api.control-number-prefixes.destroy');
 });
 
 /*==================

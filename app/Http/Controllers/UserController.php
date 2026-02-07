@@ -6,7 +6,8 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Facades\Role;       
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
 use Illuminate\Validation\Rule;                                                                      
 
 class UserController extends Controller
@@ -40,6 +41,17 @@ class UserController extends Controller
     }
 
     /**
+     * Display the main Users page (Inertia View).
+     */
+    function indexPage()
+    {
+        return Inertia::render('admin/users', [
+            'roles' => Role::all(),
+            'permissions' => Permission::all(),
+        ]);
+    }
+
+    /**
      * Display a paginated list of accounts.
      * Supports filtering by search, role, email.
      * Used for listing / table views.
@@ -59,7 +71,10 @@ class UserController extends Controller
 
         $users = User::with('roles')
             ->when($validated['search'] ?? null, fn ($q, $search) =>
-                $q->where('name', 'like', "%{$search}%")
+                $q->where(fn($sq) => 
+                    $sq->where('name', 'like', "%{$search}%")
+                       ->orWhere('account_number', 'like', "%{$search}%")
+                )
             )
             ->when($validated['role'] ?? null, fn ($q, $role) =>
                 $q->whereHas('roles', fn ($qr) =>
@@ -85,11 +100,12 @@ class UserController extends Controller
     function store(Request $request)
     {
     $validated = $request->validate([
-        'name'     => 'required|string|max:255',
-        'email'    => 'required|string|email|max:255|unique:users,email',
-        'password' => 'required|string|min:8|confirmed',
-        'role'     => [
-            'required',
+        'name'           => 'required|string|max:255',
+        'account_number' => 'required|string|max:255|unique:users,account_number',
+        'email'          => 'nullable|string|email|max:255|unique:users,email',
+        'password'       => 'required|string|min:8|confirmed',
+        'role'           => [
+            'nullable', // Allow null role
             'string',
             Rule::exists('roles', 'name')
                 ->where(fn ($q) => $q->where('guard_name', 'web')),
@@ -99,16 +115,20 @@ class UserController extends Controller
                 }
             },
         ],
-        'status'   => 'nullable|string|in:active,inactive',
+        'permissions'    => 'nullable|array', // Allow direct permissions
+        'permissions.*'  => 'exists:permissions,name',
+        'status'         => 'nullable|string|in:active,inactive',
     ], [
-        'email.unique'       => 'This email is already registered.',
-        'password.confirmed' => 'Password confirmation does not match.',
+        'email.unique'          => 'This email is already registered.',
+        'account_number.unique' => 'This employee number is already registered.',
+        'password.confirmed'    => 'Password confirmation does not match.',
     ]);
 
     // Roles that must be UNIQUE among active users
     $uniqueRoles = ['admin', 'accounting head', 'svp', 'auditor'];
 
     if (
+        $validated['role'] && // Check if role is present
         in_array($validated['role'], $uniqueRoles) &&
         ($validated['status'] ?? 'active') === 'active'
     ) {
@@ -127,23 +147,32 @@ class UserController extends Controller
 
     // Create user AFTER validation checks
     $user = User::create([
-        'name'     => $validated['name'],
-        'email'    => $validated['email'],
-        'status'   => $validated['status'] ?? 'active',
-        'password' => Hash::make($validated['password']),
+        'name'           => $validated['name'],
+        'account_number' => $validated['account_number'],
+        'email'          => $validated['email'],
+        'status'         => $validated['status'] ?? 'active',
+        'password'       => Hash::make($validated['password']),
     ]);
 
-    // Enforce ONE role per user
-    $user->syncRoles([$validated['role']]);
+    // Sync Role (if any)
+    if (!empty($validated['role'])) {
+        $user->syncRoles([$validated['role']]);
+    }
+
+    // Sync Permissions (Direct assignments)
+    if (!empty($validated['permissions'])) {
+        $user->syncPermissions($validated['permissions']);
+    }
 
     return response()->json([
         'message' => 'User created successfully.',
         'data'    => [
-            'id'     => $user->id,
-            'name'   => $user->name,
-            'email'  => $user->email,
-            'status' => $user->status,
-            'role'   => $user->getRoleNames()->first(),
+            'id'             => $user->id,
+            'name'           => $user->name,
+            'account_number' => $user->account_number,
+            'email'          => $user->email,
+            'status'         => $user->status,
+            'role'           => $user->getRoleNames()->first(),
         ],
     ], 201);
     }
@@ -167,22 +196,26 @@ class UserController extends Controller
     function update(Request $request, User $user)
     {
         $validated = $request->validate([
-            'id' => 'required|exists:users,id',
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|email|max:255',
-            'password' => 'nullable|string|min:8|confirmed',
-            'status'   => 'nullable|string|in:active,inactive',
-            'role'     => [
-                'required',
+            'id'             => 'required|exists:users,id',
+            'name'           => 'required|string|max:255',
+            'account_number' => 'required|string|max:255|unique:users,account_number,' . $request->id,
+            'email'          => 'nullable|string|email|max:255|unique:users,email,' . $request->id,
+            'password'       => 'nullable|string|min:8|confirmed',
+            'status'         => 'nullable|string|in:active,inactive',
+            'role'           => [
+                'nullable',
                 'string',
                 Rule::exists('roles', 'name')
                     ->where(fn ($q) => $q->where('guard_name', 'web')),
                 function ($attribute, $value, $fail) use ($user) {
-                    if ($value === 'admin' && $user->id !== auth()->id()) {
+                   $userToEdit = User::find(request()->id);
+                    if ($value === 'admin' && $userToEdit->id !== auth()->id()) {
                         $fail('Cannot assign admin role to other users.');
                     }
                 },
             ],
+            'permissions'    => 'nullable|array',
+            'permissions.*'  => 'exists:permissions,name',
         ]);
 
 
@@ -191,7 +224,8 @@ class UserController extends Controller
 
         // Roles that must be unique among ACTIVE users
         $uniqueRoles = ['accounting head', 'admin', 'svp', 'auditor'];
-        if (in_array($validated['role'], $uniqueRoles)) {
+        // Only check uniqueness if role is provided and in uniqueRoles
+        if (!empty($validated['role']) && in_array($validated['role'], $uniqueRoles)) {
             $exists = User::where('status', 'active')
                 ->where('id', '!=', $user->id) // exclude current user
                 ->whereHas('roles', fn ($q) =>
@@ -219,8 +253,9 @@ class UserController extends Controller
 
         // Update basic info
         $updateData = [
-            'name'   => $validated['name'],
-            'email'  => $validated['email'],
+            'name'           => $validated['name'],
+            'account_number' => $validated['account_number'],
+            'email'          => $validated['email'],
         ];
 
         // Only update status if it was not unset (i.e., not self)
@@ -238,19 +273,31 @@ class UserController extends Controller
             ]);
         }
 
-        // Enforce ONE role only (Skip if self/admin, to preserve role)
-        if (isset($validated['role'])) {
-            $user->syncRoles([$validated['role']]);
+        // Sync Roles
+        // If role is provided, sync it. If null (and explicitly sent as null/empty), remove roles?
+        // Let's assume sending empty role means 'no role'
+        if (array_key_exists('role', $validated)) {
+             if ($validated['role']) {
+                $user->syncRoles([$validated['role']]);
+             } else {
+                $user->syncRoles([]); // Remove all roles
+             }
+        }
+
+        // Sync Permissions
+        if (array_key_exists('permissions', $validated)) {
+            $user->syncPermissions($validated['permissions']);
         }
 
         return response()->json([
             'message' => 'User updated successfully.',
             'data'    => [
-                'id'     => $user->id,
-                'name'   => $user->name,
-                'email'  => $user->email,
-                'status' => $user->status,
-                'roles'  => $user->getRoleNames(),
+                'id'             => $user->id,
+                'name'           => $user->name,
+                'account_number' => $user->account_number,
+                'email'          => $user->email,
+                'status'         => $user->status,
+                'roles'          => $user->getRoleNames(),
             ],
         ]);
     }

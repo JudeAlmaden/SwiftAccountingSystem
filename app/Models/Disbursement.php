@@ -16,6 +16,7 @@ class Disbursement extends Model
         'description',
         'step',
         'status',
+        'recommended_by',
     ];
 
     /**

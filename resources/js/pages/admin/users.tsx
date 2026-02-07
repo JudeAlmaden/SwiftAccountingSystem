@@ -3,8 +3,17 @@ import { dashboard } from '@/routes';
 import { Head, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
-import type { User } from '@/types/database';
+import type { User, Role, Permission } from '@/types/database';
 import type { BreadcrumbItem } from '@/types';
+
+interface SharedData {
+    auth: {
+        user: User;
+    };
+    roles: Role[];
+    permissions: Permission[];
+    [key: string]: any;
+}
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -27,8 +36,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function Users() {
- 
-    const { user } = usePage().props as any;
+
+    const { user, roles, permissions } = usePage<SharedData>().props;
 
     //Get the CSRF token from the meta tag
     const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
@@ -76,11 +85,13 @@ export default function Users() {
     const [userForm, setUserForm] = useState({
         id: -1,
         name: '',
+        account_number: '',
         email: '',
         role: '',
         status: 'active',
         password: '',
         password_confirmation: '',
+        permissions: [] as string[],
     });
     const [formErrors, setFormErrors] = useState<any>({});
 
@@ -147,11 +158,13 @@ export default function Users() {
         setUserForm({
             id: -1,
             name: '',
+            account_number: '',
             email: '',
             role: '',
             status: 'active',
             password: '',
             password_confirmation: '',
+            permissions: [],
         });
         setFormErrors({});
         setAppModalOpen(true);
@@ -161,14 +174,18 @@ export default function Users() {
         setIsEditing(true);
         setCurrentUserId(user.id);
         const userRole = user.roles && user.roles.length > 0 ? user.roles[0].name : '';
+        const userPermissions = user.permissions ? user.permissions.map(p => p.name) : [];
+
         setUserForm({
             id: user.id,
             name: user.name,
-            email: user.email,
+            account_number: user.account_number || '',
+            email: user.email || '',
             role: userRole,
             status: user.status,
             password: '',
             password_confirmation: '',
+            permissions: userPermissions,
         });
         setFormErrors({});
         setAppModalOpen(true);
@@ -287,6 +304,7 @@ export default function Users() {
                                 <TableHeader className="border-0">
                                     <TableRow className="bg-table-head hover:bg-table-head border-0">
                                         <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head first:rounded-tl-sm">Name</TableHead>
+                                        <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Employee Number</TableHead>
                                         <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Email</TableHead>
                                         <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Role</TableHead>
                                         <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Status</TableHead>
@@ -304,7 +322,8 @@ export default function Users() {
                                         users.map((user) => (
                                             <TableRow key={user.id}>
                                                 <TableCell className="font-medium px-4">{user.name}</TableCell>
-                                                <TableCell className="px-4">{user.email}</TableCell>
+                                                <TableCell className="px-4 whitespace-nowrap">{user.account_number}</TableCell>
+                                                <TableCell className="px-4">{user.email || <span className="text-muted-foreground italic">None</span>}</TableCell>
                                                 <TableCell className="px-4">
                                                     <span className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700">
                                                         {user.roles?.map((role) => role.name).join(', ') || 'No role'}
@@ -362,6 +381,8 @@ export default function Users() {
                     formErrors={formErrors}
                     onSubmit={handleSaveUser}
                     onFormChange={(field, value) => setUserForm({ ...userForm, [field]: value })}
+                    availableRoles={roles || []}
+                    availablePermissions={permissions || []}
                 />
 
             </div>

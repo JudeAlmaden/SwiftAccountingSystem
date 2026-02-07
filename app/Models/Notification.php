@@ -18,4 +18,11 @@ class Notification extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    protected static function booted()
+    {
+        static::created(function ($notification) {
+            broadcast(new \App\Events\NotificationCreated($notification));
+        });
+    }
 }

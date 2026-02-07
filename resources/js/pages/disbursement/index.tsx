@@ -44,13 +44,13 @@ interface Disbursement {
 
 export default function Disbursements() {
     const { user } = usePage<SharedData>().props;
-    const canGenerate = user?.roles?.some(role => 
-        ['admin', 'accounting assistant'].includes(typeof role === 'string' ? role.toLowerCase() : role)
-    );
+    const permissions = user.permissions || [];
+    const canCreate = permissions.includes('create disbursements');
+    const canView = permissions.includes('view disbursements');
 
     const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
     const token = meta?.content || '';
- 
+
     const [disbursements, setDisbursements] = useState<Disbursement[]>([]);
     const [pagination, setPagination] = useState({
         current_page: 1,
@@ -78,7 +78,7 @@ export default function Disbursements() {
 
     const fetchDisbursements = (url?: string | null) => {
         setIsLoading(true);
-       
+
         const targetUrl = new URL(url || route('disbursements.index'));
 
         if (searchQuery) {
@@ -191,7 +191,7 @@ export default function Disbursements() {
                         <h2 className="text-3xl text-header">Disbursements</h2>
                         <p className="text-muted-foreground">Manage and track all disbursement requests.</p>
                     </div>
-                    {canGenerate && (
+                    {canCreate && (
                         <div className="flex gap-2">
                             <Button asChild>
                                 <Link href={route('disbursement.generate')}>
@@ -297,15 +297,15 @@ export default function Disbursements() {
                 </div>
 
                 <div className="rounded-sm border bg-card overflow-hidden py-0 pb-6">
-                    <Table>
+                    <Table className="table-fixed w-full">
                         <TableHeader className="border-0">
                             <TableRow className="bg-table-head hover:bg-table-head border-0">
-                                <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head first:rounded-tl-sm">Control Number</TableHead>
-                                <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Title</TableHead>
-                                <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Description</TableHead>
-                                <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Status</TableHead>
-                                <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Date Created</TableHead>
-                                <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head text-right last:rounded-tr-sm">Actions</TableHead>
+                                <TableHead className="w-[15%] px-4 py-5 text-white text-base font-extrabold bg-table-head first:rounded-tl-sm">Control Number</TableHead>
+                                <TableHead className="w-[20%] px-4 py-5 text-white text-base font-extrabold bg-table-head">Title</TableHead>
+                                <TableHead className="w-[30%] px-4 py-5 text-white text-base font-extrabold bg-table-head">Description</TableHead>
+                                <TableHead className="w-[10%] px-4 py-5 text-white text-base font-extrabold bg-table-head">Status</TableHead>
+                                <TableHead className="w-[15%] px-4 py-5 text-white text-base font-extrabold bg-table-head">Date Created</TableHead>
+                                <TableHead className="w-[10%] px-4 py-5 text-white text-base font-extrabold bg-table-head text-right last:rounded-tr-sm">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -322,30 +322,35 @@ export default function Disbursements() {
                             ) : (
                                 disbursements.map((disbursement) => (
                                     <TableRow key={disbursement.id} className="h-16">
-                                        <TableCell className="font-medium px-4">{disbursement.control_number}</TableCell>
-                                        <TableCell className="px-4">{disbursement.title}</TableCell>
-                                        <TableCell className="text-muted-foreground max-w-xs truncate px-4">
+                                        <TableCell className="font-medium px-4 truncate" title={disbursement.control_number}>
+                                            {disbursement.control_number}
+                                        </TableCell>
+                                        <TableCell className="px-4 truncate" title={disbursement.title}>
+                                            {disbursement.title}
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground px-4 truncate" title={disbursement.description}>
                                             {disbursement.description}
                                         </TableCell>
                                         <TableCell className="px-4">
-                                            <span 
-                                                className={`inline-flex items-center justify-center rounded-full border px-3 py-0.5 text-xs font-semibold ${
-                                                    disbursement.status.toLowerCase() === 'approved' 
-                                                        ? 'bg-green-100 text-green-700 border-green-200' 
-                                                        : disbursement.status.toLowerCase() === 'pending'
+                                            <span
+                                                className={`inline-flex items-center justify-center rounded-full border px-3 py-0.5 text-xs font-semibold ${disbursement.status.toLowerCase() === 'approved'
+                                                    ? 'bg-green-100 text-green-700 border-green-200'
+                                                    : disbursement.status.toLowerCase() === 'pending'
                                                         ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
                                                         : 'bg-red-100 text-red-700 border-red-200'
-                                                }`}
+                                                    }`}
                                             >
                                                 {disbursement.status}
                                             </span>
                                         </TableCell>
                                         <TableCell className="px-4">{formatDate(disbursement.created_at)}</TableCell>
                                         <TableCell className="text-right px-4">
-                                            <div className="flex justify-end gap-2">
-                                                <Link href={route('disbursement.view', disbursement.id)}>
-                                                    View
-                                                </Link>
+                                            <div className="flex justify-end gap-2 text-center">
+                                                {canView && (
+                                                    <Link href={route('disbursement.view', disbursement.id)}>
+                                                        View
+                                                    </Link>
+                                                )}
                                             </div>
                                         </TableCell>
                                     </TableRow>

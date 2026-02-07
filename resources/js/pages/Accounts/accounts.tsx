@@ -1,6 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
-import type { BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import type { BreadcrumbItem, SharedData } from '@/types';
+import { Head, usePage } from '@inertiajs/react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -31,6 +31,11 @@ export default function ChartOfAccounts() {
     // Since we are using fetch, we need to pass the CSRF token.
     const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
     const token = meta?.content || '';
+    const { user } = usePage<SharedData>().props;
+    const permissions = user.permissions || [];
+
+    const canCreate = permissions.includes('create accounts');
+    const canDelete = permissions.includes('delete accounts');
 
     // State for accounts (paginated data)
     const [accounts, setAccounts] = useState<Account[]>([]);
@@ -227,94 +232,106 @@ export default function ChartOfAccounts() {
                         className="max-w-lg rounded-sm border-gray-300 border-[1.7px] bg-white pl-9"
                     />
 
-                    <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                        <DialogTrigger asChild>
-                            <Button>Add Account</Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader className='gap-1'>
-                                <DialogTitle className='text-2xl text-table-head pt-1'>Create New Account</DialogTitle>
-                                <DialogDescription className='text-sm'>
-                                    Add a new account to your chart of account
-                                </DialogDescription>
-                            </DialogHeader>
-                            <DottedSeparator className='mb-2'/>
-                            <form onSubmit={handleCreateSubmit} className="space-y-6">
-                                <div className="grid gap-2">
-                                    <Label htmlFor="account_name">Account Name</Label>
-                                    <Input
-                                        id="account_name"
-                                        value={createForm.account_name}
-                                        onChange={e => setCreateForm({ ...createForm, account_name: e.target.value })}
-                                        placeholder="e.g. Cash on Hand"
-                                        required
-                                        className='border-gray-300 border-[1.7px] rounded-sm'
-                                    />
-                                    {createErrors.account_name && <p className="text-red-500 text-sm">{createErrors.account_name[0]}</p>}
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="account_code">Account Code</Label>
-                                    <Input
-                                        id="account_code"
-                                        value={createForm.account_code}
-                                        onChange={e => setCreateForm({ ...createForm, account_code: e.target.value })}
-                                        placeholder="e.g. 1001"
-                                        required
-                                        className='border-gray-300 border-[1.7px] rounded-sm'
-                                    />
-                                    {createErrors.account_code && <p className="text-red-500 text-sm">{createErrors.account_code[0]}</p>}
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="account_type">Account Type</Label>
-                                    <Input
-                                        id="account_type"
-                                        value={createForm.account_type}
-                                        onChange={e => setCreateForm({ ...createForm, account_type: e.target.value })}
-                                        placeholder="e.g. Asset"
-                                        required
-                                        className='border-gray-300 border-[1.7px] rounded-sm'
-                                    />
-                                    {createErrors.account_type && <p className="text-red-500 text-sm">{createErrors.account_type[0]}</p>}
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="account_normal_side">Normal Side</Label>
-                                    <Select
-                                        value={createForm.account_normal_side}
-                                        onValueChange={(value) =>
-                                            setCreateForm({ ...createForm, account_normal_side: value })
-                                        }
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="e.g. Debit" />
-                                        </SelectTrigger>
+                    {canCreate && (
+                        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                            <DialogTrigger asChild>
+                                <Button>Add Account</Button>
+                            </DialogTrigger>
+                            <DialogContent>
 
-                                        <SelectContent className='border-gray-300 border-[1.7px] rounded-sm'>
-                                            <SelectItem value="debit">Debit</SelectItem>
-                                            <SelectItem value="credit">Credit</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                <DialogHeader className='gap-1'>
+                                    <DialogTitle className='text-2xl text-table-head pt-1'>Create New Account</DialogTitle>
+                                    <DialogDescription className='text-sm'>
+                                        Add a new account to your chart of account
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <DottedSeparator className='mb-2' />
+                                <form onSubmit={handleCreateSubmit} className="space-y-6">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="account_name">Account Name</Label>
+                                        <Input
+                                            id="account_name"
+                                            value={createForm.account_name}
+                                            onChange={e => setCreateForm({ ...createForm, account_name: e.target.value })}
+                                            placeholder="e.g. Cash on Hand"
+                                            required
+                                            className='border-gray-300 border-[1.7px] rounded-sm'
+                                        />
+                                        {createErrors.account_name && <p className="text-red-500 text-sm">{createErrors.account_name[0]}</p>}
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="account_code">Account Code</Label>
+                                        <Input
+                                            id="account_code"
+                                            value={createForm.account_code}
+                                            onChange={e => setCreateForm({ ...createForm, account_code: e.target.value })}
+                                            placeholder="e.g. 1001"
+                                            required
+                                            className='border-gray-300 border-[1.7px] rounded-sm'
+                                        />
+                                        {createErrors.account_code && <p className="text-red-500 text-sm">{createErrors.account_code[0]}</p>}
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="account_type">Account Type</Label>
+                                        <Select
+                                            value={createForm.account_type}
+                                            onValueChange={(value) =>
+                                                setCreateForm({ ...createForm, account_type: value })
+                                            }
+                                        >
+                                            <SelectTrigger className='border-gray-300 border-[1.7px] rounded-sm'>
+                                                <SelectValue placeholder="e.g. Assets" />
+                                            </SelectTrigger>
+                                            <SelectContent className='border-gray-300 border-[1.7px] rounded-sm'>
+                                                <SelectItem value="Assets">Assets</SelectItem>
+                                                <SelectItem value="Liabilities">Liabilities</SelectItem>
+                                                <SelectItem value="Equity">Equity</SelectItem>
+                                                <SelectItem value="Revenue">Revenue</SelectItem>
+                                                <SelectItem value="Expenses">Expenses</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {createErrors.account_type && <p className="text-red-500 text-sm">{createErrors.account_type[0]}</p>}
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="account_normal_side">Normal Side</Label>
+                                        <Select
+                                            value={createForm.account_normal_side}
+                                            onValueChange={(value) =>
+                                                setCreateForm({ ...createForm, account_normal_side: value })
+                                            }
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="e.g. Debit" />
+                                            </SelectTrigger>
 
-                                    {createErrors.account_normal_side && <p className="text-red-500 text-sm">{createErrors.account_normal_side[0]}</p>}
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="account_description">Description (Optional)</Label>
-                                    <Input
-                                        id="account_description"
-                                        value={createForm.account_description}
-                                        onChange={e => setCreateForm({ ...createForm, account_description: e.target.value })}
-                                        placeholder="Brief description"
-                                        className='border-gray-300 border-[1.7px] rounded-sm'
-                                    />
-                                </div>
-                                <DialogFooter>
-                                    <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
-                                    <Button type="submit" disabled={isCreating}>
-                                        {isCreating ? 'Saving...' : 'Save Account'}
-                                    </Button>
-                                </DialogFooter>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
+                                            <SelectContent className='border-gray-300 border-[1.7px] rounded-sm'>
+                                                <SelectItem value="debit">Debit</SelectItem>
+                                                <SelectItem value="credit">Credit</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+
+                                        {createErrors.account_normal_side && <p className="text-red-500 text-sm">{createErrors.account_normal_side[0]}</p>}
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="account_description">Description (Optional)</Label>
+                                        <Input
+                                            id="account_description"
+                                            value={createForm.account_description}
+                                            onChange={e => setCreateForm({ ...createForm, account_description: e.target.value })}
+                                            placeholder="Brief description"
+                                            className='border-gray-300 border-[1.7px] rounded-sm'
+                                        />
+                                    </div>
+                                    <DialogFooter>
+                                        <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
+                                        <Button type="submit" disabled={isCreating}>
+                                            {isCreating ? 'Saving...' : 'Save Account'}
+                                        </Button>
+                                    </DialogFooter>
+                                </form>
+                            </DialogContent>
+                        </Dialog>
+                    )}
                 </div>
 
                 <div className="rounded-sm border bg-card overflow-hidden py-0 pb-6">
@@ -362,14 +379,16 @@ export default function ChartOfAccounts() {
                                                     <Check className="size-5 text-green-600 opacity-50" />
                                                 </div>
                                             ) : (
-                                                <Button
-                                                    variant="destructive"
-                                                    size="icon"
-                                                    onClick={() => confirmDelete(account)}
-                                                    title="Delete account"
-                                                >
-                                                    <Trash2 className="size-4" />
-                                                </Button>
+                                                canDelete && (
+                                                    <Button
+                                                        variant="destructive"
+                                                        size="icon"
+                                                        onClick={() => confirmDelete(account)}
+                                                        title="Delete account"
+                                                    >
+                                                        <Trash2 className="size-4" />
+                                                    </Button>
+                                                )
                                             )}
                                         </TableCell>
                                     </TableRow>

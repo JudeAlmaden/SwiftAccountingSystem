@@ -28,99 +28,99 @@ export function DisbursementStatusTracking({ currentStep = 1, tracking = [] }: S
     };
 
     return (
-        <Card className="border-border bg-card p-4">
-            <div className="mb-3">
-                <h3 className="text-base font-semibold text-foreground">Status Tracking</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Approval workflow progress</p>
+        <Card className="border-border bg-card p-5 shadow-sm">
+            <div className="mb-4">
+                <h3 className="text-lg font-bold text-header">Approval Workflow</h3>
+                <p className="text-xs text-[#737385]">Current progress and history</p>
             </div>
-             <DottedSeparator className='-mt-5'/>
-            <div className="relative">
-                <div className="absolute left-2.5 top-0 bottom-0 w-0.5 bg-border"></div>
 
-                <div className="space-y-5">
+            <DottedSeparator className='-mt-2 mb-6' />
+
+            <div className="relative">
+                {/* Vertical Line */}
+                <div className="absolute left-[11px] top-1 bottom-1 w-[2px] bg-muted"></div>
+
+                <div className="space-y-6">
                     {steps.map((step, index) => {
                         const stepNum = index + 1;
                         const trackingInfo = tracking.find(t => t.step === stepNum);
                         const isCompleted = trackingInfo?.action === 'approved';
-                        const isPending = trackingInfo?.action === 'pending' || (currentStep === stepNum && !trackingInfo);
+                        const isPending = currentStep === stepNum && (!trackingInfo || trackingInfo.action === 'pending');
                         const isRejected = trackingInfo?.action === 'rejected';
-                        
-                        let circleClass = 'bg-gray-200';
+                        const isFuture = currentStep < stepNum;
+
+                        let circleClass = 'bg-muted border-muted';
                         let textColor = 'text-muted-foreground';
-                        let statusText = 'Awaiting';
-                        let dotClass = 'bg-gray-400';
+                        let statusText = 'Pending';
+                        let icon = null;
 
                         if (isCompleted) {
-                            circleClass = 'bg-green-500';
+                            circleClass = 'bg-green-500 border-green-500 shadow-green-100 shadow-lg';
                             textColor = 'text-foreground';
-                            statusText = `Approved by ${trackingInfo?.handler?.name || 'System'}`;
+                            statusText = trackingInfo?.handler?.name || 'Approved';
+                            icon = (
+                                <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                            );
                         } else if (isRejected) {
-                            circleClass = 'bg-destructive';
+                            circleClass = 'bg-destructive border-destructive shadow-destructive/20 shadow-lg';
                             textColor = 'text-destructive';
                             statusText = `Rejected by ${trackingInfo?.handler?.name || 'System'}`;
+                            icon = (
+                                <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            );
                         } else if (isPending) {
-                            circleClass = 'bg-yellow-500';
+                            circleClass = 'bg-white border-primary border-2 shadow-primary/20 shadow-lg';
                             textColor = 'text-foreground';
-                            statusText = 'Pending approval';
-                            dotClass = 'bg-white';
+                            statusText = 'Waiting for Action';
+                            icon = <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse"></div>;
+                        } else if (isFuture) {
+                            circleClass = 'bg-muted/50 border-muted';
+                            textColor = 'text-muted-foreground/50';
+                            statusText = 'Next Step';
+                            icon = null;
                         }
 
                         return (
-                            <div key={step.role} className="flex items-start gap-3 relative">
-                                <div className={`relative flex h-5 w-5 shrink-0 items-center justify-center rounded-full z-10 ${circleClass}`}>
+                            <div key={step.role} className="flex items-start gap-4 relative">
+                                <div className={`relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full z-10 border transition-all duration-300 ${circleClass}`}>
                                     {isPending && (
-                                        <div className="absolute inset-0 rounded-full bg-yellow-500 opacity-75 animate-[ping_2s_ease-in-out_infinite]"></div>
+                                        <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping"></div>
                                     )}
-                                    {isCompleted ? (
-                                        <svg
-                                            className="relative h-2.5 w-2.5 text-white"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            strokeWidth={3}
-                                        >
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                        </svg>
-                                    ) : isRejected ? (
-                                        <svg
-                                            className="relative h-2.5 w-2.5 text-white"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            strokeWidth={3}
-                                        >
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    ) : (
-                                        <div className={`h-1.5 w-1.5 rounded-full ${dotClass}`}></div>
-                                    )}
+                                    {icon}
                                 </div>
-                                <div className="flex-1">
-                                    <p className={`text-sm font-medium ${textColor}`}>
-                                        {step.name}
-                                    </p>
-                                    <p className="text-[11px] text-muted-foreground/70 font-medium mt-0.5">
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex justify-between items-start gap-2">
+                                        <p className={`text-sm font-bold tracking-tight ${textColor}`}>
+                                            {step.name}
+                                        </p>
+                                        {trackingInfo?.acted_at && (
+                                            <span className="text-[10px] text-muted-foreground whitespace-nowrap mt-0.5 font-medium">
+                                                {formatDate(trackingInfo.acted_at)}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className={`text-[11px] font-medium truncate ${isCompleted ? 'text-green-600' : isRejected ? 'text-destructive' : 'text-muted-foreground'}`}>
                                         {statusText}
                                     </p>
-                                    {trackingInfo?.acted_at && (
-                                        <p className="text-[11px] text-muted-foreground/70">
-                                            {formatDate(trackingInfo.acted_at)}
-                                        </p>
-                                    )}
+
                                     {trackingInfo?.remarks && (
-                                        <div className="mt-1">
+                                        <div className="mt-2">
                                             <button
                                                 onClick={() => {
-                                                    setExpandedRemarks(prev => 
-                                                        prev.includes(stepNum) 
+                                                    setExpandedRemarks(prev =>
+                                                        prev.includes(stepNum)
                                                             ? prev.filter(s => s !== stepNum)
                                                             : [...prev, stepNum]
                                                     );
                                                 }}
-                                                className="flex items-center gap-1 text-[12px] text-green-700 transition-colors"
+                                                className="flex items-center gap-1.5 text-[11px] font-semibold text-primary/80 hover:text-primary transition-colors bg-primary/5 px-2 py-0.5 rounded-full"
                                             >
                                                 <svg
-                                                    className={`h-3 w-3 transition-transform ${expandedRemarks.includes(stepNum) ? 'rotate-180' : ''}`}
+                                                    className={`h-3 w-3 transition-transform duration-200 ${expandedRemarks.includes(stepNum) ? 'rotate-180' : ''}`}
                                                     fill="none"
                                                     viewBox="0 0 24 24"
                                                     stroke="currentColor"
@@ -128,10 +128,10 @@ export function DisbursementStatusTracking({ currentStep = 1, tracking = [] }: S
                                                 >
                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                                                 </svg>
-                                                <span>View remarks</span>
+                                                <span>View Remarks</span>
                                             </button>
                                             {expandedRemarks.includes(stepNum) && (
-                                                <p className="text-xs text-muted-foreground italic mt-1 bg-muted/50 p-1.5 rounded border-l-2 border-border">
+                                                <p className="text-[11px] text-foreground/80 italic mt-2 bg-muted/30 p-2 rounded-md border-l-2 border-primary/30 leading-relaxed shadow-sm">
                                                     "{trackingInfo.remarks}"
                                                 </p>
                                             )}

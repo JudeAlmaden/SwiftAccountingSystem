@@ -1,7 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { DatePicker } from '@/components/ui/date-picker';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router } from '@inertiajs/react';
 import { route } from 'ziggy-js';
@@ -9,6 +16,13 @@ import type { BreadcrumbItem } from '@/types';
 import AccountingEntryTable from '@/components/accounting-entry-table';
 import { DisbursementAttachment } from './components/DisbursementAttachment';
 import { DottedSeparator } from '@/components/dotted-line';
+
+interface ControlNumberPrefixOption {
+    id: number;
+    code: string;
+    label: string | null;
+    sort_order: number;
+}
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -30,8 +44,11 @@ export default function GenerateDisbursement() {
     const [title, setTitle] = useState('');
     const [date, setDate] = useState(today);
     const [description, setDescription] = useState('');
+    const [recommendedBy, setRecommendedBy] = useState('');
     const [disbursementData, setDisbursementData] = useState<any>(null);
     const [attachments, setAttachments] = useState<string[]>([]);
+    const [prefixes, setPrefixes] = useState<ControlNumberPrefixOption[]>([]);
+    const [controlNumberPrefixId, setControlNumberPrefixId] = useState<string>('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errors, setErrors] = useState<Record<string, string[]>>({});
 
@@ -42,8 +59,35 @@ export default function GenerateDisbursement() {
     const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
     const token = meta?.content || '';
 
+    useEffect(() => {
+        fetch('/api/control-number-prefixes', {
+            headers: { Accept: 'application/json' },
+            credentials: 'include',
+        })
+            .then((res) => res.ok ? res.json() : Promise.reject(new Error('Failed to load prefixes')))
+            .then((data) => {
+                const list = data.data || [];
+                setPrefixes(list);
+                if (list.length > 0 && !controlNumberPrefixId) {
+                    setControlNumberPrefixId(String(list[0].id));
+                }
+            })
+            .catch(console.error);
+    }, []);
+
+    // When prefixes load, select first if none selected
+    useEffect(() => {
+        if (prefixes.length > 0 && !controlNumberPrefixId) {
+            setControlNumberPrefixId(String(prefixes[0].id));
+        }
+    }, [prefixes, controlNumberPrefixId]);
+
     const handleSave = () => {
         if (!disbursementData) return;
+        if (!controlNumberPrefixId) {
+            setErrors({ control_number_prefix_id: ['Please select a control number prefix.'] });
+            return;
+        }
         setIsSubmitting(true);
         setErrors({});
 
@@ -53,6 +97,8 @@ export default function GenerateDisbursement() {
         formData.append('title', disbursementData.title);
         formData.append('date', disbursementData.date);
         formData.append('description', disbursementData.description);
+        formData.append('recommended_by', disbursementData.recommended_by || '');
+        formData.append('control_number_prefix_id', controlNumberPrefixId);
 
         // Append accounting entries
         formData.append('accounts', JSON.stringify(disbursementData.accounts));
@@ -104,7 +150,26 @@ export default function GenerateDisbursement() {
                 <div className="space-y-6">
                     <Card>
                         <div className="px-10 py-2">
-                           <div className="grid gap-10 md:grid-cols-2">
+                            <div className="grid gap-10 md:grid-cols-2">
+                                <div>
+                                    <label htmlFor="prefix" className="text-sm font-medium text-foreground mb-2 flex items-center gap-1">
+                                        Control number prefix
+                                        <span className="text-destructive text-xs">*</span>
+                                    </label>
+                                    <Select value={controlNumberPrefixId} onValueChange={setControlNumberPrefixId}>
+                                        <SelectTrigger id="prefix" className={`max-w-[200px] border-gray-400 border-[1.6px] ${errors.control_number_prefix_id ? 'border-destructive' : ''}`}>
+                                            <SelectValue placeholder="Select prefix" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {prefixes.map((p) => (
+                                                <SelectItem key={p.id} value={String(p.id)}>
+                                                    {p.code} {p.label ? `– ${p.label}` : ''}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {errors.control_number_prefix_id && <p className="text-[10px] text-destructive mt-1 font-medium">{errors.control_number_prefix_id[0]}</p>}
+                                </div>
                                 <div>
                                     <label htmlFor="title" className="text-sm font-medium text-foreground mb-2 flex items-center gap-1">
                                         Title
@@ -125,9 +190,8 @@ export default function GenerateDisbursement() {
                                             className={`bg-background border-gray-400 border-[1.6px] focus-visible:ring-primary pr-14 ${errors.title ? 'border-destructive' : ''}`}
                                         />
                                         {title.length > 0 && (
-                                            <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium transition-all duration-200 animate-in fade-in ${
-                                                title.length >= TITLE_MAX_LENGTH - 10 ? 'text-red-500' : 'text-muted-foreground'
-                                            }`}>
+                                            <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium transition-all duration-200 animate-in fade-in ${title.length >= TITLE_MAX_LENGTH - 10 ? 'text-red-500' : 'text-muted-foreground'
+                                                }`}>
                                                 {title.length}/{TITLE_MAX_LENGTH}
                                             </span>
                                         )}
@@ -168,14 +232,29 @@ export default function GenerateDisbursement() {
                                         className={`bg-background focus-visible:ring-primary shadow-sm pr-14 ${errors.description ? 'border-destructive' : ''}  border-gray-400 border-[1.6px]`}
                                     />
                                     {description.length > 0 && (
-                                        <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium transition-all duration-200 animate-in fade-in ${
-                                            description.length >= DESCRIPTION_MAX_LENGTH - 10 ? 'text-red-500' : 'text-muted-foreground'
-                                        }`}>
+                                        <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium transition-all duration-200 animate-in fade-in ${description.length >= DESCRIPTION_MAX_LENGTH - 10 ? 'text-red-500' : 'text-muted-foreground'
+                                            }`}>
                                             {description.length}/{DESCRIPTION_MAX_LENGTH}
                                         </span>
                                     )}
                                 </div>
                                 {errors.description && <p className="text-[10px] text-destructive mt-1 font-medium">{errors.description[0]}</p>}
+                            </div>
+                            <div className="mt-4">
+                                <label htmlFor="recommended_by" className="text-sm font-medium text-foreground mb-2 flex items-center gap-1">
+                                    Recommended By
+                                    <span className="text-muted-foreground text-[10px] font-normal italic ml-1">(Optional)</span>
+                                </label>
+                                <div className="relative">
+                                    <Input
+                                        id="recommended_by"
+                                        value={recommendedBy}
+                                        onChange={(e) => setRecommendedBy(e.target.value)}
+                                        placeholder="Name of the person recommending this disbursement..."
+                                        className={`bg-background focus-visible:ring-primary shadow-sm border-gray-400 border-[1.6px] ${errors.recommended_by ? 'border-destructive' : ''}`}
+                                    />
+                                </div>
+                                {errors.recommended_by && <p className="text-[10px] text-destructive mt-1 font-medium">{errors.recommended_by[0]}</p>}
                             </div>
                         </div>
                     </Card>
@@ -184,9 +263,11 @@ export default function GenerateDisbursement() {
                         title={title}
                         date={date}
                         description={description}
+                        recommended_by={recommendedBy}
                         onTitleChange={setTitle}
                         onDateChange={setDate}
                         onDescriptionChange={setDescription}
+                        onRecommendedByChange={setRecommendedBy}
                         onDataChange={setDisbursementData}
                         onSave={handleSave}
                         onCancel={handleCancel}

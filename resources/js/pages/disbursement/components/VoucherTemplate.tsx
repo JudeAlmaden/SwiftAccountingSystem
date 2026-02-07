@@ -148,9 +148,18 @@ export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
                 {/* Footer Signature Lines */}
                 <div style={{ fontSize: '10px', marginTop: '16px' }}>
                     {[
-                        ['PREPARED BY', 'APPROVED BY'],
-                        ['CHECKED BY', 'PAID BY'],
-                        ['RECOMMENDED BY', 'RECEIVED BY'],
+                        [
+                            { label: 'PREPARED BY', step: 1 },
+                            { label: 'APPROVED BY', step: 2 }
+                        ],
+                        [
+                            { label: 'CHECKED BY', step: 3 },
+                            { label: 'PAID BY', step: 4 }
+                        ],
+                        [
+                            { label: 'RECOMMENDED BY', step: null },
+                            { label: 'RECEIVED BY', step: null }
+                        ],
                     ].map((row, i) => (
                         <div
                             key={i}
@@ -161,29 +170,43 @@ export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
                                 marginBottom: i < 2 ? '12px' : 0,
                             }}
                         >
-                            {row.map(label => (
-                                <div
-                                    key={label}
-                                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                                >
-                                    <p
-                                        style={{
-                                            fontWeight: 'bold',
-                                            color: '#1f2937',
-                                            whiteSpace: 'nowrap',
-                                        }}
-                                    >
-                                        {label}
-                                    </p>
+                            {row.map(({ label, step }) => {
+                                const trackingInfo = step ? disbursement.tracking?.find(t => t.step === step && t.action === 'approved') : null;
+                                const actorName = trackingInfo?.handler?.name || '';
+
+                                return (
                                     <div
-                                        style={{
-                                            borderBottom: '1px dotted black',
-                                            flex: 1,
-                                            height: '14px',
-                                        }}
-                                    />
-                                </div>
-                            ))}
+                                        key={label}
+                                        style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                                            <p
+                                                style={{
+                                                    fontWeight: 'bold',
+                                                    color: '#1f2937',
+                                                    whiteSpace: 'nowrap',
+                                                    minWidth: '100px'
+                                                }}
+                                            >
+                                                {label}
+                                            </p>
+                                            <div
+                                                style={{
+                                                    borderBottom: '1px dotted black',
+                                                    flex: 1,
+                                                    display: 'flex',
+                                                    justifyContent: 'center',
+                                                    paddingBottom: '1px'
+                                                }}
+                                            >
+                                                <span className="font-bold text-[10px] uppercase">
+                                                    {actorName}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     ))}
                 </div>
