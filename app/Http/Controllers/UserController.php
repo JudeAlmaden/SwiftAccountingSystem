@@ -40,14 +40,38 @@ class UserController extends Controller
         ]);
     }
 
-    /**
-     * Display the main Users page (Inertia View).
-     */
+
     function indexPage()
     {
+        $totalUsers = User::count();
+        $activeUsers = User::where('status', 'active')->count();
+        $inactiveUsers = User::where('status', 'inactive')->count();
+        $adminUsers = User::role('admin')->count();
+        
+        $accountingHead = User::role('accounting head')->where('status', 'active')->get();
+        $svp = User::role('svp')->where('status', 'active')->get();
+        $auditor = User::role('auditor')->where('status', 'active')->get();
+        
+        $specialUsers = [
+            'accounting_head' => $accountingHead,
+            'svp' => $svp,
+            'auditor' => $auditor,
+        ];
+
+        // Get initial users list
+        $users = User::with('roles')->paginate(10);
+
         return Inertia::render('admin/users', [
             'roles' => Role::all(),
             'permissions' => Permission::all(),
+            'stats' => [
+                'total_users' => $totalUsers,
+                'active_users' => $activeUsers,
+                'inactive_users' => $inactiveUsers,
+                'admin_users' => $adminUsers,
+            ],
+            'specialUsers' => $specialUsers,
+            'initialUsers' => $users,
         ]);
     }
 
@@ -207,9 +231,9 @@ class UserController extends Controller
                 'string',
                 Rule::exists('roles', 'name')
                     ->where(fn ($q) => $q->where('guard_name', 'web')),
-                function ($attribute, $value, $fail) use ($user) {
-                   $userToEdit = User::find(request()->id);
-                    if ($value === 'admin' && $userToEdit->id !== auth()->id()) {
+                function ($attribute, $value, $fail) use ($request) {
+                    $userToEdit = User::find($request->input('id'));
+                    if ($value === 'admin' && $userToEdit && $userToEdit->id !== auth()->id()) {
                         $fail('Cannot assign admin role to other users.');
                     }
                 },

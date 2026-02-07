@@ -171,14 +171,16 @@ export default function View() {
         if (!element) return;
 
         const opt = {
-            margin: 0,
+            margin: [5, 5, 5, 5],
             filename: `Voucher_${disbursement?.control_number}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: {
-                scale: 2,
+                scale: 1.8,
                 useCORS: true,
                 backgroundColor: '#ffffff',
                 foreignObjectRendering: false,
+                windowWidth: 794,
+                windowHeight: 1123,
                 onclone: (doc: Document) => {
                     const style = doc.createElement("style");
                     style.innerHTML = `

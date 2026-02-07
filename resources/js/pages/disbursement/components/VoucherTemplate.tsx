@@ -26,26 +26,30 @@ export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
 
     return (
         <div id="voucher-paper" className="bg-white text-black w-full max-w-[210mm] min-h-[297mm] mx-auto shadow-2xl" style={{ fontFamily: 'Times New Roman, serif' }}>
-            <div className="px-[1.5cm] sm:px-[2.5cm] py-[1cm] pb-[2.5cm] min-h-[297mm] flex flex-col font-serif">
+            <div className="px-[0.8cm] py-[0.8cm] pb-[2cm] min-h-[297mm] flex flex-col font-serif">
                 {/* Header */}
                 <div className="text-center mb-0">
                     <img src="/Sacli/Format_3.jpg" alt="ST. ANNE COLLEGE LUCENA, INC." className="w-full max-w-[400px] mx-auto mb-2" />
-                    <h2 style={{ fontSize: '18px', fontWeight: 'bold', letterSpacing: '0.05em', marginTop: '8px' }}>CHECK VOUCHER</h2>
+                    <h2 style={{ fontSize: '20px', fontWeight: 'bold', letterSpacing: '0.05em', marginTop: '8px', marginBottom: '4px' }}>CHECK VOUCHER</h2>
                 </div>
 
                 {/* Top Right Info - NO and DATE */}
-                <div className="flex justify-end mb-1 text-[10px]" style={{ gap: '20px' }}>
+                <div className="flex justify-end mb-1" style={{ gap: '20px', fontSize: '11px' }}>
                     <div style={{ textAlign: 'left', minWidth: '180px' }}>
-                        <div style={{ display: 'flex', alignItems: 'baseline', marginBottom: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', marginBottom: '6px' }}>
                             <span className="font-bold" style={{ marginRight: '15px', minWidth: '40px' }}>NO.</span>
-                            <span style={{ borderBottom: '1px dotted black', flex: 1, paddingBottom: '2px' }}>
-                                {disbursement.control_number?.split('-').pop()}
+                            <span style={{ borderBottom: '1px dotted black', flex: 1, paddingBottom: '4px', display: 'flex', alignItems: 'flex-end', minHeight: '20px' }}>
+                                <span style={{ paddingBottom: '2px' }}>
+                                    {disbursement.control_number?.split('-').pop()}
+                                </span>
                             </span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'baseline' }}>
                             <span className="font-bold" style={{ marginRight: '15px', minWidth: '40px' }}>DATE</span>
-                            <span style={{ borderBottom: '1px dotted black', flex: 1, paddingBottom: '2px' }}>
-                                {formatDate(disbursement.created_at)}
+                            <span style={{ borderBottom: '1px dotted black', flex: 1, paddingBottom: '4px', display: 'flex', alignItems: 'flex-end', minHeight: '20px' }}>
+                                <span style={{ paddingBottom: '2px' }}>
+                                    {formatDate(disbursement.created_at)}
+                                </span>
                             </span>
                         </div>
                     </div>
@@ -56,19 +60,19 @@ export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
                     <table className="w-full border-collapse flex-grow" style={{ borderCollapse: 'collapse' }}>
                         <thead>
                             <tr>
-                                <th className="p-0.5 text-center text-[10px] font-bold w-24" style={{ borderRight: '1px solid black', borderTop: '2px solid black', borderBottom: '2px solid black' }}>
+                                <th style={{ borderRight: '1px solid black', borderTop: '2px solid black', borderBottom: '2px solid black', padding: '6px 4px', fontSize: '11px', fontWeight: 'bold', textAlign: 'center', width: '96px' }}>
                                     ACCOUNT NO.
                                 </th>
-                                <th className="p-0.5 text-center text-[10px] font-bold flex-1" style={{ borderRight: '1px solid black', borderTop: '2px solid black', borderBottom: '2px solid black' }}>
+                                <th style={{ borderRight: '1px solid black', borderTop: '2px solid black', borderBottom: '2px solid black', padding: '6px 4px', fontSize: '11px', fontWeight: 'bold', textAlign: 'center' }}>
                                     PARTICULARS
                                 </th>
-                                <th className="p-0.5 text-center text-[10px] font-bold w-8" style={{ borderRight: '1px solid black', borderTop: '2px solid black', borderBottom: '2px solid black' }}>
+                                <th style={{ borderRight: '1px solid black', borderTop: '2px solid black', borderBottom: '2px solid black', padding: '6px 4px', fontSize: '11px', fontWeight: 'bold', textAlign: 'center', width: '32px' }}>
                                     REF.
                                 </th>
-                                <th className="p-0.5 text-center text-[10px] font-bold w-24" style={{ borderRight: '1px solid black', borderTop: '2px solid black', borderBottom: '2px solid black' }}>
+                                <th style={{ borderRight: '1px solid black', borderTop: '2px solid black', borderBottom: '2px solid black', padding: '6px 4px', fontSize: '11px', fontWeight: 'bold', textAlign: 'center', width: '96px' }}>
                                     DEBIT
                                 </th>
-                                <th className="p-0.5 text-center text-[10px] font-bold w-24" style={{ borderTop: '2px solid black', borderBottom: '2px solid black' }}>
+                                <th style={{ borderTop: '2px solid black', borderBottom: '2px solid black', padding: '6px 4px', fontSize: '11px', fontWeight: 'bold', textAlign: 'center', width: '96px' }}>
                                     CREDIT
                                 </th>
                             </tr>
@@ -77,19 +81,19 @@ export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
                             {/* Actual data rows */}
                             {allItems.map((item) => (
                                 <tr key={item.id}>
-                                    <td className="px-0 py-0 text-[10px] text-center" style={{ borderRight: '1px solid black', height: '5px' }}>
+                                    <td style={{ borderRight: '1px solid black', height: '5px', padding: '4px 2px', fontSize: '11px', textAlign: 'center' }}>
                                         {item.account?.account_code}
                                     </td>
-                                    <td className={`px-0 py-0 text-[10px] ${item.type === 'credit' ? 'pl-6' : 'pl-2'}`} style={{ borderRight: '1px solid black', height: '5px' }}>
+                                    <td style={{ borderRight: '1px solid black', height: '5px', padding: '4px 2px', fontSize: '11px', paddingLeft: item.type === 'credit' ? '24px' : '8px' }}>
                                         {item.account?.account_name}
                                     </td>
-                                    <td className="px-0 py-0 text-[10px] text-center" style={{ borderRight: '1px solid black', height: '5px' }}>
+                                    <td style={{ borderRight: '1px solid black', height: '5px', padding: '4px 2px', fontSize: '11px', textAlign: 'center' }}>
                                         &nbsp;
                                     </td>
-                                    <td className="px-0 py-0 text-[10px] text-center" style={{ borderRight: '1px solid black', height: '5px' }}>
+                                    <td style={{ borderRight: '1px solid black', height: '5px', padding: '4px 2px', fontSize: '11px', textAlign: 'center' }}>
                                         {item.type === 'debit' ? Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}
                                     </td>
-                                    <td className="px-0 py-0 text-[10px] text-center" style={{ height: '5px' }}>
+                                    <td style={{ height: '5px', padding: '4px 2px', fontSize: '11px', textAlign: 'center' }}>
                                         {item.type === 'credit' ? Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}
                                     </td>
                                 </tr>
@@ -118,19 +122,19 @@ export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
 
                             {/* Total Row */}
                             <tr style={{ fontWeight: 'bold' }}>
-                                <td style={{ borderRight: '1px solid black', borderBottom: '2px solid black', height: '24px', padding: '0px 4px', fontSize: '10px', textAlign: 'center', verticalAlign: 'middle' }}>
+                                <td style={{ borderRight: '1px solid black', borderBottom: '2px solid black', height: '28px', padding: '6px 4px 4px 4px', fontSize: '11px', textAlign: 'center', verticalAlign: 'top' }}>
                                     &nbsp;
                                 </td>
-                                <td style={{ borderRight: '1px solid black', borderBottom: '2px solid black', height: '24px', padding: '0px 4px', fontSize: '10px', textAlign: 'center', verticalAlign: 'middle' }}>
+                                <td style={{ borderRight: '1px solid black', borderBottom: '2px solid black', height: '28px', padding: '6px 4px 4px 4px', fontSize: '11px', textAlign: 'center', verticalAlign: 'top' }}>
                                     TOTAL
                                 </td>
-                                <td style={{ borderRight: '1px solid black', borderBottom: '2px solid black', height: '24px', padding: '0px 4px', fontSize: '10px', textAlign: 'center', verticalAlign: 'middle' }}>
+                                <td style={{ borderRight: '1px solid black', borderBottom: '2px solid black', height: '28px', padding: '6px 4px 4px 4px', fontSize: '11px', textAlign: 'center', verticalAlign: 'top' }}>
                                     &nbsp;
                                 </td>
-                                <td style={{ borderRight: '1px solid black', borderBottom: '2px solid black', textDecoration: 'underline', height: '24px', padding: '0px 4px', fontSize: '10px', textAlign: 'center', verticalAlign: 'middle' }}>
+                                <td style={{ borderRight: '1px solid black', borderBottom: '2px solid black', textDecoration: 'underline', height: '28px', padding: '6px 4px 4px 4px', fontSize: '11px', textAlign: 'center', verticalAlign: 'top' }}>
                                     {totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                 </td>
-                                <td style={{ borderBottom: '2px solid black', textDecoration: 'underline', height: '24px', padding: '0px 4px', fontSize: '10px', textAlign: 'center', verticalAlign: 'middle' }}>
+                                <td style={{ borderBottom: '2px solid black', textDecoration: 'underline', height: '28px', padding: '6px 4px 4px 4px', fontSize: '11px', textAlign: 'center', verticalAlign: 'top' }}>
                                     {totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                 </td>
                             </tr>
@@ -140,13 +144,14 @@ export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
 
                 {/* Explanation */}
                 <div style={{ padding: '8px', minHeight: '80px', fontSize: '10px', marginBottom: '16px', borderBottom: '2px solid black' }}>
-                    <div style={{ lineHeight: '1.4' }}> <span style={{ fontWeight: 'bold', borderBottom: '1px solid #e5e7eb', marginBottom: '4px', paddingBottom: '2px' }}>
-                        EXPLANATION:</span>{disbursement.description}
+                    <div style={{ lineHeight: '1.4', display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+                        <span style={{ fontWeight: 'bold', marginTop: '6px' }}>EXPLANATION:</span>
+                        <span style={{ marginTop: '6px' }}>{disbursement.description}</span>
                     </div>
                 </div>
 
                 {/* Footer Signature Lines */}
-                <div style={{ fontSize: '10px', marginTop: '16px' }}>
+                <div style={{ fontSize: '11px', marginTop: '20px' }}>
                     {[
                         [
                             { label: 'PREPARED BY', step: 1 },
@@ -167,7 +172,7 @@ export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
                                 display: 'grid',
                                 gridTemplateColumns: '1fr 1fr',
                                 gap: '40px',
-                                marginBottom: i < 2 ? '12px' : 0,
+                                marginBottom: i < 2 ? '16px' : 0,
                             }}
                         >
                             {row.map(({ label, step }) => {
@@ -196,10 +201,12 @@ export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
                                                     flex: 1,
                                                     display: 'flex',
                                                     justifyContent: 'center',
-                                                    paddingBottom: '1px'
+                                                    paddingBottom: '4px',
+                                                    minHeight: '20px',
+                                                    alignItems: 'flex-end'
                                                 }}
                                             >
-                                                <span className="font-bold text-[10px] uppercase">
+                                                <span style={{ fontWeight: 'bold', fontSize: '11px', textTransform: 'uppercase', paddingBottom: '2px' }}>
                                                     {actorName}
                                                 </span>
                                             </div>

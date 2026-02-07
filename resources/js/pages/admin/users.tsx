@@ -37,27 +37,34 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 export default function Users() {
 
-    const { user, roles, permissions } = usePage<SharedData>().props;
+    const { user: currentUser, roles, permissions, stats: initialStats, specialUsers: initialSpecialUsers, initialUsers } = usePage<SharedData>().props;
 
-    //Get the CSRF token from the meta tag
+    const userRoles = currentUser?.roles || [];
+    const userPermissions = currentUser?.permissions || [];
+    
+    const isAdmin = userRoles.includes('admin');
+    const canCreateUsers = isAdmin || userPermissions.includes('create users');
+    const canEditUsers = isAdmin || userPermissions.includes('edit users');
+
+   
     const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
     const token = meta?.content || '';
 
-    const [users, setUsers] = useState<User[]>([]);
+    const [users, setUsers] = useState<User[]>(initialUsers?.data || []);
     const [pagination, setPagination] = useState({
-        current_page: 1,
-        last_page: 1,
-        next_page_url: null as string | null,
-        prev_page_url: null as string | null,
-        total: 0,
-        from: 0,
-        to: 0,
+        current_page: initialUsers?.current_page || 1,
+        last_page: initialUsers?.last_page || 1,
+        next_page_url: initialUsers?.next_page_url || null,
+        prev_page_url: initialUsers?.prev_page_url || null,
+        total: initialUsers?.total || 0,
+        from: initialUsers?.from || 0,
+        to: initialUsers?.to || 0,
     });
     const [stats, setStats] = useState({
-        total_users: 0,
-        active_users: 0,
-        inactive_users: 0,
-        admin_users: 0,
+        total_users: initialStats?.total_users ?? 0,
+        active_users: initialStats?.active_users ?? 0,
+        inactive_users: initialStats?.inactive_users ?? 0,
+        admin_users: initialStats?.admin_users ?? 0,
     });
 
     const [specialUsers, setSpecialUsers] = useState<{
@@ -65,23 +72,20 @@ export default function Users() {
         svp: User[];
         auditor: User[];
     }>({
-        accounting_head: [],
-        svp: [],
-        auditor: [],
+        accounting_head: initialSpecialUsers?.accounting_head ?? [],
+        svp: initialSpecialUsers?.svp ?? [],
+        auditor: initialSpecialUsers?.auditor ?? [],
     });
 
-    // Search and Loading State
     const [search, setSearch] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [isLoading, setIsLoading] = useState(true);
 
-    // Modal State
-    const [isAppModalOpen, setAppModalOpen] = useState(false); // Renamed to avoid confusion with potential other modals
+    const [isAppModalOpen, setAppModalOpen] = useState(false); 
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
-    //User Form State and data
     const [userForm, setUserForm] = useState({
         id: -1,
         name: '',
@@ -148,8 +152,14 @@ export default function Users() {
 
     // Fetch on Search or initial load
     useEffect(() => {
-        fetchUsers();
-    }, [searchQuery, token]);
+        // Only fetch if there's a search query, otherwise use initial data
+        if (searchQuery) {
+            fetchUsers();
+        } else {
+            // Use initial load, just set loading to false
+            setIsLoading(false);
+        }
+    }, [searchQuery]);
 
 
     const openCreateModal = () => {
@@ -295,7 +305,9 @@ export default function Users() {
                             onChange={(e) => setSearch(e.target.value)}
                             className="max-w-lg border-gray-300 border-[1.7px] rounded-sm bg-white pl-9"
                         />
-                        <Button onClick={openCreateModal} variant="default" >Add User</Button>
+                        {canCreateUsers && (
+                            <Button onClick={openCreateModal} variant="default">Add User</Button>
+                        )}
                     </div>
 
                     <Card className="overflow-hidden rounded-sm py-0 pb-6">
@@ -333,7 +345,11 @@ export default function Users() {
                                                     <StatusIndicator status={user.status as 'active' | 'inactive'} />
                                                 </TableCell>
                                                 <TableCell className="px-4">
-                                                    <Button variant="outline" size="sm" onClick={() => openEditModal(user)}>Edit</Button>
+                                                    {canEditUsers ? (
+                                                        <Button variant="outline" size="sm" onClick={() => openEditModal(user)}>Edit</Button>
+                                                    ) : (
+                                                        <Button variant="outline" size="sm" disabled>Edit</Button>
+                                                    )}
                                                 </TableCell>
                                             </TableRow>
                                         ))
@@ -376,7 +392,7 @@ export default function Users() {
                     isEditing={isEditing}
                     isSaving={isSaving}
                     currentUserId={currentUserId}
-                    currentUser={user}
+                    currentUser={currentUser}
                     userForm={userForm}
                     formErrors={formErrors}
                     onSubmit={handleSaveUser}
