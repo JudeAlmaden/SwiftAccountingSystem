@@ -62,6 +62,9 @@ class RolesSeeder extends Seeder
 
             // Control number prefixes (accounting head)
             'manage control number prefixes',
+
+            // Audit
+            'view audit trails',
         ];
 
         foreach ($permissions as $permission) {
@@ -71,11 +74,19 @@ class RolesSeeder extends Seeder
         /*==========================================================================*/
         // Assign Permissions to Roles
 
-        // Admin: User Management and View Disbursements only + View Accounts
+        // Admin: User Management and View Disbursements only + View Accounts + Audit Trails
         $admin->givePermissionTo([
             'view users', 'create users', 'edit users', 'delete users',
             'view disbursements',
-            'view accounts'
+            'view accounts',
+            'view audit trails',
+        ]);
+
+        // Accounting Assistant: Create/View Disbursements, View Accounts
+        $accountingAssistant->givePermissionTo([
+            'view accounts',
+            'view disbursements', 
+            'create disbursements'
         ]);
 
         // Accounting Head: Accounts & Disbursements (Full access) + manage control number prefixes
@@ -84,24 +95,21 @@ class RolesSeeder extends Seeder
             'view disbursements', 'create disbursements', 'edit disbursements', 'delete disbursements', 'approve disbursements', 'release disbursements',
             'manage control number prefixes'
         ]);
-
-        // Accounting Assistant: Create/View Disbursements, View Accounts
-        $accountingAssistant->givePermissionTo([
-            'view accounts',
-            'view disbursements', 'create disbursements'
-        ]);
-
-        // Auditor: Read-only access
+                
+        // Auditor: Read-only access + Audit Trails
         $auditor->givePermissionTo([
-            'view users',
             'view accounts',
-            'view disbursements'
+            'view disbursements',
+            'approve disbursements',
+            'view audit trails',
         ]);
 
         // SVP: View & Approve Disbursements
         $svp->givePermissionTo([
+            'view accounts',
             'view disbursements',
-            'approve disbursements'
+            'approve disbursements',
+            'release disbursements'
         ]);
     }
 }

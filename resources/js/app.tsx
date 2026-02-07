@@ -8,44 +8,44 @@ import { configureEcho } from '@laravel/echo-react';
 import axios from 'axios';
 import Pusher from 'pusher-js';
 
-window.Pusher = Pusher;
-axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
-window.axios = axios;
+// window.Pusher = Pusher;
+// axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+// window.axios = axios;
 
-const pusherClient = new Pusher(import.meta.env.VITE_REVERB_APP_KEY, {
-    wsHost: import.meta.env.VITE_REVERB_HOST,
-    wsPort: import.meta.env.VITE_REVERB_PORT ?? 80,
-    wssPort: import.meta.env.VITE_REVERB_PORT ?? 443,
-    forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
-    enabledTransports: ['ws', 'wss'],
-    cluster: 'mt1',
-    disableStats: true,
-    authEndpoint: '/broadcasting/auth',
-});
+// const pusherClient = new Pusher(import.meta.env.VITE_REVERB_APP_KEY, {
+//     wsHost: import.meta.env.VITE_REVERB_HOST,
+//     wsPort: import.meta.env.VITE_REVERB_PORT ?? 80,
+//     wssPort: import.meta.env.VITE_REVERB_PORT ?? 443,
+//     forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
+//     enabledTransports: ['ws', 'wss'],
+//     cluster: 'mt1',
+//     disableStats: true,
+//     authEndpoint: '/broadcasting/auth',
+// });
 
-// Add connection logging
-pusherClient.connection.bind('connected', () => {
-    console.log('[Pusher] ✓ Connected to Reverb');
-});
+// // Add connection logging
+// pusherClient.connection.bind('connected', () => {
+//     console.log('[Pusher] ✓ Connected to Reverb');
+// });
 
-pusherClient.connection.bind('error', (err: any) => {
-    console.error('[Pusher] ✗ Connection error:', err);
-});
+// pusherClient.connection.bind('error', (err: any) => {
+//     console.error('[Pusher] ✗ Connection error:', err);
+// });
 
-pusherClient.connection.bind('disconnected', () => {
-    console.warn('[Pusher] Disconnected from Reverb');
-});
+// pusherClient.connection.bind('disconnected', () => {
+//     console.warn('[Pusher] Disconnected from Reverb');
+// });
 
-configureEcho({
-    broadcaster: 'reverb',
-    key: import.meta.env.VITE_REVERB_APP_KEY,
-    wsHost: import.meta.env.VITE_REVERB_HOST,
-    wsPort: import.meta.env.VITE_REVERB_PORT ?? 80,
-    wssPort: import.meta.env.VITE_REVERB_PORT ?? 443,
-    forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
-    enabledTransports: ['ws', 'wss'],
-    client: pusherClient
-});
+// configureEcho({
+//     broadcaster: 'reverb',
+//     key: import.meta.env.VITE_REVERB_APP_KEY,
+//     wsHost: import.meta.env.VITE_REVERB_HOST,
+//     wsPort: import.meta.env.VITE_REVERB_PORT ?? 80,
+//     wssPort: import.meta.env.VITE_REVERB_PORT ?? 443,
+//     forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
+//     enabledTransports: ['ws', 'wss'],
+//     client: pusherClient
+// });
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 

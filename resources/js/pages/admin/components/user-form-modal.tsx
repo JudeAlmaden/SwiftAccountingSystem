@@ -7,6 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import type { Role, Permission } from '@/types/database';
 
+const ACCOUNT_PERMISSIONS = [
+    'view accounts',
+    'create accounts',
+    'edit accounts',
+    'delete accounts',
+    'manage control number prefixes',
+];
+
 interface UserFormModalProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
@@ -56,6 +64,19 @@ export function UserFormModal({
         }
         onFormChange('permissions', newPermissions);
     };
+
+    const selectedRole = availableRoles.find(r => r.name === userForm.role);
+    const permissionsFromRole = selectedRole?.permissions?.map(p => p.name) ?? [];
+    const hasPermission = (permissionName: string) =>
+        (userForm.permissions?.includes(permissionName) ?? false) || permissionsFromRole.includes(permissionName);
+
+    const isAdmin = (currentUser?.roles ?? []).some((r: { name: string }) => r.name === 'admin');
+    const isAccountPermission = (name: string) => ACCOUNT_PERMISSIONS.includes(name);
+    const isFromRole = (permissionName: string) => permissionsFromRole.includes(permissionName);
+    const isPermissionDisabled = (permission: Permission) =>
+        userForm.role === 'admin' ||
+        isFromRole(permission.name) ||
+        (isAccountPermission(permission.name) && !isAdmin);
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -171,8 +192,9 @@ export function UserFormModal({
                                     availablePermissions.map(permission => (
                                         <div key={permission.id} className="flex items-center space-x-2">
                                             <Checkbox
+                                                disabled={!selectedRole || isPermissionDisabled(permission)   }
                                                 id={`perm-${permission.id}`}
-                                                checked={userForm.permissions?.includes(permission.name)}
+                                                checked={hasPermission(permission.name)}
                                                 onCheckedChange={(checked) => handlePermissionChange(permission.name, checked as boolean)}
                                             />
                                             <label

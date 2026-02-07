@@ -25,6 +25,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { VoucherTemplate } from './components/VoucherTemplate';
 import { DisbursementSidebar } from './components/DisbursementSidebar';
 import { DottedSeparator } from '@/components/dotted-line';
+import { disbursements } from '@/routes';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -130,13 +131,20 @@ export default function View() {
     const canPerformAction = () => {
         if (!disbursement || disbursement.status !== 'pending') return false;
 
-        const step = disbursement.step;
+        const currentStep = disbursement.current_step ?? 1;
+        const stepFlow = disbursement.step_flow ?? [];
+        const stepConfig = stepFlow[currentStep - 1];
+        const stepRole = stepConfig?.role ?? (currentStep === 1 ? null : null);
+        const restrictedToUserId = stepConfig?.user_id ?? null;
+        const rolesLower = (userRoles || []).map((r: string) => r.toLowerCase());
+        const userId = user?.id;
 
-        if (userRoles.includes('admin')) return true;
+        if (rolesLower.includes('admin')) return true;
 
-        if (step === 2 && userRoles.includes('accounting head')) return true;
-        if (step === 3 && userRoles.includes('auditor')) return true;
-        if (step === 4 && userRoles.includes('SVP')) return true;
+        if (restrictedToUserId != null && userId !== restrictedToUserId) return false;
+
+        if (currentStep === 1) return rolesLower.includes('accounting assistant');
+        if (stepRole && rolesLower.includes(stepRole.toLowerCase())) return true;
 
         return false;
     };
@@ -264,7 +272,7 @@ export default function View() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Disbursement - ${disbursement.control_number}`} />
-
+            {userRoles}
             <div className="flex flex-col gap-6">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -341,7 +349,8 @@ export default function View() {
                     {/* Sidebar */}
                     <div className="sticky top-6">
                         <DisbursementSidebar
-                            currentStep={disbursement.step}
+                            currentStep={disbursement.current_step}
+                            stepFlow={disbursement.step_flow}
                             tracking={disbursement.tracking}
                             attachments={disbursement.attachments}
                         />

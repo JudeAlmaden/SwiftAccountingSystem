@@ -25,14 +25,14 @@ class UsersSeeder extends Seeder
         //Most of these are just for testing
         User::factory()->create([
             'name' => 'accounting head',
-            'account_number' => '000-0002',
+            'account_number' => '000-0003',
             'email' => 'head@example.com',
             'password' => Hash::make('password'),
         ])->assignRole('accounting head');   
 
         User::factory()->create([
             'name' => 'accounting assistant',
-            'account_number' => '000-0003',
+            'account_number' => '000-0002',
             'email' => 'assistant@example.com',
             'password' => Hash::make('password'),
         ])->assignRole('accounting assistant');  

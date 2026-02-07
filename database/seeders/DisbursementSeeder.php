@@ -2,236 +2,168 @@
 
 namespace Database\Seeders;
 
+use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use App\Models\Disbursement;
 use App\Models\DisbursementItem;
 use App\Models\DisbursementTracking;
 use App\Models\Account;
 use App\Models\User;
-use Carbon\Carbon;
 
 class DisbursementSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
+    private ?Account $cashAccount = null;
+    private ?Account $bankAccount = null;
+    private ?Account $rentExpense = null;
+    private ?Account $accountsPayable = null;
+    private ?User $assistant = null;
+    private ?User $head = null;
+    private ?User $admin = null;
+
     public function run(): void
     {
-        // Get accounts and users for foreign keys
-        $cashAccount = Account::where('account_code', '1001')->first();
-        $bankAccount = Account::where('account_code', '1002')->first();
-        $rentExpense = Account::where('account_code', '5001')->first();
-        $accountsPayable = Account::where('account_code', '2001')->first();
-
-        $assistant = User::where('email', 'assistant@example.com')->first();
-        $head = User::where('email', 'head@example.com')->first();
-        $admin = User::where('email', 'admin@example.com')->first();
-
-        // Check if required data exists
-        if (!$cashAccount || !$bankAccount || !$rentExpense || !$accountsPayable) {
-            $this->command->warn('Required accounts not found. Please run ChartOfAccountsSeeder first.');
+        $this->resolveDependencies();
+        if (!$this->assistant || !$this->head || !$this->admin) {
+            $this->command->warn('Required users not found. Run UsersSeeder first.');
+            return;
+        }
+        if (!$this->cashAccount || !$this->bankAccount || !$this->rentExpense || !$this->accountsPayable) {
+            $this->command->warn('Required accounts not found. Run ChartOfAccountsSeeder first.');
             return;
         }
 
-        if (!$assistant || !$head || !$admin) {
-            $this->command->warn('Required users not found. Please run DatabaseSeeder to create users first.');
-            return;
-        }
+        $this->seedDisbursement1();
+        $this->seedDisbursement2();
+        $this->seedDisbursement3();
+        $this->seedDisbursement4();
+    }
 
-        // Disbursement 1 - Fully Approved
-        $disbursement1 = Disbursement::create([
+    private function resolveDependencies(): void
+    {
+        $this->cashAccount = Account::where('account_code', '1001')->first();
+        $this->bankAccount = Account::where('account_code', '1002')->first();
+        $this->rentExpense = Account::where('account_code', '5001')->first();
+        $this->accountsPayable = Account::where('account_code', '2001')->first();
+        $this->assistant = User::where('email', 'assistant@example.com')->first();
+        $this->head = User::where('email', 'head@example.com')->first();
+        $this->admin = User::where('email', 'admin@example.com')->first();
+    }
+
+    /** Step flow: use default (role-based only). Set user_id only when a step must be restricted to a specific user. */
+
+    private function createItems(int $disbursementId, array $rows): void
+    {
+        foreach ($rows as $i => $row) {
+            DisbursementItem::create([
+                'disbursement_id' => $disbursementId,
+                'account_id' => $row['account_id'],
+                'type' => $row['type'],
+                'amount' => $row['amount'],
+                'order_number' => $i + 1,
+            ]);
+        }
+    }
+
+    private function createTracking(int $disbursementId, array $rows): void
+    {
+        foreach ($rows as $row) {
+            DisbursementTracking::create(array_merge($row, [
+                'disbursement_id' => $disbursementId,
+            ]));
+        }
+    }
+
+    /** DV-001: Fully approved (all 4 steps done). */
+    private function seedDisbursement1(): void
+    {
+        $d = Disbursement::create([
             'control_number' => 'DV-2026-001',
             'title' => 'Office Rent Payment - January 2026',
             'description' => 'Monthly office rent payment for the main office building',
-            'step' => 4,
+            'step_flow' => Disbursement::defaultStepFlow(),
+            'current_step' => 5,
             'status' => 'approved',
         ]);
 
-        DisbursementItem::create([
-            'disbursement_id' => $disbursement1->id,
-            'account_id' => $rentExpense->id,
-            'amount' => 50000.00,
-            'order_number' => 1,
+        $this->createItems($d->id, [
+            ['account_id' => $this->rentExpense->id, 'type' => 'debit', 'amount' => 50000.00],
+            ['account_id' => $this->cashAccount->id, 'type' => 'credit', 'amount' => 50000.00],
         ]);
 
-        DisbursementItem::create([
-            'disbursement_id' => $disbursement1->id,
-            'account_id' => $cashAccount->id,
-            'amount' => 50000.00,
-            'order_number' => 2,
+        $this->createTracking($d->id, [
+            ['handled_by' => $this->assistant->id, 'step' => 1, 'role' => 'accounting assistant', 'action' => 'approved', 'remarks' => 'Verified supporting documents. All in order.', 'acted_at' => Carbon::now()->subDays(5)],
+            ['handled_by' => $this->head->id, 'step' => 2, 'role' => 'accounting head', 'action' => 'approved', 'remarks' => 'Approved for payment.', 'acted_at' => Carbon::now()->subDays(4)],
+            ['handled_by' => $this->admin->id, 'step' => 3, 'role' => 'auditor', 'action' => 'approved', 'remarks' => 'Audit complete. No issues found.', 'acted_at' => Carbon::now()->subDays(3)],
+            ['handled_by' => $this->admin->id, 'step' => 4, 'role' => 'svp', 'action' => 'approved', 'remarks' => 'Final approval granted.', 'acted_at' => Carbon::now()->subDays(2)],
         ]);
+    }
 
-        // Tracking history - fully approved
-        DisbursementTracking::create([
-            'disbursement_id' => $disbursement1->id,
-            'handled_by' => $assistant->id,
-            'step' => 1,
-            'role' => 'accounting assistant',
-            'action' => 'approved',
-            'remarks' => 'Verified supporting documents. All in order.',
-            'acted_at' => Carbon::now()->subDays(5),
-        ]);
-
-        DisbursementTracking::create([
-            'disbursement_id' => $disbursement1->id,
-            'handled_by' => $head->id,
-            'step' => 2,
-            'role' => 'accounting head',
-            'action' => 'approved',
-            'remarks' => 'Approved for payment.',
-            'acted_at' => Carbon::now()->subDays(4),
-        ]);
-
-        DisbursementTracking::create([
-            'disbursement_id' => $disbursement1->id,
-            'handled_by' => $admin->id,
-            'step' => 3,
-            'role' => 'auditor',
-            'action' => 'approved',
-            'remarks' => 'Audit complete. No issues found.',
-            'acted_at' => Carbon::now()->subDays(3),
-        ]);
-
-        DisbursementTracking::create([
-            'disbursement_id' => $disbursement1->id,
-            'handled_by' => $admin->id,
-            'step' => 4,
-            'role' => 'svp',
-            'action' => 'approved',
-            'remarks' => 'Final approval granted.',
-            'acted_at' => Carbon::now()->subDays(2),
-        ]);
-
-        // Disbursement 2 - Pending at Head level
-        $disbursement2 = Disbursement::create([
+    /** DV-002: Pending at accounting head (step 1 done). */
+    private function seedDisbursement2(): void
+    {
+        $d = Disbursement::create([
             'control_number' => 'DV-2026-002',
             'title' => 'Supplier Payment - ABC Corp',
             'description' => 'Payment for office supplies and equipment',
-            'step' => 2,
+            'step_flow' => Disbursement::defaultStepFlow(),
+            'current_step' => 2,
             'status' => 'pending',
         ]);
 
-        DisbursementItem::create([
-            'disbursement_id' => $disbursement2->id,
-            'account_id' => $accountsPayable->id,
-            'amount' => 25000.00,
-            'order_number' => 1,
+        $this->createItems($d->id, [
+            ['account_id' => $this->accountsPayable->id, 'type' => 'debit', 'amount' => 25000.00],
+            ['account_id' => $this->bankAccount->id, 'type' => 'credit', 'amount' => 25000.00],
         ]);
 
-        DisbursementItem::create([
-            'disbursement_id' => $disbursement2->id,
-            'account_id' => $bankAccount->id,
-            'amount' => 25000.00,
-            'order_number' => 2,
+        $this->createTracking($d->id, [
+            ['handled_by' => $this->assistant->id, 'step' => 1, 'role' => 'accounting assistant', 'action' => 'approved', 'remarks' => 'Documents verified and complete.', 'acted_at' => Carbon::now()->subDays(2)],
+            ['handled_by' => null, 'step' => 2, 'role' => 'accounting head', 'action' => 'pending', 'remarks' => null, 'acted_at' => null],
         ]);
+    }
 
-        // Tracking - approved by assistant, pending at head
-        DisbursementTracking::create([
-            'disbursement_id' => $disbursement2->id,
-            'handled_by' => $assistant->id,
-            'step' => 1,
-            'role' => 'accounting assistant',
-            'action' => 'approved',
-            'remarks' => 'Documents verified and complete.',
-            'acted_at' => Carbon::now()->subDays(2),
-        ]);
-
-        DisbursementTracking::create([
-            'disbursement_id' => $disbursement2->id,
-            'handled_by' => null,
-            'step' => 2,
-            'role' => 'accounting head',
-            'action' => 'pending',
-            'remarks' => null,
-            'acted_at' => null,
-        ]);
-
-        // Disbursement 3 - Just submitted, pending at assistant
-        $disbursement3 = Disbursement::create([
+    /** DV-003: Just submitted, pending at assistant (step 1). */
+    private function seedDisbursement3(): void
+    {
+        $d = Disbursement::create([
             'control_number' => 'DV-2026-003',
             'title' => 'Utility Bills Payment',
             'description' => 'Electricity and water bills for January 2026',
-            'step' => 1,
+            'step_flow' => Disbursement::defaultStepFlow(),
+            'current_step' => 1,
             'status' => 'pending',
         ]);
 
-        DisbursementItem::create([
-            'disbursement_id' => $disbursement3->id,
-            'account_id' => $accountsPayable->id,
-            'amount' => 15000.00,
-            'order_number' => 1,
+        $this->createItems($d->id, [
+            ['account_id' => $this->accountsPayable->id, 'type' => 'debit', 'amount' => 15000.00],
+            ['account_id' => $this->cashAccount->id, 'type' => 'credit', 'amount' => 15000.00],
         ]);
 
-        DisbursementItem::create([
-            'disbursement_id' => $disbursement3->id,
-            'account_id' => $cashAccount->id,
-            'amount' => 15000.00,
-            'order_number' => 2,
+        $this->createTracking($d->id, [
+            ['handled_by' => null, 'step' => 1, 'role' => 'accounting assistant', 'action' => 'pending', 'remarks' => null, 'acted_at' => null],
         ]);
+    }
 
-        // Tracking - pending at assistant
-        DisbursementTracking::create([
-            'disbursement_id' => $disbursement3->id,
-            'handled_by' => null,
-            'step' => 1,
-            'role' => 'accounting assistant',
-            'action' => 'pending',
-            'remarks' => null,
-            'acted_at' => null,
-        ]);
-
-        // Disbursement 4 - Rejected at auditor level
-        $disbursement4 = Disbursement::create([
+    /** DV-004: Rejected at auditor (steps 1–2 approved, step 3 rejected). */
+    private function seedDisbursement4(): void
+    {
+        $d = Disbursement::create([
             'control_number' => 'DV-2026-004',
             'title' => 'Equipment Purchase',
             'description' => 'New computer equipment for accounting department',
-            'step' => 3,
+            'step_flow' => Disbursement::defaultStepFlow(),
+            'current_step' => 3,
             'status' => 'rejected',
         ]);
 
-        DisbursementItem::create([
-            'disbursement_id' => $disbursement4->id,
-            'account_id' => $accountsPayable->id,
-            'amount' => 75000.00,
-            'order_number' => 1,
+        $this->createItems($d->id, [
+            ['account_id' => $this->accountsPayable->id, 'type' => 'debit', 'amount' => 75000.00],
+            ['account_id' => $this->bankAccount->id, 'type' => 'credit', 'amount' => 75000.00],
         ]);
 
-        DisbursementItem::create([
-            'disbursement_id' => $disbursement4->id,
-            'account_id' => $bankAccount->id,
-            'amount' => 75000.00,
-            'order_number' => 2,
-        ]);
-
-        // Tracking - rejected at auditor
-        DisbursementTracking::create([
-            'disbursement_id' => $disbursement4->id,
-            'handled_by' => $assistant->id,
-            'step' => 1,
-            'role' => 'accounting assistant',
-            'action' => 'approved',
-            'remarks' => 'All documents attached.',
-            'acted_at' => Carbon::now()->subDays(3),
-        ]);
-
-        DisbursementTracking::create([
-            'disbursement_id' => $disbursement4->id,
-            'handled_by' => $head->id,
-            'step' => 2,
-            'role' => 'accounting head',
-            'action' => 'approved',
-            'remarks' => 'Budget allocation confirmed.',
-            'acted_at' => Carbon::now()->subDays(2),
-        ]);
-
-        DisbursementTracking::create([
-            'disbursement_id' => $disbursement4->id,
-            'handled_by' => $admin->id,
-            'step' => 3,
-            'role' => 'auditor',
-            'action' => 'rejected',
-            'remarks' => 'Missing purchase order. Please resubmit with complete documentation.',
-            'acted_at' => Carbon::now()->subDays(1),
+        $this->createTracking($d->id, [
+            ['handled_by' => $this->assistant->id, 'step' => 1, 'role' => 'accounting assistant', 'action' => 'approved', 'remarks' => 'All documents attached.', 'acted_at' => Carbon::now()->subDays(3)],
+            ['handled_by' => $this->head->id, 'step' => 2, 'role' => 'accounting head', 'action' => 'approved', 'remarks' => 'Budget allocation confirmed.', 'acted_at' => Carbon::now()->subDays(2)],
+            ['handled_by' => $this->admin->id, 'step' => 3, 'role' => 'auditor', 'action' => 'rejected', 'remarks' => 'Missing purchase order. Please resubmit with complete documentation.', 'acted_at' => Carbon::now()->subDays(1)],
         ]);
     }
 }

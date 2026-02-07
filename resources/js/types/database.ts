@@ -50,6 +50,14 @@ export interface DisbursementAttachment {
     created_at?: string;
 }
 
+/** One step in the approval flow. user_id: optional; when set, only that user (or admin) can act at this step. */
+export interface StepFlowStep {
+    user_id: number | null;
+    role: string | null;
+    /** When user_id is set, resolved by API for display. */
+    user_name?: string | null;
+}
+
 //Used in view
 export interface Disbursement {
     id: number;
@@ -57,7 +65,8 @@ export interface Disbursement {
     title?: string;
     description?: string;
     status?: string;
-    step?: number;
+    step_flow?: StepFlowStep[];
+    current_step?: number;
     recommended_by?: string;
     created_at?: string;
     updated_at?: string;
@@ -70,6 +79,7 @@ export interface Disbursement {
 export interface Role {
     id: number;
     name: string;
+    permissions?: Permission[];
 }
 
 export interface Permission {

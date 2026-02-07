@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Models\AuditTrail;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
@@ -12,8 +13,24 @@ use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
+    private const ACCOUNT_PERMISSIONS = [
+        'view accounts',
+        'create accounts',
+        'edit accounts',
+        'delete accounts',
+        'manage control number prefixes',
+    ];
 
- // For Stat Card
+    /** Strip account-only permissions if the current user is not admin. */
+    private function filterPermissionsForNonAdmin(array $permissions): array
+    {
+        if (auth()->user()?->hasRole('admin')) {
+            return $permissions;
+        }
+        return array_values(array_diff($permissions, self::ACCOUNT_PERMISSIONS));
+    }
+
+    // For Stat Card
     function stats()
     {
         $totalUsers = User::count();
@@ -46,7 +63,7 @@ class UserController extends Controller
     function indexPage()
     {
         return Inertia::render('admin/users', [
-            'roles' => Role::all(),
+            'roles' => Role::with('permissions')->get(),
             'permissions' => Permission::all(),
         ]);
     }
@@ -159,10 +176,19 @@ class UserController extends Controller
         $user->syncRoles([$validated['role']]);
     }
 
-    // Sync Permissions (Direct assignments)
-    if (!empty($validated['permissions'])) {
-        $user->syncPermissions($validated['permissions']);
+    // Sync Permissions (Direct assignments; non-admins cannot assign account permissions)
+    if (array_key_exists('permissions', $validated)) {
+        $user->syncPermissions($this->filterPermissionsForNonAdmin($validated['permissions'] ?? []));
     }
+
+    AuditTrail::log(
+        'user_created',
+        "User account created: {$user->name} (#{$user->account_number})",
+        auth()->id(),
+        \App\Models\User::class,
+        $user->id,
+        ['email' => $user->email, 'role' => $validated['role'] ?? null]
+    );
 
     return response()->json([
         'message' => 'User created successfully.',
@@ -271,6 +297,13 @@ class UserController extends Controller
             $user->update([
                 'password' => Hash::make($validated['password']),
             ]);
+            AuditTrail::log(
+                'password_changed',
+                "Password changed for user: {$user->name} (#{$user->account_number})",
+                auth()->id(),
+                User::class,
+                $user->id
+            );
         }
 
         // Sync Roles
@@ -284,10 +317,22 @@ class UserController extends Controller
              }
         }
 
-        // Sync Permissions
-        if (array_key_exists('permissions', $validated)) {
-            $user->syncPermissions($validated['permissions']);
+        // Sync Permissions (skip for admin: they cannot be given more or have permissions changed)
+        if (array_key_exists('permissions', $validated) && !$user->hasRole('admin')) {
+            $user->syncPermissions($this->filterPermissionsForNonAdmin($validated['permissions'] ?? []));
         }
+
+        AuditTrail::log(
+            'user_updated',
+            "User updated: {$user->name} (#{$user->account_number})",
+            auth()->id(),
+            User::class,
+            $user->id,
+            [
+                'role' => $validated['role'] ?? null,
+                'status' => $validated['status'] ?? null,
+            ]
+        );
 
         return response()->json([
             'message' => 'User updated successfully.',

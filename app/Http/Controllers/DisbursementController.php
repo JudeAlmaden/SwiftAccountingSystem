@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\User;
 use App\Models\Notification;
 use App\Models\ControlNumberPrefix;
+use App\Models\AuditTrail;
 
 class DisbursementController extends Controller
 {
@@ -23,8 +24,8 @@ class DisbursementController extends Controller
             'date_from' => 'nullable|date',
             'date_to' => 'nullable|date|after_or_equal:date_from',
             'status' => 'nullable|string|in:pending,approved,rejected',
-            'step' => 'nullable|integer|in:1,2,3,4',
-            'sort_by' => 'nullable|string|in:created_at,control_number,title,status,step',
+            'current_step' => 'nullable|integer|in:1,2,3,4',
+            'sort_by' => 'nullable|string|in:created_at,control_number,title,status,current_step',
             'sort_order' => 'nullable|string|in:asc,desc',
         ]);
 
@@ -55,9 +56,9 @@ class DisbursementController extends Controller
             $query->where('status', $validated['status']);
         }
 
-        // Step filtering - filter by current step
-        if (!empty($validated['step'])) {
-            $query->where('step', $validated['step']);
+        // Filter by current step (workflow position)
+        if (!empty($validated['current_step'])) {
+            $query->where('current_step', $validated['current_step']);
         }
 
         // Sorting
@@ -85,11 +86,12 @@ class DisbursementController extends Controller
         ]);
     }
 
-    public function show($id){
+    public function show($id)
+    {
         $disbursement = Disbursement::with(['items.account', 'tracking.handler', 'attachments'])->findOrFail($id);
-        return response()->json([
-            'disbursement' => $disbursement
-        ]);
+        $data = $disbursement->toArray();
+        $data['step_flow'] = $disbursement->step_flow_for_api;
+        return response()->json(['disbursement' => $data]);
     }
 
     public function store(Request $request){
@@ -118,12 +120,14 @@ class DisbursementController extends Controller
         $random = Str::upper(Str::random(6));
         $controlNumber = "{$prefixCode}-{$yearTwo}-{$random}";
         
+        $stepFlow = Disbursement::defaultStepFlow();
         $disbursement = Disbursement::create([
             'control_number' => $controlNumber,
             'title' => $validated['title'],
             'description' => $validated['description'] ?? '',
             'recommended_by' => $validated['recommended_by'] ?? null,
-            'step' => 2, // Waiting for Accounting Head
+            'step_flow' => $stepFlow,
+            'current_step' => 2, // Next: Accounting Head
             'status' => 'pending',
         ]);
 
@@ -187,51 +191,59 @@ class DisbursementController extends Controller
     {
         $disbursement = Disbursement::findOrFail($id);
         $user = Auth::user();
-        $roles = $user->getRoleNames()->toArray();
-        
-        // Step 1 was Assistant (Auto-approved on store)
-        $stepRoles = [
-            2 => 'accounting head',
-            3 => 'auditor',
-            4 => 'SVP',
-        ];
+        $roles = array_map('strtolower', $user->getRoleNames()->toArray());
+        $currentStep = (int) $disbursement->current_step;
+        $stepFlow = $disbursement->step_flow ?? Disbursement::defaultStepFlow();
 
-        $currentStep = $disbursement->step;
-        
-        // Check if user has the required role for the current step
-        if (!in_array('admin', $roles) && (!isset($stepRoles[$currentStep]) || !in_array($stepRoles[$currentStep], $roles))) {
-            return response()->json(['message' => 'Unauthorized for this step.'], 403);
+        $stepConfig = $stepFlow[$currentStep - 1] ?? [];
+        $requiredRole = $currentStep === 1 ? 'accounting assistant' : ($stepConfig['role'] ?? null);
+        $restrictedToUserId = isset($stepConfig['user_id']) ? (int) $stepConfig['user_id'] : null;
+
+        if (!in_array('admin', $roles)) {
+            if ($restrictedToUserId !== null && $restrictedToUserId !== (int) $user->id) {
+                return response()->json(['message' => 'Unauthorized for this step.'], 403);
+            }
+            if ($requiredRole === null || !in_array(strtolower($requiredRole), $roles)) {
+                return response()->json(['message' => 'Unauthorized for this step.'], 403);
+            }
         }
 
+        $trackingRole = $currentStep === 1 ? 'accounting assistant' : ($stepConfig['role'] ?? 'admin');
         $nextStep = $currentStep + 1;
-        $status = $disbursement->status;
-
-        // If SVP approves (Step 4), mark as approved (Step 5)
-        if ($currentStep === 4) {
-            $status = 'approved';
-        }
+        $status = $nextStep > 4 ? 'approved' : $disbursement->status;
 
         $disbursement->update([
-            'step' => $nextStep,
-            'status' => $status
+            'current_step' => min($nextStep, 5),
+            'status' => $status,
         ]);
 
         DisbursementTracking::create([
             'handled_by' => $user->id,
             'disbursement_id' => $disbursement->id,
             'step' => $currentStep,
-            'role' => $stepRoles[$currentStep] ?? 'admin',
+            'role' => $trackingRole,
             'action' => 'approved',
             'remarks' => $request->remarks ?? 'Approved.',
             'acted_at' => now(),
         ]);
 
-        // Trigger Notifications
-        if (isset($stepRoles[$nextStep])) {
-            $this->notifyUsersWithRole($stepRoles[$nextStep], 'Review Required', "Disbursement {$disbursement->control_number} needs your approval.", route('disbursement.view', ['id' => $disbursement->id]));
-        } elseif ($status === 'approved') {
+        AuditTrail::log(
+            'disbursement_approved',
+            "Disbursement approved: {$disbursement->control_number} by {$user->name} (step {$currentStep})",
+            $user->id,
+            Disbursement::class,
+            $disbursement->id,
+            ['control_number' => $disbursement->control_number, 'step' => $currentStep, 'status' => $status]
+        );
+
+        if ($nextStep <= 4) {
+            $nextRole = $stepFlow[$nextStep - 1]['role'] ?? null;
+            if ($nextRole) {
+                $this->notifyUsersWithRole($nextRole, 'Review Required', "Disbursement {$disbursement->control_number} needs your approval.", route('disbursement.view', ['id' => $disbursement->id]));
+            }
+        } else {
             $initiator = $disbursement->tracking()->where('step', 1)->first();
-            if ($initiator) {
+            if ($initiator && $initiator->handled_by) {
                 Notification::create([
                     'user_id' => $initiator->handled_by,
                     'title' => 'Disbursement Approved',
@@ -241,9 +253,12 @@ class DisbursementController extends Controller
             }
         }
 
+        $fresh = $disbursement->fresh(['items.account', 'tracking.handler', 'attachments']);
+        $data = $fresh->toArray();
+        $data['step_flow'] = $fresh->step_flow_for_api;
         return response()->json([
             'message' => 'Disbursement approved successfully.',
-            'disbursement' => $disbursement
+            'disbursement' => $data,
         ]);
     }
 
@@ -251,37 +266,48 @@ class DisbursementController extends Controller
     {
         $disbursement = Disbursement::findOrFail($id);
         $user = Auth::user();
-        $roles = $user->getRoleNames()->toArray();
-        
-        $stepRoles = [
-            2 => 'accounting head',
-            3 => 'auditor',
-            4 => 'SVP',
-        ];
+        $roles = array_map('strtolower', $user->getRoleNames()->toArray());
+        $currentStep = (int) $disbursement->current_step;
+        $stepFlow = $disbursement->step_flow ?? Disbursement::defaultStepFlow();
 
-        $currentStep = $disbursement->step;
-        
-        if (!in_array('admin', $roles) && (!isset($stepRoles[$currentStep]) || !in_array($stepRoles[$currentStep], $roles))) {
-            return response()->json(['message' => 'Unauthorized for this step.'], 403);
+        $stepConfig = $stepFlow[$currentStep - 1] ?? [];
+        $requiredRole = $currentStep === 1 ? 'accounting assistant' : ($stepConfig['role'] ?? null);
+        $restrictedToUserId = isset($stepConfig['user_id']) ? (int) $stepConfig['user_id'] : null;
+
+        if (!in_array('admin', $roles)) {
+            if ($restrictedToUserId !== null && $restrictedToUserId !== (int) $user->id) {
+                return response()->json(['message' => 'Unauthorized for this step.'], 403);
+            }
+            if ($requiredRole === null || !in_array(strtolower($requiredRole), $roles)) {
+                return response()->json(['message' => 'Unauthorized for this step.'], 403);
+            }
         }
 
-        $disbursement->update([
-            'status' => 'rejected'
-        ]);
+        $trackingRole = $currentStep === 1 ? 'accounting assistant' : ($stepConfig['role'] ?? 'admin');
+
+        $disbursement->update(['status' => 'rejected']);
+
+        AuditTrail::log(
+            'disbursement_declined',
+            "Disbursement declined: {$disbursement->control_number} by {$user->name} (step {$currentStep})",
+            $user->id,
+            Disbursement::class,
+            $disbursement->id,
+            ['control_number' => $disbursement->control_number, 'step' => $currentStep, 'remarks' => $request->remarks ?? null]
+        );
 
         DisbursementTracking::create([
             'handled_by' => $user->id,
             'disbursement_id' => $disbursement->id,
             'step' => $currentStep,
-            'role' => $stepRoles[$currentStep] ?? 'admin',
+            'role' => $trackingRole,
             'action' => 'rejected',
             'remarks' => $request->remarks ?? 'Declined.',
             'acted_at' => now(),
         ]);
 
-        // Notify Initiator
         $initiator = $disbursement->tracking()->where('step', 1)->first();
-        if ($initiator) {
+        if ($initiator && $initiator->handled_by) {
             $reason = $request->remarks ?? 'No reason provided.';
             Notification::create([
                 'user_id' => $initiator->handled_by,
@@ -291,9 +317,12 @@ class DisbursementController extends Controller
             ]);
         }
 
+        $fresh = $disbursement->fresh(['items.account', 'tracking.handler', 'attachments']);
+        $data = $fresh->toArray();
+        $data['step_flow'] = $fresh->step_flow_for_api;
         return response()->json([
             'message' => 'Disbursement declined successfully.',
-            'disbursement' => $disbursement
+            'disbursement' => $data,
         ]);
     }
 

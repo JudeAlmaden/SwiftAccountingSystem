@@ -13,7 +13,7 @@ import {
 import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { LayoutGrid, User, FileText, WalletCards, BookOpen, Bell, BarChart3, PieChart, Tag } from 'lucide-react';
+import { LayoutGrid, User, FileText, WalletCards, BookOpen, Bell, BarChart3, PieChart, Tag, ClipboardList } from 'lucide-react';
 import AppLogo from './app-logo';
 import type { SharedData } from '@/types';
 import { route } from 'ziggy-js';
@@ -31,6 +31,7 @@ export function AppSidebar() {
         chartAccounts: { title: 'Chart of Accounts', href: route('accounts'), icon: BookOpen, permission: 'view accounts' },
         accountReports: { title: 'Account Reports', href: route('reports.accounts'), icon: PieChart, permission: 'view accounts' },
         controlPrefixes: { title: 'Control number prefixes', href: route('control-number-prefixes.index'), icon: Tag, permission: 'manage control number prefixes', role: 'accounting head' },
+        auditTrails: { title: 'Audit Trails', href: route('audit-trails.index'), icon: ClipboardList, permission: 'view audit trails' },
         notifications: { title: 'Notifications', href: route('inbox'), icon: Bell },
     };
 

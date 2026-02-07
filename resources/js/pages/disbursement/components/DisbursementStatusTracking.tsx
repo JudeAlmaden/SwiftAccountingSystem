@@ -1,21 +1,36 @@
 import { DottedSeparator } from '@/components/dotted-line';
 import { Card } from '@/components/ui/card';
-import { DisbursementTracking } from '@/types/database';
+import { DisbursementTracking, StepFlowStep } from '@/types/database';
 import { useState } from 'react';
+
+const ROLE_LABELS: Record<string, string> = {
+    'accounting assistant': 'Accounting Assistant',
+    'accounting head': 'Accounting Head',
+    'auditor': 'Auditor',
+    'svp': 'SVP',
+};
+
+function stepLabel(stepFlow: StepFlowStep[] | null | undefined, index: number): string {
+    if (stepFlow && stepFlow[index]) {
+        const role = stepFlow[index].role;
+        if (role) return ROLE_LABELS[role.toLowerCase()] ?? role;
+        return 'Prepared by';
+    }
+    return ['Accounting Assistant', 'Accounting Head', 'Auditor', 'SVP'][index] ?? `Step ${index + 1}`;
+}
 
 interface StatusTrackingProps {
     currentStep?: number;
+    stepFlow?: StepFlowStep[] | null;
     tracking?: DisbursementTracking[];
 }
 
-export function DisbursementStatusTracking({ currentStep = 1, tracking = [] }: StatusTrackingProps) {
+export function DisbursementStatusTracking({ currentStep = 1, stepFlow, tracking = [] }: StatusTrackingProps) {
     const [expandedRemarks, setExpandedRemarks] = useState<number[]>([]);
-    const steps = [
-        { name: 'Accounting Assistant', role: 'accounting assistant' },
-        { name: 'Accounting Head', role: 'accounting head' },
-        { name: 'Auditor', role: 'auditor' },
-        { name: 'SVP', role: 'SVP' },
-    ];
+    const steps = Array.from({ length: 4 }, (_, i) => ({
+        name: stepLabel(stepFlow, i),
+        role: (stepFlow && stepFlow[i]?.role) || (i === 0 ? 'accounting assistant' : ['accounting head', 'auditor', 'svp'][i - 1]),
+    }));
 
     const formatDate = (dateString?: string | null) => {
         if (!dateString) return null;
@@ -48,6 +63,7 @@ export function DisbursementStatusTracking({ currentStep = 1, tracking = [] }: S
                         const isPending = currentStep === stepNum && (!trackingInfo || trackingInfo.action === 'pending');
                         const isRejected = trackingInfo?.action === 'rejected';
                         const isFuture = currentStep < stepNum;
+                        const actorName = trackingInfo?.handler?.name ?? (stepFlow?.[index]?.user_name ?? null);
 
                         let circleClass = 'bg-muted border-muted';
                         let textColor = 'text-muted-foreground';
@@ -57,7 +73,7 @@ export function DisbursementStatusTracking({ currentStep = 1, tracking = [] }: S
                         if (isCompleted) {
                             circleClass = 'bg-green-500 border-green-500 shadow-green-100 shadow-lg';
                             textColor = 'text-foreground';
-                            statusText = trackingInfo?.handler?.name || 'Approved';
+                            statusText = actorName || 'Approved';
                             icon = (
                                 <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -66,7 +82,7 @@ export function DisbursementStatusTracking({ currentStep = 1, tracking = [] }: S
                         } else if (isRejected) {
                             circleClass = 'bg-destructive border-destructive shadow-destructive/20 shadow-lg';
                             textColor = 'text-destructive';
-                            statusText = `Rejected by ${trackingInfo?.handler?.name || 'System'}`;
+                            statusText = `Rejected by ${actorName || 'System'}`;
                             icon = (
                                 <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

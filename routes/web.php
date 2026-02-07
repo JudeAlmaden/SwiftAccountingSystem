@@ -90,6 +90,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('can:approve disbursements')
         ->name('disbursements.decline');
 
+    // Audit Trails (auditor / admin)
+    Route::middleware(['can:view audit trails'])->group(function () {
+        Route::get('/dashboard/audit-trails', [App\Http\Controllers\AuditTrailController::class, 'indexPage'])->name('audit-trails.index');
+        Route::get('/audit-trails/data', [App\Http\Controllers\AuditTrailController::class, 'index'])->name('audit-trails.data');
+        Route::get('/audit-trails/filters', [App\Http\Controllers\AuditTrailController::class, 'filters'])->name('audit-trails.filters');
+    });
+
     // Attachments
     Route::get('/attachments/download/{id}', [App\Http\Controllers\FileController::class, 'download'])->name('attachments.download');
     Route::post('/attachments/upload-temp', [App\Http\Controllers\TemporaryUploadController::class, 'upload'])->name('attachments.upload-temp');
