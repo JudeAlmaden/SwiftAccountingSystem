@@ -551,7 +551,7 @@ export default function DisbursementReportPage() {
                                 <CardHeader>
                                     <CardTitle>Voucher-level details</CardTitle>
                                     <CardDescription>
-                                        Audit list: voucher no, date, account, amount, status, approver, pending days, remarks
+                                        Audit list: voucher no, date, account, amount, status, approver, remarks
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>
@@ -564,7 +564,6 @@ export default function DisbursementReportPage() {
                                                 <TableHead className="text-right">Amount</TableHead>
                                                 <TableHead>Status</TableHead>
                                                 <TableHead>Approver</TableHead>
-                                                <TableHead className="text-right">Pending days</TableHead>
                                                 <TableHead>Remarks</TableHead>
                                             </TableRow>
                                         </TableHeader>
@@ -577,7 +576,6 @@ export default function DisbursementReportPage() {
                                                     <TableCell className="text-right">{formatCurrency(row.amount)}</TableCell>
                                                     <TableCell>{row.status}</TableCell>
                                                     <TableCell>{row.approver}</TableCell>
-                                                    <TableCell className="text-right">{row.pending_days}</TableCell>
                                                     <TableCell className="max-w-[160px] truncate text-muted-foreground" title={row.remarks}>{row.remarks}</TableCell>
                                                 </TableRow>
                                             ))}
@@ -587,7 +585,7 @@ export default function DisbursementReportPage() {
                             </Card>
                         )}
 
-                        {/* 5. Status / Workflow insights */}
+                      
                         {data.workflow && (
                             <Card>
                                 <CardHeader>
