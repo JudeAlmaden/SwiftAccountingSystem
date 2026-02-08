@@ -52,10 +52,9 @@ export function DisbursementStatusTracking({ currentStep = 1, stepFlow, tracking
                 <p className="text-xs text-[#737385]">Current progress and history</p>
             </div>
 
-            <DottedSeparator className='-mt-2 mb-6' />
+            <DottedSeparator className='-mt-5' />
 
             <div className="relative">
-                {/* Vertical Line */}
                 <div className="absolute left-[11px] top-1 bottom-1 w-[2px] bg-muted"></div>
 
                 <div className="space-y-6">
@@ -92,10 +91,10 @@ export function DisbursementStatusTracking({ currentStep = 1, stepFlow, tracking
                                 </svg>
                             );
                         } else if (isPending) {
-                            circleClass = 'bg-white border-primary border-2 shadow-primary/20 shadow-lg';
+                            circleClass = 'bg-green-500 border-green-500 shadow-green-100 shadow-lg';
                             textColor = 'text-foreground';
                             statusText = 'Waiting for Action';
-                            icon = <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse"></div>;
+                            icon = <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse"></div>;
                         } else if (isFuture) {
                             circleClass = 'bg-muted/50 border-muted';
                             textColor = 'text-muted-foreground/50';
@@ -107,7 +106,7 @@ export function DisbursementStatusTracking({ currentStep = 1, stepFlow, tracking
                             <div key={step.role} className="flex items-start gap-4 relative">
                                 <div className={`relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full z-10 border transition-all duration-300 ${circleClass}`}>
                                     {isPending && (
-                                        <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping"></div>
+                                        <div className="absolute inset-0 rounded-full bg-green-500/20 animate-ping"></div>
                                     )}
                                     {icon}
                                 </div>

@@ -55,10 +55,6 @@ export default function GenerateDisbursement() {
     const TITLE_MAX_LENGTH = 50;
     const DESCRIPTION_MAX_LENGTH = 70;
 
-    // Get CSRF token
-    const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
-    const token = meta?.content || '';
-
     useEffect(() => {
         fetch('/api/control-number-prefixes', {
             headers: { Accept: 'application/json' },
@@ -91,6 +87,10 @@ export default function GenerateDisbursement() {
         setIsSubmitting(true);
         setErrors({});
 
+        // Get fresh CSRF token
+        const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
+        const csrfToken = meta?.content || '';
+
         const formData = new FormData();
 
         // Append basic info
@@ -111,7 +111,7 @@ export default function GenerateDisbursement() {
         fetch(route('disbursements.store'), {
             method: 'POST',
             headers: {
-                'X-CSRF-TOKEN': token,
+                'X-CSRF-TOKEN': csrfToken,
                 'Accept': 'application/json',
             },
             body: formData,
@@ -122,6 +122,9 @@ export default function GenerateDisbursement() {
                     if (response.status === 422) {
                         setErrors(data.errors || {});
                         throw new Error('Validation failed');
+                    }
+                    if (response.status === 419) {
+                        throw new Error('CSRF token mismatch. Please refresh the page and try again.');
                     }
                     throw new Error(data.message || 'Something went wrong');
                 }
@@ -134,6 +137,7 @@ export default function GenerateDisbursement() {
             })
             .catch(error => {
                 console.error('Error saving disbursement:', error);
+                alert(error.message || 'Failed to save disbursement. Please try again.');
                 setIsSubmitting(false);
             });
     };
@@ -149,27 +153,8 @@ export default function GenerateDisbursement() {
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
                 <div className="space-y-6">
                     <Card>
-                        <div className="px-10 py-2">
-                            <div className="grid gap-10 md:grid-cols-2">
-                                <div>
-                                    <label htmlFor="prefix" className="text-sm font-medium text-foreground mb-2 flex items-center gap-1">
-                                        Control number prefix
-                                        <span className="text-destructive text-xs">*</span>
-                                    </label>
-                                    <Select value={controlNumberPrefixId} onValueChange={setControlNumberPrefixId}>
-                                        <SelectTrigger id="prefix" className={`max-w-[200px] border-gray-400 border-[1.6px] ${errors.control_number_prefix_id ? 'border-destructive' : ''}`}>
-                                            <SelectValue placeholder="Select prefix" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {prefixes.map((p) => (
-                                                <SelectItem key={p.id} value={String(p.id)}>
-                                                    {p.code} {p.label ? `– ${p.label}` : ''}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.control_number_prefix_id && <p className="text-[10px] text-destructive mt-1 font-medium">{errors.control_number_prefix_id[0]}</p>}
-                                </div>
+                        <div className="px-10 py-6">
+                            <div className="grid gap-4 grid-cols-[2fr_1fr_1fr]">
                                 <div>
                                     <label htmlFor="title" className="text-sm font-medium text-foreground mb-2 flex items-center gap-1">
                                         Title
@@ -195,24 +180,47 @@ export default function GenerateDisbursement() {
                                                 {title.length}/{TITLE_MAX_LENGTH}
                                             </span>
                                         )}
+                                        
                                     </div>
                                     {errors.title && <p className="text-[10px] text-destructive mt-1 font-medium">{errors.title[0]}</p>}
                                 </div>
-                                <div className='ml-30'>
+                                
+                                <div>
+                                    <label htmlFor="prefix" className="text-sm font-medium text-foreground mb-2 flex items-center gap-1">
+                                        Control number prefix
+                                        <span className="text-destructive text-xs">*</span>
+                                    </label>
+                                    <Select value={controlNumberPrefixId} onValueChange={setControlNumberPrefixId}>
+                                        <SelectTrigger id="prefix" className={`border-gray-400 border-[1.6px] text-xs text-muted-foreground ${errors.control_number_prefix_id ? 'border-destructive' : ''}`}>
+                                            <SelectValue placeholder="Select prefix" className="text-xs text-muted-foreground" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {prefixes.map((p) => (
+                                                <SelectItem key={p.id} value={String(p.id)} className="text-xs">
+                                                    {p.code} {p.label ? `– ${p.label}` : ''}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {errors.control_number_prefix_id && <p className="text-[10px] text-destructive mt-1 font-medium">{errors.control_number_prefix_id[0]}</p>}
+                                </div>
+
+                                <div>
                                     <label htmlFor="date" className="text-sm font-medium text-foreground mb-2 flex items-center gap-1">
                                         Date of transaction
                                         <span className="text-destructive text-xs">*</span>
                                     </label>
-                                    <DatePicker
-                                        value={date}
-                                        onChange={setDate}
-                                        placeholder="Select transaction date"
-                                        className={`${errors.date ? 'border-destructive' : ''} max-w-[310px] border-gray-400 border-[1.6px]`}
+                                    <Input
+                                        id="date"
+                                        value={new Date(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                                        readOnly
+                                        disabled
+                                        className="bg-muted border-gray-400 border-[1.6px] cursor-not-allowed"
                                     />
                                     {errors.date && <p className="text-[10px] text-destructive mt-1 font-medium">{errors.date[0]}</p>}
                                 </div>
                             </div>
-                            <div className="mt-4">
+                            <div className="mt-6">
                                 <label htmlFor="description" className="text-sm font-medium text-foreground mb-2 flex items-center gap-1">
                                     Description
                                     <span className="text-destructive text-xs">*</span>
@@ -240,7 +248,7 @@ export default function GenerateDisbursement() {
                                 </div>
                                 {errors.description && <p className="text-[10px] text-destructive mt-1 font-medium">{errors.description[0]}</p>}
                             </div>
-                            <div className="mt-4">
+                            <div className="mt-6">
                                 <label htmlFor="recommended_by" className="text-sm font-medium text-foreground mb-2 flex items-center gap-1">
                                     Recommended By
                                     <span className="text-muted-foreground text-[10px] font-normal italic ml-1">(Optional)</span>

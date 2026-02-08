@@ -60,7 +60,7 @@ export default function Inbox() {
             const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
             const token = meta?.content || '';
 
-            await fetch(`/api/notifications/${id}/read`, {
+            const response = await fetch(`/api/notifications/${id}/read`, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': token,
@@ -68,10 +68,15 @@ export default function Inbox() {
                 }
             });
 
+            const data = await response.json();
+            setNotifications(prev => prev.map(n => 
+                n.id === id ? { ...n, is_read: true } : n
+            ));
+            setUnreadCount(data.unread_count);
+            router.reload({ only: ['user'] });
+
             if (link) {
-                router.visit(link);
-            } else {
-                fetchNotifications();
+                setTimeout(() => router.visit(link), 100);
             }
         } catch (error) {
             console.error('Error marking notification as read:', error);
@@ -83,14 +88,18 @@ export default function Inbox() {
             const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
             const token = meta?.content || '';
 
-            await fetch('/api/notifications/read-all', {
+            const response = await fetch('/api/notifications/read-all', {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': token,
                     'Accept': 'application/json',
                 }
             });
-            fetchNotifications();
+
+            const data = await response.json();
+            setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+            setUnreadCount(0);
+            router.reload({ only: ['user'] });
         } catch (error) {
             console.error('Error marking all as read:', error);
         }
