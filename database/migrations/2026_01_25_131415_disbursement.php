@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('title');
             $table->string('description');
             $table->integer('step')->default(1); // 1=assistant, 2=head, 3=auditor, 4=svp
-            $table->string('recommended_by')->nullable();
+            $table->string('check_id')->nullable();
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->timestamps();
         });

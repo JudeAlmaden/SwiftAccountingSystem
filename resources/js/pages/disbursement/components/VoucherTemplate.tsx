@@ -34,24 +34,61 @@ export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
                 </div>
 
                 {/* Top Right Info - NO and DATE */}
-                <div className="flex justify-end mb-1" style={{ gap: '20px', fontSize: '11px' }}>
-                    <div style={{ textAlign: 'left', minWidth: '180px' }}>
-                        <div style={{ display: 'flex', alignItems: 'baseline', marginBottom: '6px' }}>
-                            <span className="font-bold" style={{ marginRight: '15px', minWidth: '40px' }}>NO.</span>
-                            <span style={{ borderBottom: '1px dotted black', flex: 1, paddingBottom: '4px', display: 'flex', alignItems: 'flex-end', minHeight: '20px' }}>
-                                <span style={{ paddingBottom: '2px' }}>
-                                    {disbursement.control_number?.split('-').pop()}
-                                </span>
-                            </span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'baseline' }}>
-                            <span className="font-bold" style={{ marginRight: '15px', minWidth: '40px' }}>DATE</span>
-                            <span style={{ borderBottom: '1px dotted black', flex: 1, paddingBottom: '4px', display: 'flex', alignItems: 'flex-end', minHeight: '20px' }}>
-                                <span style={{ paddingBottom: '2px' }}>
-                                    {formatDate(disbursement.created_at)}
-                                </span>
-                            </span>
-                        </div>
+                <div
+                    className="flex justify-end mb-1"
+                    style={{ gap: '20px', fontSize: '11px' }}
+                >
+                    {/* Check No */}
+                    <div style={{ display: 'flex', alignItems: 'baseline' }}>
+                        <span className="font-bold" style={{ marginRight: '6px' }}>
+                            Check No.
+                        </span>
+                        <span
+                            style={{
+                                borderBottom: '1px dotted black',
+                                flex: 1,
+                                paddingBottom: '3px',
+                                minHeight: '16px',
+                                minWidth: '80px',
+                                textAlign: 'left',
+                            }}
+                        >
+                            {disbursement.check_id}
+                        </span>
+                    </div>
+
+                    {/* No */}
+                    <div style={{ display: 'flex', alignItems: 'baseline', minWidth: '140px' }}>
+                        <span className="font-bold" style={{ marginRight: '6px' }}>
+                            No.
+                        </span>
+                        <span
+                            style={{
+                                borderBottom: '1px dotted black',
+                                flex: 1,
+                                paddingBottom: '3px',
+                                minHeight: '16px',
+                            }}
+                        >
+                            {disbursement.control_number?.split('-').pop()}
+                        </span>
+                    </div>
+
+                    {/* Date */}
+                    <div style={{ display: 'flex', alignItems: 'baseline', minWidth: '120px' }}>
+                        <span className="font-bold" style={{ marginRight: '6px' }}>
+                            Date
+                        </span>
+                        <span
+                            style={{
+                                borderBottom: '1px dotted black',
+                                flex: 1,
+                                paddingBottom: '3px',
+                                minHeight: '16px',
+                            }}
+                        >
+                            {formatDate(disbursement.created_at)}
+                        </span>
                     </div>
                 </div>
 
@@ -155,14 +192,14 @@ export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
                     {[
                         [
                             { label: 'PREPARED BY', step: 1 },
-                            { label: 'APPROVED BY', step: 2 }
+                            { label: 'RECOMMENDED BY', step: 2 }
                         ],
                         [
-                            { label: 'CHECKED BY', step: 4 },
-                            { label: 'PAID BY', step: 5 }
+                            { label: 'CHECKED BY', step: 3 },
+                            { label: 'APPROVED BY', step: 4 }
                         ],
                         [
-                            { label: 'RECOMMENDED BY', step: null },
+                            { label: 'PAID BY', step: null },
                             { label: 'RECEIVED BY', step: null }
                         ],
                     ].map((row, i) => (
@@ -172,11 +209,15 @@ export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
                                 display: 'grid',
                                 gridTemplateColumns: '1fr 1fr',
                                 gap: '40px',
-                                marginBottom: i < 2 ? '16px' : 0,
+                                marginBottom: '16px',
                             }}
                         >
                             {row.map(({ label, step }) => {
-                                const trackingInfo = step ? disbursement.tracking?.find(t => t.step === step && t.action === 'approved') : null;
+                                // Find the user who performed the action for this step
+                                const trackingInfo = step
+                                    ? disbursement.tracking?.find(t => t.step === step && t.action === 'approved')
+                                    : null;
+
                                 const actorName = trackingInfo?.handler?.name || '';
 
                                 return (

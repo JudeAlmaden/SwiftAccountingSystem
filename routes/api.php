@@ -4,10 +4,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AccountsController;
+use App\Http\Controllers\AccountGroupController;
 use App\Http\Controllers\DisbursementController;
 use App\Http\Controllers\DisbursementReportController;
 use App\Http\Controllers\AccountReportController;
 use App\Http\Controllers\ControlNumberPrefixController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\AuditTrailController;
+use App\Http\Controllers\TemporaryUploadController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -45,9 +49,17 @@ Route::get('/users/stats', [UserController::class, 'stats'])->name('users.stats'
 Route::middleware(['auth:sanctum'])->group(function () {
     // Chart of Accounts Management
     Route::get('/accounts', [AccountsController::class, 'index'])->name('accounts.index'); // List all accounts
+    Route::get('/accounts/{id}', [AccountsController::class, 'show'])->name('accounts.show'); // View specific account
     Route::post('/accounts', [AccountsController::class, 'store'])->name('accounts.store');      // Save new account
      Route::delete('/accounts/{account}', [AccountsController::class, 'destroy'])->name('accounts.destroy');   // Delete account
      Route::post('/accounts/{id}/toggle-status', [AccountsController::class, 'toggleStatus'])->name('accounts.toggleStatus');
+
+     // Account Groups
+     Route::get('/account-groups', [AccountGroupController::class, 'index'])->name('account-groups.index');
+     Route::post('/account-groups', [AccountGroupController::class, 'store'])->name('account-groups.store');
+     Route::put('/account-groups/{id}', [AccountGroupController::class, 'update'])->name('account-groups.update');
+     Route::delete('/account-groups/{id}', [AccountGroupController::class, 'destroy'])->name('account-groups.destroy');
+     Route::get('/account-groups/{id}', [AccountGroupController::class, 'show'])->name('account-groups.show');
 });
 
 /*==================
@@ -76,7 +88,38 @@ Route::middleware(['auth:sanctum'])->group(function () {
     /*==================
       Notification API Routes
     ===================*/
-    Route::get('/notifications', [App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
-    Route::post('/notifications/{id}/read', [App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notifications.markRead');
-    Route::post('/notifications/read-all', [App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('notifications.markAllRead');
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.markRead');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.markAllRead');
+
+    /*==================
+      Disbursement Actions
+    ===================*/
+    Route::post('/disbursements/{id}/approve', [DisbursementController::class, 'approve'])
+        ->middleware('can:approve disbursements')
+        ->name('disbursements.approve');
+
+    Route::post('/disbursements/{id}/decline', [DisbursementController::class, 'decline'])
+        ->middleware('can:approve disbursements')
+        ->name('disbursements.decline');
+
+    /*==================
+      Audit Trails
+    ===================*/
+     Route::middleware(['can:view audit trails'])->group(function () {
+        Route::get('/audit-trails', [AuditTrailController::class, 'index'])->name('audit-trails.data');
+        Route::get('/audit-trails/filters', [AuditTrailController::class, 'filters'])->name('audit-trails.filters');
+    });
+
+    /*==================
+      Attachments
+    ===================*/
+    Route::post('/attachments/upload-temp', [TemporaryUploadController::class, 'upload'])->name('attachments.upload-temp');
+    Route::delete('/attachments/revert-temp', [TemporaryUploadController::class, 'revert'])->name('attachments.revert-temp');
+
+    /*==================
+      Trial Balance
+    ===================*/
+      Route::get('/api/trial-balance/data', [App\Http\Controllers\TrialBalanceController::class, 'getData'])
+      ->middleware(['can:create trial balance'])->name('api.trial-balance.data');
 });

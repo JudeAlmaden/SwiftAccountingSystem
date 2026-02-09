@@ -54,6 +54,8 @@ export default function View() {
     const [isActionLoading, setIsActionLoading] = useState(false);
     const [isDeclineModalOpen, setIsDeclineModalOpen] = useState(false);
     const [declineRemarks, setDeclineRemarks] = useState('');
+    const [isApproveStep5ModalOpen, setIsApproveStep5ModalOpen] = useState(false);
+    const [checkId, setCheckId] = useState('');
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -77,11 +79,17 @@ export default function View() {
         fetchData();
     }, [id]);
 
-    const handleAction = async (action: 'approve' | 'decline', remarks?: string) => {
+    const handleAction = async (action: 'approve' | 'decline', remarks?: string, checkIdValue?: string) => {
         if (!disbursement) return;
 
         if (action === 'decline' && !remarks) {
             setIsDeclineModalOpen(true);
+            return;
+        }
+
+        const currentStep = Number(disbursement.current_step) || 1;
+        if (action === 'approve' && isLastStep(currentStep) && !checkIdValue) {
+            setIsApproveStep5ModalOpen(true);
             return;
         }
 
@@ -100,6 +108,15 @@ export default function View() {
                 ? route('disbursements.approve', { id: disbursement.id })
                 : route('disbursements.decline', { id: disbursement.id });
 
+            const requestBody: any = {
+                remarks: remarks || (action === 'approve' ? 'Approved through dashboard.' : 'Declined through dashboard.')
+            };
+
+            // Add check_id for final step approval
+            if (action === 'approve' && isLastStep(currentStep) && checkIdValue) {
+                requestBody.check_id = checkIdValue;
+            }
+
             const res = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
@@ -107,14 +124,14 @@ export default function View() {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': token,
                 },
-                body: JSON.stringify({
-                    remarks: remarks || (action === 'approve' ? 'Approved through dashboard.' : 'Declined through dashboard.')
-                })
+                body: JSON.stringify(requestBody)
             });
 
             if (res.ok) {
                 setIsDeclineModalOpen(false);
                 setDeclineRemarks('');
+                setIsApproveStep5ModalOpen(false);
+                setCheckId('');
                 await fetchData(); // Refresh data
             } else {
                 const data = await res.json();
@@ -128,23 +145,41 @@ export default function View() {
         }
     };
 
+    const isLastStep = (step: number) => {
+        const flow = disbursement?.step_flow || [];
+        // If flow exists, last step is flow.length. Current step is 1-based index.
+        return flow.length > 0 ? step === flow.length : step === 5;
+    };
+
     const canPerformAction = () => {
         if (!disbursement || disbursement.status !== 'pending') return false;
 
         const currentStep = Number(disbursement.current_step) || 1;
         const stepFlow = disbursement.step_flow ?? [];
-        const stepConfig = stepFlow[currentStep - 1];
-        const stepRole = stepConfig?.role ?? (currentStep === 1 ? null : null);
+        const stepConfig = stepFlow[currentStep - 1]; // 0-based index
+
+        // Use step role if available, fallback for defaults
+        const stepRole = stepConfig?.role;
         const restrictedToUserId = stepConfig?.user_id ?? null;
+
         const rolesLower = (userRoles || []).map((r: string) => r.toLowerCase());
         const userId = user?.id;
 
-        if (rolesLower.includes('admin')) return true;
-
+        // If restricted to specific user ID
         if (restrictedToUserId != null && userId !== restrictedToUserId) return false;
 
-        if (currentStep === 1) return rolesLower.includes('accounting assistant');
+        // If restricted to role
         if (stepRole && rolesLower.includes(stepRole.toLowerCase())) return true;
+
+        // If no role/user defined (e.g. initial step or user didn't set role), 
+        // fallback logic or maybe allow specific roles like admin?
+        // For Step 1 (creation), usually it requires 'accounting assistant' or is auto-approved.
+        // If we are at Step 1 pending approval (which is weird, normally it moves to 2), maybe allow creator?
+        if (!stepRole && !restrictedToUserId) {
+            // Fallback: If it's step 1, allow accounting assistant? Or allow anyone if null?
+            // Usually step 1 is done instantly. If current_step is 1 and pending, something is wrong or waiting for initial review.
+            if (currentStep === 1 && rolesLower.includes('accounting assistant')) return true;
+        }
 
         return false;
     };
@@ -407,6 +442,46 @@ export default function View() {
                             onClick={() => handleAction('decline', declineRemarks)}
                         >
                             {isActionLoading ? 'Processing...' : 'Confirm Decline'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Step 5 Approval - Check ID Modal */}
+            <Dialog open={isApproveStep5ModalOpen} onOpenChange={setIsApproveStep5ModalOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-green-600">
+                            <Info className="h-5 w-5" />
+                            Final Approval - Enter Check ID
+                        </DialogTitle>
+                        <DialogDescription>
+                            This is the final step. Please enter the check ID to complete the approval process.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                            <label htmlFor="check_id" className="text-sm font-medium">
+                                Check ID <span className="text-destructive">*</span>
+                            </label>
+                            <input
+                                id="check_id"
+                                type="text"
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                placeholder="Enter check number or ID..."
+                                value={checkId}
+                                onChange={(e) => setCheckId(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsApproveStep5ModalOpen(false)}>Cancel</Button>
+                        <Button
+                            className="bg-green-600 hover:bg-green-700"
+                            disabled={!checkId.trim() || isActionLoading}
+                            onClick={() => handleAction('approve', 'Final approval with check ID.', checkId)}
+                        >
+                            {isActionLoading ? 'Processing...' : 'Approve & Complete'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

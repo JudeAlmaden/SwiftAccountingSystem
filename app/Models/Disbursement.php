@@ -18,7 +18,7 @@ class Disbursement extends Model
         'step_flow',
         'current_step',
         'status',
-        'recommended_by',
+        'check_id',
     ];
 
     protected $casts = [
@@ -27,7 +27,13 @@ class Disbursement extends Model
     ];
 
     /**
-     * Default approval flow: step 1 = preparer (role null), 2 = accounting head, 3 = auditor, 4 = svp.
+     * Default approval flow: 
+     * Step 1 = accounting assistant generates voucher
+     * Step 2 = accounting head approval
+     * Step 3 = auditor approval
+     * Step 4 = svp approval
+     * Step 5 = back to accounting assistant for final approval
+     * 
      * user_id: optional. When null, any user with that role can approve/decline. When set, only that
      * user (or admin) can act at this step — for when a step is restricted to a specific person.
      * Who actually acted is stored in disbursement_tracking (handled_by), not in step_flow.
@@ -39,6 +45,7 @@ class Disbursement extends Model
             ['user_id' => null, 'role' => 'accounting head'],
             ['user_id' => null, 'role' => 'auditor'],
             ['user_id' => null, 'role' => 'svp'],
+            ['user_id' => null, 'role' => 'accounting assistant'], // Final approval
         ];
     }
 

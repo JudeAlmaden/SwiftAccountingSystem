@@ -185,7 +185,7 @@ export default function DisbursementReportPage() {
             date_to: dateTo,
         });
         // Use web route path so session auth is used (API route has same name and uses Sanctum).
-        const url = `/dashboard/reports/disbursements/data?${params}`;
+        const url = `/api/reports/disbursements?${params}`;
         fetch(url, {
             headers: { Accept: 'application/json' },
             credentials: 'include',
@@ -585,7 +585,7 @@ export default function DisbursementReportPage() {
                             </Card>
                         )}
 
-                      
+
                         {data.workflow && (
                             <Card>
                                 <CardHeader>

@@ -65,6 +65,9 @@ class RolesSeeder extends Seeder
 
             // Audit
             'view audit trails',
+
+            // Reports
+            'create trial balance',
         ];
 
         foreach ($permissions as $permission) {
@@ -86,14 +89,16 @@ class RolesSeeder extends Seeder
         $accountingAssistant->givePermissionTo([
             'view accounts',
             'view disbursements', 
-            'create disbursements'
+            'create disbursements',
+            'release disbursements'
         ]);
 
         // Accounting Head: Accounts & Disbursements (Full access) + manage control number prefixes
         $accountingHead->givePermissionTo([
             'view accounts', 'create accounts', 'edit accounts', 'delete accounts',
             'view disbursements', 'create disbursements', 'edit disbursements', 'delete disbursements', 'approve disbursements', 'release disbursements',
-            'manage control number prefixes'
+            'manage control number prefixes',
+            'create trial balance'
         ]);
                 
         // Auditor: Read-only access + Audit Trails
@@ -101,6 +106,7 @@ class RolesSeeder extends Seeder
             'view accounts',
             'view disbursements',
             'approve disbursements',
+            'create trial balance',
             'view audit trails',
         ]);
 
@@ -109,7 +115,6 @@ class RolesSeeder extends Seeder
             'view accounts',
             'view disbursements',
             'approve disbursements',
-            'release disbursements'
         ]);
     }
 }

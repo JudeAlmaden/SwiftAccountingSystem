@@ -3,6 +3,10 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\AuditTrailController;
+use App\Http\Controllers\FileController;
 
 // Login view for unauthenticated users
 Route::get('/', function () {
@@ -16,7 +20,7 @@ Route::get('/', function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     
     // Dashboard
-    Route::get('dashboard', App\Http\Controllers\DashboardController::class)->name('dashboard');
+    Route::get('dashboard', DashboardController::class)->name('dashboard');
 
     // Inbox
     Route::get('dashboard/inbox', function(){
@@ -50,9 +54,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/dashboard/reports/disbursements', function () {
             return Inertia::render('reports/disbursement');
         })->name('reports.disbursements');
-
-        Route::get('/dashboard/reports/disbursements/data', [App\Http\Controllers\DisbursementReportController::class, 'index'])
-            ->name('reports.disbursements.data');
     });
 
     // Account Reports (Requires view accounts permission)
@@ -62,16 +63,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         })->name('reports.accounts');
     });
 
+    Route::get('dashboard/accounts/{id}', function($id){
+        return Inertia::render('Accounts/view', ['id' => $id]);
+    })->name('accounts.view');
     // Create/Edit/View Users (Requires view users permission at least, page handles nuances?)
     // Based on sidebar, this is "Users and Accounts"
     Route::middleware(['can:view users'])->group(function () {
-        Route::get('/dashboard/accounts', [App\Http\Controllers\UserController::class, 'indexPage'])->name('users');
-
-        // API Routes for Users (consumed by the React frontend)
-        Route::get('/users/data', [App\Http\Controllers\UserController::class, 'index'])->name('users.index');
-        Route::get('/users/stats', [App\Http\Controllers\UserController::class, 'stats'])->name('users.stats');
-        Route::post('/users', [App\Http\Controllers\UserController::class, 'store'])->name('users.store');
-        Route::put('/users/{user}', [App\Http\Controllers\UserController::class, 'update'])->name('users.update');
+        Route::get('/dashboard/accounts', [UserController::class, 'indexPage'])->name('users');
     });
 
     // Chart of Accounts (Requires view accounts permission)
@@ -79,28 +77,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/dashboard/chart-of-accounts',function(){
             return Inertia::render('Accounts/accounts');
         })->name('accounts');
+        
+        Route::get('/dashboard/chart-of-accounts/{id}', function($id){
+            return Inertia::render('Accounts/view', ['id' => $id]);
+        })->name('accounts.view');
     });
 
-    // Disbursement Actions
-    Route::post('/disbursements/{id}/approve', [App\Http\Controllers\DisbursementController::class, 'approve'])
-        ->middleware('can:approve disbursements')
-        ->name('disbursements.approve');
-
-    Route::post('/disbursements/{id}/decline', [App\Http\Controllers\DisbursementController::class, 'decline'])
-        ->middleware('can:approve disbursements')
-        ->name('disbursements.decline');
-
+    Route::get('dashboard/accounts/view/{id}', function($id){
+        return Inertia::render('Accounts/view');
+    })->name('accounts.view');
     // Audit Trails (auditor / admin)
     Route::middleware(['can:view audit trails'])->group(function () {
-        Route::get('/dashboard/audit-trails', [App\Http\Controllers\AuditTrailController::class, 'indexPage'])->name('audit-trails.index');
-        Route::get('/audit-trails/data', [App\Http\Controllers\AuditTrailController::class, 'index'])->name('audit-trails.data');
-        Route::get('/audit-trails/filters', [App\Http\Controllers\AuditTrailController::class, 'filters'])->name('audit-trails.filters');
+        Route::get('/dashboard/audit-trails', [AuditTrailController::class, 'indexPage'])->name('audit-trails.index');
     });
 
     // Attachments
-    Route::get('/attachments/download/{id}', [App\Http\Controllers\FileController::class, 'download'])->name('attachments.download');
-    Route::post('/attachments/upload-temp', [App\Http\Controllers\TemporaryUploadController::class, 'upload'])->name('attachments.upload-temp');
-    Route::delete('/attachments/revert-temp', [App\Http\Controllers\TemporaryUploadController::class, 'revert'])->name('attachments.revert-temp');
+    Route::get('/attachments/download/{id}', [FileController::class, 'download'])->name('attachments.download');
+
+    // Trial Balance (Requires create trial balance permission)
+    Route::middleware(['can:create trial balance'])->group(function () {
+        Route::get('/dashboard/reports/trial-balance', function(){
+            return Inertia::render('reports/TrialBalance');
+        })->name('trial-balance.index');
+    });
 });
 
 require __DIR__.'/settings.php';

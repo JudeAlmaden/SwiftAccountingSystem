@@ -33,6 +33,7 @@ export function AppSidebar() {
         controlPrefixes: { title: 'Control number prefixes', href: route('control-number-prefixes.index'), icon: Tag, permission: 'manage control number prefixes', role: 'accounting head' },
         auditTrails: { title: 'Audit Trails', href: route('audit-trails.index'), icon: ClipboardList, permission: 'view audit trails' },
         notifications: { title: 'Notifications', href: route('inbox'), icon: Bell },
+        trialBalance: { title: 'Trial Balance', href: route('trial-balance.index'), icon: PieChart, permission: 'create trial balance' },
     };
 
     const userPermissions = user?.permissions || [];

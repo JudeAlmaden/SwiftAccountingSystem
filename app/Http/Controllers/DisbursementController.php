@@ -103,7 +103,6 @@ class DisbursementController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'recommended_by' => 'nullable|string|max:255',
             'control_number_prefix_id' => 'required|exists:control_number_prefixes,id',
             'accounts' => 'required|array|min:1',
             'accounts.*.account_id' => 'required|exists:accounts,id',
@@ -116,16 +115,31 @@ class DisbursementController extends Controller
 
         $prefix = ControlNumberPrefix::findOrFail($validated['control_number_prefix_id']);
         $prefixCode = Str::upper($prefix->code);
-        $yearTwo = substr((string) date('Y'), -2);
-        $random = Str::upper(Str::random(6));
-        $controlNumber = "{$prefixCode}-{$yearTwo}-{$random}";
+
+        // Get the latest disbursement with this prefix to determine the next number
+        $latestDisbursement = Disbursement::where('control_number', 'like', "{$prefixCode}-%")
+            ->orderBy('id', 'desc')
+            ->first();
+
+        $nextNumber = 1;
+        if ($latestDisbursement) {
+            $parts = explode('-', $latestDisbursement->control_number);
+            $lastPart = end($parts);
+            
+            // basic check if the last part is numeric to avoid issues with old formats
+            if (is_numeric($lastPart)) {
+                $nextNumber = intval($lastPart) + 1;
+            }
+        }
+
+        $paddedNumber = str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+        $controlNumber = "{$prefixCode}-{$paddedNumber}";
         
         $stepFlow = Disbursement::defaultStepFlow();
         $disbursement = Disbursement::create([
             'control_number' => $controlNumber,
             'title' => $validated['title'],
             'description' => $validated['description'] ?? '',
-            'recommended_by' => $validated['recommended_by'] ?? null,
             'step_flow' => $stepFlow,
             'current_step' => 2, // Next: Accounting Head
             'status' => 'pending',
@@ -208,14 +222,30 @@ class DisbursementController extends Controller
             }
         }
 
+        $totalSteps = count($stepFlow);
+        
+        // Final step (check_id required)
+        if ($currentStep === $totalSteps) {
+            $request->validate([
+                'check_id' => 'required|string|max:255',
+            ]);
+        }
+
         $trackingRole = $currentStep === 1 ? 'accounting assistant' : ($stepConfig['role'] ?? 'admin');
         $nextStep = $currentStep + 1;
-        $status = $nextStep > 4 ? 'approved' : $disbursement->status;
+        $status = $nextStep > $totalSteps ? 'approved' : $disbursement->status;
 
-        $disbursement->update([
-            'current_step' => min($nextStep, 5),
+        $updateData = [
+            'current_step' => min($nextStep, $totalSteps + 1),
             'status' => $status,
-        ]);
+        ];
+
+        // Add check_id at final step
+        if ($currentStep === $totalSteps && $request->has('check_id')) {
+            $updateData['check_id'] = $request->check_id;
+        }
+
+        $disbursement->update($updateData);
 
         DisbursementTracking::create([
             'handled_by' => $user->id,
@@ -236,18 +266,23 @@ class DisbursementController extends Controller
             ['control_number' => $disbursement->control_number, 'step' => $currentStep, 'status' => $status]
         );
 
-        if ($nextStep <= 4) {
+        if ($nextStep <= $totalSteps) {
             $nextRole = $stepFlow[$nextStep - 1]['role'] ?? null;
             if ($nextRole) {
                 $this->notifyUsersWithRole($nextRole, 'Review Required', "Disbursement {$disbursement->control_number} needs your approval.", route('disbursement.view', ['id' => $disbursement->id]));
             }
         } else {
-            $initiator = $disbursement->tracking()->where('step', 1)->first();
-            if ($initiator && $initiator->handled_by) {
-                Notification::create([
-                    'user_id' => $initiator->handled_by,
+            // Final Approval - Notify EVERYONE involved
+            $involvedUserIds = DisbursementTracking::where('disbursement_id', $disbursement->id)
+                ->whereNotNull('handled_by')
+                ->pluck('handled_by')
+                ->unique();
+
+            foreach ($involvedUserIds as $involvedUserId) {
+                 Notification::create([
+                    'user_id' => $involvedUserId,
                     'title' => 'Disbursement Approved',
-                    'message' => "Your disbursement ({$disbursement->control_number}) has been fully approved.",
+                    'message' => "Disbursement ({$disbursement->control_number}) has been fully approved.",
                     'link' => route('disbursement.view', ['id' => $disbursement->id])
                 ]);
             }

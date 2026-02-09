@@ -11,12 +11,15 @@ export interface User {
 export interface Account {
     id: number;
     account_name: string;
-    account_description: string;
     account_code: string;
     account_type: string;
-    account_normal_side: string;
-    status: string;
+    sub_account_type?: string;
+    account_description?: string;
+    status?: string;
+    account_normal_side?: 'debit' | 'credit';
     disbursement_items_count?: number;
+    created_at?: string;
+    updated_at?: string;
 }
 
 export interface DisbursementItem {
@@ -62,8 +65,10 @@ export interface StepFlowStep {
 export interface Disbursement {
     id: number;
     control_number?: string;
+    check_id?: string;
     title?: string;
     description?: string;
+    check_number?: string;
     status?: string;
     step_flow?: StepFlowStep[];
     current_step?: number;

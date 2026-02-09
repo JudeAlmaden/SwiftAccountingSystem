@@ -30,7 +30,8 @@ export function DisbursementStatusTracking({ currentStep = 1, stepFlow, tracking
     const currentStepNum = Number(currentStep) || 1;
     const pendingStep = tracking.find(t => t.action === 'pending')?.step;
     const effectiveCurrentStep = pendingStep != null ? Math.min(currentStepNum, pendingStep) : currentStepNum;
-    const steps = Array.from({ length: 4 }, (_, i) => ({
+    const flowLength = stepFlow?.length || 4;
+    const steps = Array.from({ length: flowLength }, (_, i) => ({
         name: stepLabel(stepFlow, i),
         role: (stepFlow && stepFlow[i]?.role) || (i === 0 ? 'accounting assistant' : ['accounting head', 'auditor', 'svp'][i - 1]),
     }));

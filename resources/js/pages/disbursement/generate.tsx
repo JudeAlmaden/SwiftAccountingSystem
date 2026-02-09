@@ -44,7 +44,6 @@ export default function GenerateDisbursement() {
     const [title, setTitle] = useState('');
     const [date, setDate] = useState(today);
     const [description, setDescription] = useState('');
-    const [recommendedBy, setRecommendedBy] = useState('');
     const [disbursementData, setDisbursementData] = useState<any>(null);
     const [attachments, setAttachments] = useState<string[]>([]);
     const [prefixes, setPrefixes] = useState<ControlNumberPrefixOption[]>([]);
@@ -97,7 +96,6 @@ export default function GenerateDisbursement() {
         formData.append('title', disbursementData.title);
         formData.append('date', disbursementData.date);
         formData.append('description', disbursementData.description);
-        formData.append('recommended_by', disbursementData.recommended_by || '');
         formData.append('control_number_prefix_id', controlNumberPrefixId);
 
         // Append accounting entries
@@ -180,11 +178,11 @@ export default function GenerateDisbursement() {
                                                 {title.length}/{TITLE_MAX_LENGTH}
                                             </span>
                                         )}
-                                        
+
                                     </div>
                                     {errors.title && <p className="text-[10px] text-destructive mt-1 font-medium">{errors.title[0]}</p>}
                                 </div>
-                                
+
                                 <div>
                                     <label htmlFor="prefix" className="text-sm font-medium text-foreground mb-2 flex items-center gap-1">
                                         Control number prefix
@@ -248,22 +246,6 @@ export default function GenerateDisbursement() {
                                 </div>
                                 {errors.description && <p className="text-[10px] text-destructive mt-1 font-medium">{errors.description[0]}</p>}
                             </div>
-                            <div className="mt-6">
-                                <label htmlFor="recommended_by" className="text-sm font-medium text-foreground mb-2 flex items-center gap-1">
-                                    Recommended By
-                                    <span className="text-muted-foreground text-[10px] font-normal italic ml-1">(Optional)</span>
-                                </label>
-                                <div className="relative">
-                                    <Input
-                                        id="recommended_by"
-                                        value={recommendedBy}
-                                        onChange={(e) => setRecommendedBy(e.target.value)}
-                                        placeholder="Name of the person recommending this disbursement..."
-                                        className={`bg-background focus-visible:ring-primary shadow-sm border-gray-400 border-[1.6px] ${errors.recommended_by ? 'border-destructive' : ''}`}
-                                    />
-                                </div>
-                                {errors.recommended_by && <p className="text-[10px] text-destructive mt-1 font-medium">{errors.recommended_by[0]}</p>}
-                            </div>
                         </div>
                     </Card>
 
@@ -271,11 +253,9 @@ export default function GenerateDisbursement() {
                         title={title}
                         date={date}
                         description={description}
-                        recommended_by={recommendedBy}
                         onTitleChange={setTitle}
                         onDateChange={setDate}
                         onDescriptionChange={setDescription}
-                        onRecommendedByChange={setRecommendedBy}
                         onDataChange={setDisbursementData}
                         onSave={handleSave}
                         onCancel={handleCancel}
