@@ -90,6 +90,7 @@ class RolesSeeder extends Seeder
             'view accounts',
             'view disbursements', 
             'create disbursements',
+            'approve disbursements', // Needed for final step (step 5)
             'release disbursements'
         ]);
 

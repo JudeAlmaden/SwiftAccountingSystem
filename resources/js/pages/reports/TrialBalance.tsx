@@ -4,10 +4,10 @@ import { Head } from '@inertiajs/react';
 import { useState, Fragment } from 'react';
 import { route } from 'ziggy-js';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Download } from 'lucide-react';
+import { DatePicker } from '@/components/ui/date-picker';
+import { Printer } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -84,9 +84,43 @@ export default function TrialBalance() {
     const totalDebit = data.reduce((sum, item) => sum + Number(item.total_debit), 0);
     const totalCredit = data.reduce((sum, item) => sum + Number(item.total_credit), 0);
 
+    const handlePrint = () => {
+        window.print();
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Trial Balance" />
+            <Head title="Trial Balance">
+                <style>{`
+                    @media print {
+                        body * {
+                            visibility: hidden;
+                        }
+                        #trial-balance-print-area,
+                        #trial-balance-print-area * {
+                            visibility: visible;
+                        }
+                        #trial-balance-print-area {
+                            position: absolute;
+                            left: 0;
+                            top: 0;
+                            width: 100%;
+                        }
+                        #trial-balance-print-area table {
+                            font-size: 10px !important;
+                        }
+                        #trial-balance-print-area td,
+                        #trial-balance-print-area th {
+                            padding: 2px 3px !important;
+                            line-height: 1.3 !important;
+                        }
+                        @page {
+                            size: portrait;
+                            margin: 0.4cm;
+                        }
+                    }
+                `}</style>
+            </Head>
             <div className="flex flex-col gap-6">
                 <div className="flex items-center justify-between">
                     <div className="flex flex-col gap-2">
@@ -99,37 +133,44 @@ export default function TrialBalance() {
                     <div className="flex flex-col sm:flex-row items-end gap-4 mb-6">
                         <div className="grid gap-2 w-full sm:w-auto">
                             <Label htmlFor="start_date">Start Date</Label>
-                            <Input
-                                id="start_date"
-                                type="date"
+                            <DatePicker
                                 value={startDate}
-                                onChange={(e) => setStartDate(e.target.value)}
+                                onChange={setStartDate}
+                                placeholder="Select start date"
                             />
                         </div>
                         <div className="grid gap-2 w-full sm:w-auto">
                             <Label htmlFor="end_date">End Date</Label>
-                            <Input
-                                id="end_date"
-                                type="date"
+                            <DatePicker
                                 value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
+                                onChange={setEndDate}
+                                placeholder="Select end date"
                             />
                         </div>
                         <Button onClick={fetchData} disabled={loading || !startDate || !endDate}>
                             {loading ? 'Generating...' : 'Generate Report'}
                         </Button>
+                        <Button 
+                            onClick={handlePrint} 
+                            disabled={!hasSearched || data.length === 0}
+                            variant="outline"
+                            className="gap-2"
+                        >
+                            <Printer className="h-4 w-4" />
+                            Print
+                        </Button>
                     </div>
 
                     {hasSearched && (
-                        <div className="rounded-sm border bg-card overflow-hidden">
+                        <div id="trial-balance-print-area" className="rounded-sm border bg-card overflow-hidden">
                             <Table className="border-collapse border border-black">
                                 <TableHeader>
-                                    <TableRow className="bg-gray-100 p-0 hover:bg-gray-100">
-                                        <TableHead className="text-black font-bold px-2 py-1 text-xs border border-black w-16 text-center h-8">GRP CODE</TableHead>
-                                        <TableHead className="text-black font-bold px-2 py-1 text-xs border border-black w-24 text-center h-8">ACCT CODE</TableHead>
-                                        <TableHead className="text-black font-bold px-2 py-1 text-xs border border-black text-center h-8">ACCOUNT TITLE</TableHead>
-                                        <TableHead className="text-black font-bold px-2 py-1 text-xs border border-black w-32 text-center h-8">DEBIT</TableHead>
-                                        <TableHead className="text-black font-bold px-2 py-1 text-xs border border-black w-32 text-center h-8">CREDIT</TableHead>
+                                    <TableRow className="bg-green-600 p-0 hover:bg-green-600">
+                                        <TableHead className="text-white font-bold px-2 py-1 text-xs border border-black w-16 text-center h-8">GRP CODE</TableHead>
+                                        <TableHead className="text-white font-bold px-2 py-1 text-xs border border-black w-24 text-center h-8">ACCT CODE</TableHead>
+                                        <TableHead className="text-white font-bold px-2 py-1 text-xs border border-black text-center h-8">ACCOUNT TITLE</TableHead>
+                                        <TableHead className="text-white font-bold px-2 py-1 text-xs border border-black w-32 text-center h-8">DEBIT</TableHead>
+                                        <TableHead className="text-white font-bold px-2 py-1 text-xs border border-black w-32 text-center h-8">CREDIT</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -149,11 +190,14 @@ export default function TrialBalance() {
                                                 const showSubTypeHeader = !prevItem || prevItem.sub_account_type !== item.sub_account_type || showTypeHeader;
                                                 const showGroupHeader = item.group && (!prevItem?.group || prevItem.group.id !== item.group?.id || showSubTypeHeader);
 
+                                                // Alternating row colors with subtle green
+                                                const rowBgClass = index % 2 === 0 ? "bg-white hover:bg-green-50/30" : "bg-green-50/20 hover:bg-green-50/40";
+
                                                 return (
                                                     <Fragment key={item.id}>
                                                         {/* Account Type Header */}
                                                         {showTypeHeader && (
-                                                            <TableRow className="bg-gray-200 hover:bg-gray-200">
+                                                            <TableRow className="bg-green-100 hover:bg-green-100">
                                                                 <TableCell colSpan={5} className="font-extrabold px-2 py-1 text-xs uppercase border border-black text-black">
                                                                     {item.account_type}
                                                                 </TableCell>
@@ -162,7 +206,7 @@ export default function TrialBalance() {
 
                                                         {/* Sub-Account Type Header */}
                                                         {showSubTypeHeader && (
-                                                            <TableRow className="bg-gray-50 hover:bg-gray-50">
+                                                            <TableRow className="bg-green-50 hover:bg-green-50">
                                                                 <TableCell colSpan={5} className="font-bold px-2 py-1 text-xs uppercase pl-6 border border-black text-black">
                                                                     {item.sub_account_type}
                                                                 </TableCell>
@@ -171,14 +215,14 @@ export default function TrialBalance() {
 
                                                         {/* Account Group Header */}
                                                         {showGroupHeader && (
-                                                            <TableRow className="hover:bg-transparent">
+                                                            <TableRow className="bg-green-50/30 hover:bg-green-50/50">
                                                                 <TableCell colSpan={5} className="font-semibold px-2 py-1 text-xs italic pl-10 border border-black text-black">
                                                                     {item.group?.name} <span className="opacity-70 font-normal ml-1">({item.group?.grp_code})</span>
                                                                 </TableCell>
                                                             </TableRow>
                                                         )}
 
-                                                        <TableRow className="hover:bg-transparent">
+                                                        <TableRow className={rowBgClass}>
                                                             <TableCell className="px-2 py-1 text-xs border border-black text-center h-auto font-mono text-black align-top">
                                                                 {item.group?.grp_code || ''}
                                                             </TableCell>
@@ -217,7 +261,7 @@ export default function TrialBalance() {
                                                     </Fragment>
                                                 );
                                             })}
-                                            <TableRow className="bg-gray-100 font-bold border-t-2 border-black hover:bg-gray-100">
+                                            <TableRow className="bg-green-100 font-bold border-t-2 border-black hover:bg-green-100">
                                                 <TableCell colSpan={3} className="px-2 py-2 text-right text-xs border border-black text-black">TOTAL</TableCell>
                                                 <TableCell className="px-2 py-2 text-right text-xs border border-black text-blue-900 font-bold">{formatCurrency(totalDebit)}</TableCell>
                                                 <TableCell className="px-2 py-2 text-right text-xs border border-black text-green-900 font-bold">{formatCurrency(totalCredit)}</TableCell>

@@ -70,7 +70,7 @@ export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
                                 minHeight: '16px',
                             }}
                         >
-                            {disbursement.control_number?.split('-').pop()}
+                            {disbursement.control_number}
                         </span>
                     </div>
 

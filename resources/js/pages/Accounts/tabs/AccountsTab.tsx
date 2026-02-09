@@ -423,75 +423,93 @@ export default function AccountsTab() {
             </div>
 
             <div className="rounded-sm border bg-card overflow-hidden py-0 pb-6">
-                <Table>
-                    <TableHeader className="border-0">
-                        <TableRow className="bg-table-head hover:bg-table-head border-0">
-                            <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head first:rounded-tl-sm">Code</TableHead>
-                            <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Name</TableHead>
-                            <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Group</TableHead>
-                            <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Type</TableHead>
-                            <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Sub-Type</TableHead>
-                            <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Description</TableHead>
-                            <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Normal Side</TableHead>
-                            <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Status</TableHead>
-                            <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head text-right last:rounded-tr-sm">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {isLoading ? (
-                            <TableRow>
-                                <TableCell colSpan={9} className="text-center h-24 px-4">Loading accounts...</TableCell>
+                <div className="overflow-x-auto">
+                    <Table className="w-full">
+                        <TableHeader className="border-0">
+                            <TableRow className="bg-table-head hover:bg-table-head border-0">
+                                <TableHead className="w-[8%] px-3 py-5 text-white text-base font-extrabold bg-table-head first:rounded-tl-sm">Code</TableHead>
+                                <TableHead className="w-[15%] px-3 py-5 text-white text-base font-extrabold bg-table-head">Name</TableHead>
+                                <TableHead className="w-[12%] px-3 py-5 text-white text-base font-extrabold bg-table-head">Group</TableHead>
+                                <TableHead className="w-[10%] px-3 py-5 text-white text-base font-extrabold bg-table-head">Type</TableHead>
+                                <TableHead className="w-[12%] px-3 py-5 text-white text-base font-extrabold bg-table-head">Sub-Type</TableHead>
+                                <TableHead className="w-[20%] px-3 py-5 text-white text-base font-extrabold bg-table-head">Description</TableHead>
+                                <TableHead className="w-[8%] px-3 py-5 text-white text-base font-extrabold bg-table-head">Side</TableHead>
+                                <TableHead className="w-[8%] px-3 py-5 text-white text-base font-extrabold bg-table-head">Status</TableHead>
+                                <TableHead className="w-[7%] px-3 py-5 text-white text-base font-extrabold bg-table-head text-right last:rounded-tr-sm">Actions</TableHead>
                             </TableRow>
-                        ) : accounts.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={9} className="text-center h-24 text-muted-foreground px-4">No accounts found.</TableCell>
-                            </TableRow>
-                        ) : (
-                            accounts.map((account) => (
-                                <TableRow key={account.id} className="h-16">
-                                    <TableCell className="font-medium px-4">{account.account_code}</TableCell>
-                                    <TableCell className="px-4"><Link href={route('accounts.view', account.id)}>{account.account_name}</Link></TableCell>
-                                    <TableCell className="px-4 text-sm font-medium text-blue-600">
-                                        {(account as any).group?.name ?
-                                            `${(account as any).group.name} (${(account as any).group.grp_code || ''})`
-                                            : '-'}
-                                    </TableCell>
-                                    <TableCell className="px-4">{account.account_type}</TableCell>
-                                    <TableCell className="px-4 text-sm text-muted-foreground">{account.sub_account_type || '-'}</TableCell>
-                                    <TableCell className="text-muted-foreground px-4">{account.account_description || '-'}</TableCell>
-                                    <TableCell className="px-4">{account.account_normal_side}</TableCell>
-                                    <TableCell className="px-4">
-                                        <button
-                                            onClick={() => handleToggleStatus(account.id)}
-                                            className="hover:opacity-80 transition-opacity"
-                                            title={`Click to make ${account.status === 'active' ? 'inactive' : 'active'}`}
-                                        >
-                                            <StatusIndicator status={account.status as 'active' | 'inactive'} />
-                                        </button>
-                                    </TableCell>
-                                    <TableCell className="text-right px-4">
-                                        {account.disbursement_items_count && account.disbursement_items_count > 0 ? (
-                                            <div className="flex justify-end" title="Account is in use">
-                                                <Check className="size-5 text-green-600 opacity-50" />
-                                            </div>
-                                        ) : (
-                                            canDelete && (
-                                                <Button
-                                                    variant="destructive"
-                                                    size="icon"
-                                                    onClick={() => confirmDelete(account)}
-                                                    title="Delete account"
-                                                >
-                                                    <Trash2 className="size-4" />
-                                                </Button>
-                                            )
-                                        )}
-                                    </TableCell>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={9} className="text-center h-24 px-3">Loading accounts...</TableCell>
                                 </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
+                            ) : accounts.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={9} className="text-center h-24 text-muted-foreground px-3">No accounts found.</TableCell>
+                                </TableRow>
+                            ) : (
+                                accounts.map((account) => (
+                                    <TableRow key={account.id} className="h-16">
+                                        <TableCell className="font-medium px-3 text-sm">{account.account_code}</TableCell>
+                                        <TableCell className="px-3">
+                                            <Link href={route('accounts.view', account.id)} className="hover:underline font-medium">
+                                                {account.account_name}
+                                            </Link>
+                                        </TableCell>
+                                        <TableCell className="px-3 text-xs">
+                                            {(account as any).group?.name ? (
+                                                <div className="text-blue-600 font-medium leading-tight">
+                                                    <div>{(account as any).group.name}</div>
+                                                    {(account as any).group.grp_code && (
+                                                        <div className="text-[10px] text-muted-foreground">({(account as any).group.grp_code})</div>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <span className="text-muted-foreground">-</span>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="px-3 text-sm">{account.account_type}</TableCell>
+                                        <TableCell className="px-3 text-xs text-muted-foreground truncate" title={account.sub_account_type || '-'}>
+                                            {account.sub_account_type || '-'}
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground px-3 text-xs truncate" title={account.account_description || '-'}>
+                                            {account.account_description || '-'}
+                                        </TableCell>
+                                        <TableCell className="px-3 text-sm capitalize">{account.account_normal_side}</TableCell>
+                                        <TableCell className="px-3">
+                                            <button
+                                                onClick={() => handleToggleStatus(account.id)}
+                                                className="hover:opacity-80 transition-opacity"
+                                                title={`Click to make ${account.status === 'active' ? 'inactive' : 'active'}`}
+                                            >
+                                                <StatusIndicator status={account.status as 'active' | 'inactive'} />
+                                            </button>
+                                        </TableCell>
+                                        <TableCell className="text-right px-3">
+                                            {account.disbursement_items_count && account.disbursement_items_count > 0 ? (
+                                                <div className="flex justify-end" title="Account is in use">
+                                                    <Check className="size-4 text-green-600 opacity-50" />
+                                                </div>
+                                            ) : (
+                                                canDelete && (
+                                                    <Button
+                                                        variant="destructive"
+                                                        size="icon"
+                                                        className="h-8 w-8"
+                                                        onClick={() => confirmDelete(account)}
+                                                        title="Delete account"
+                                                    >
+                                                        <Trash2 className="size-3.5" />
+                                                    </Button>
+                                                )
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
             </div>
 
             <div className="flex items-center justify-between space-x-2 py-4">

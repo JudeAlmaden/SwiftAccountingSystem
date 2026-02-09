@@ -210,15 +210,43 @@ class DisbursementController extends Controller
         $stepFlow = $disbursement->step_flow ?? Disbursement::defaultStepFlow();
 
         $stepConfig = $stepFlow[$currentStep - 1] ?? [];
-        $requiredRole = $currentStep === 1 ? 'accounting assistant' : ($stepConfig['role'] ?? null);
+        $requiredRole = $stepConfig['role'] ?? null;
+        
+        // Debug logging
+        \Log::info('Approve attempt', [
+            'user_id' => $user->id,
+            'user_roles' => $roles,
+            'current_step' => $currentStep,
+            'step_config' => $stepConfig,
+            'required_role_raw' => $requiredRole,
+        ]);
+        
+        // Special handling for step 1 and step 5 (both accounting assistant)
+        if ($currentStep === 1 || ($requiredRole && strtolower($requiredRole) === 'accounting assistant')) {
+            $requiredRole = 'accounting assistant';
+        }
+        
         $restrictedToUserId = isset($stepConfig['user_id']) ? (int) $stepConfig['user_id'] : null;
+
+        \Log::info('After role processing', [
+            'required_role' => $requiredRole,
+            'restricted_to_user_id' => $restrictedToUserId,
+            'has_required_role' => in_array(strtolower($requiredRole ?? ''), $roles),
+        ]);
 
         if (!in_array('admin', $roles)) {
             if ($restrictedToUserId !== null && $restrictedToUserId !== (int) $user->id) {
-                return response()->json(['message' => 'Unauthorized for this step.'], 403);
+                return response()->json(['message' => 'Unauthorized for this step. Restricted to specific user.'], 403);
             }
             if ($requiredRole === null || !in_array(strtolower($requiredRole), $roles)) {
-                return response()->json(['message' => 'Unauthorized for this step.'], 403);
+                return response()->json([
+                    'message' => 'Unauthorized for this step.',
+                    'debug' => [
+                        'required_role' => $requiredRole,
+                        'user_roles' => $roles,
+                        'current_step' => $currentStep,
+                    ]
+                ], 403);
             }
         }
 
@@ -231,7 +259,7 @@ class DisbursementController extends Controller
             ]);
         }
 
-        $trackingRole = $currentStep === 1 ? 'accounting assistant' : ($stepConfig['role'] ?? 'admin');
+        $trackingRole = $requiredRole ?? 'admin';
         $nextStep = $currentStep + 1;
         $status = $nextStep > $totalSteps ? 'approved' : $disbursement->status;
 
@@ -306,7 +334,13 @@ class DisbursementController extends Controller
         $stepFlow = $disbursement->step_flow ?? Disbursement::defaultStepFlow();
 
         $stepConfig = $stepFlow[$currentStep - 1] ?? [];
-        $requiredRole = $currentStep === 1 ? 'accounting assistant' : ($stepConfig['role'] ?? null);
+        $requiredRole = $stepConfig['role'] ?? null;
+        
+        // Special handling for step 1 and step 5 (both accounting assistant)
+        if ($currentStep === 1 || ($requiredRole && strtolower($requiredRole) === 'accounting assistant')) {
+            $requiredRole = 'accounting assistant';
+        }
+        
         $restrictedToUserId = isset($stepConfig['user_id']) ? (int) $stepConfig['user_id'] : null;
 
         if (!in_array('admin', $roles)) {
@@ -318,7 +352,7 @@ class DisbursementController extends Controller
             }
         }
 
-        $trackingRole = $currentStep === 1 ? 'accounting assistant' : ($stepConfig['role'] ?? 'admin');
+        $trackingRole = $requiredRole ?? 'admin';
 
         $disbursement->update(['status' => 'rejected']);
 
