@@ -18,7 +18,7 @@ class AccountsController extends Controller
             'all'    => 'nullable',
             'account_group_id' => 'nullable|exists:account_groups,id'
         ]);
-        $query = Account::query()->withCount('disbursementItems')->with('group');
+        $query = Account::query()->withCount('journalItems')->with('group');
 
         if ($request->has('search')) {
             $search = $request->input('search');
@@ -79,7 +79,7 @@ class AccountsController extends Controller
     }
 
     /**
-     * View a specific account with its disbursement history
+     * View a specific account with its journal history
      */
     function show(Request $request, $id)
     {
@@ -88,10 +88,10 @@ class AccountsController extends Controller
             'page' => 'nullable|integer|min:1',
         ]);
 
-        $account = Account::withCount('disbursementItems')->findOrFail($id);
+        $account = Account::withCount('journalItems')->findOrFail($id);
 
-        // Get disbursements that reference this account
-        $query = \App\Models\Disbursement::query()
+        // Get journals that reference this account
+        $query = \App\Models\Journal::query()
             ->whereHas('items', function($q) use ($id) {
                 $q->where('account_id', $id);
             })
@@ -109,11 +109,11 @@ class AccountsController extends Controller
             });
         }
 
-        $disbursements = $query->orderBy('created_at', 'desc')->paginate(10);
+        $journals = $query->orderBy('created_at', 'desc')->paginate(10);
 
         return response()->json([
-            'account' => $account,
-            'disbursements' => $disbursements,
+            'account'  => $account,
+            'journals' => $journals,
         ]);
     }
 
@@ -122,7 +122,7 @@ class AccountsController extends Controller
     * WE WILL ONLY DO THIS IF THE ACCOUNT IS NOT ASSIGNED TO ANY TRANSACTION
     **/
     function destroy($id){
-        $account = Account::withCount('disbursementItems')->find($id);
+        $account = Account::withCount('journalItems')->find($id);
 
         if (!$account) {
             return response()->json([
@@ -130,9 +130,9 @@ class AccountsController extends Controller
             ], 404);
         }
 
-        if ($account->disbursement_items_count > 0) {
+        if ($account->journal_items_count > 0) {
             return response()->json([
-                'message' => 'Cannot delete account as it has associated disbursement items.',
+                'message' => 'Cannot delete account as it has associated journal items.',
             ], 422);
         }
 

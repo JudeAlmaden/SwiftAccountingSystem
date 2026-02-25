@@ -15,6 +15,7 @@ class ControlNumberPrefixSeeder extends Seeder
 
         ControlNumberPrefix::insert([
             ['code' => 'DV', 'label' => 'Disbursement Voucher (Default)', 'sort_order' => 0, 'created_at' => now(), 'updated_at' => now()],
+            ['code' => 'JV', 'label' => 'Journal Voucher', 'sort_order' => 0, 'created_at' => now(), 'updated_at' => now()],
         ]);
     }
 }

@@ -52,13 +52,13 @@ class RolesSeeder extends Seeder
             'edit accounts',
             'delete accounts',
 
-            // Disbursements
-            'view disbursements',
-            'create disbursements',
-            'edit disbursements',
-            'delete disbursements',
-            'approve disbursements',
-            'release disbursements', // If applicable
+            // Journals
+            'view journals',
+            'create journals',
+            'edit journals',
+            'delete journals',
+            'approve journals',
+            'release journals',
 
             // Control number prefixes (accounting head)
             'manage control number prefixes',
@@ -77,26 +77,26 @@ class RolesSeeder extends Seeder
         /*==========================================================================*/
         // Assign Permissions to Roles
 
-        // Admin: User Management and View Disbursements only + View Accounts + Audit Trails
+        // Admin: User Management and View Journals only + View Accounts + Audit Trails
         $admin->givePermissionTo([
             'view users', 'create users', 'edit users', 'delete users',
-            'view disbursements',
+            'view journals',
             'view accounts',
             'view audit trails',
         ]);
 
-        // Accounting Assistant: Create/View Disbursements, View Accounts
+        // Accounting Assistant: Create/View Journals, View Accounts
         $accountingAssistant->givePermissionTo([
             'view accounts',
-            'view disbursements', 
-            'create disbursements',
-            'release disbursements'
+            'view journals',
+            'create journals',
+            'release journals'
         ]);
 
-        // Accounting Head: Accounts & Disbursements (Full access) + manage control number prefixes
+        // Accounting Head: Accounts & Journals (Full access) + manage control number prefixes
         $accountingHead->givePermissionTo([
             'view accounts', 'create accounts', 'edit accounts', 'delete accounts',
-            'view disbursements', 'create disbursements', 'edit disbursements', 'delete disbursements', 'approve disbursements', 'release disbursements',
+            'view journals', 'create journals', 'edit journals', 'delete journals', 'approve journals', 'release journals',
             'manage control number prefixes',
             'create trial balance'
         ]);
@@ -104,17 +104,17 @@ class RolesSeeder extends Seeder
         // Auditor: Read-only access + Audit Trails
         $auditor->givePermissionTo([
             'view accounts',
-            'view disbursements',
-            'approve disbursements',
+            'view journals',
+            'approve journals',
             'create trial balance',
             'view audit trails',
         ]);
 
-        // SVP: View & Approve Disbursements
+        // SVP: View & Approve Journals
         $svp->givePermissionTo([
             'view accounts',
-            'view disbursements',
-            'approve disbursements',
+            'view journals',
+            'approve journals',
         ]);
     }
 }

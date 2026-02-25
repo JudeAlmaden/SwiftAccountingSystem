@@ -6,14 +6,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class DisbursementTracking extends Model
+class JournalTracking extends Model
 {
     use HasFactory;
 
-    protected $table = 'disbursement_tracking';
+    protected $table = 'journal_tracking';
 
     protected $fillable = [
-        'disbursement_id',
+        'journal_id',
         'handled_by',
         'step',
         'role',
@@ -27,15 +27,15 @@ class DisbursementTracking extends Model
     ];
 
     /**
-     * Get the disbursement that owns this tracking record.
+     * Get the journal that owns this tracking record.
      */
-    public function disbursement(): BelongsTo
+    public function journal(): BelongsTo
     {
-        return $this->belongsTo(Disbursement::class);
+        return $this->belongsTo(Journal::class);
     }
 
     /**
-     * Get the user who handled this disbursement.
+     * Get the user who handled this journal.
      */
     public function handler(): BelongsTo
     {

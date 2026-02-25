@@ -1,7 +1,7 @@
 import { Card } from '@/components/ui/card';
 import { useState, useRef, useEffect } from 'react';
 import { FileText, Image as ImageIcon, X, Paperclip, FileIcon, Plus, Download, Loader2, AlertCircle } from 'lucide-react';
-import { DisbursementAttachment as DBAttachment } from '@/types/database';
+import { JournalAttachment as DBAttachment } from '@/types/database';
 import { DottedSeparator } from '@/components/dotted-line';
 import {
     Dialog,
@@ -15,19 +15,19 @@ interface FileWithStatus {
     errorMessage?: string;
 }
 
-interface DisbursementAttachmentProps {
+interface JournalAttachmentProps {
     onFilesChange?: (tempIds: string[]) => void;
     attachments?: DBAttachment[];
     mode?: 'generate' | 'view';
 }
 
-export function DisbursementAttachment({ onFilesChange, attachments = [], mode = 'generate' }: DisbursementAttachmentProps) {
+export function JournalAttachment({ onFilesChange, attachments = [], mode = 'generate' }: JournalAttachmentProps) {
     const [filesWithStatus, setFilesWithStatus] = useState<FileWithStatus[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    
+
     const ITEMS_PER_PAGE = 5;
 
     // Get CSRF token for async uploads
@@ -198,12 +198,12 @@ export function DisbursementAttachment({ onFilesChange, attachments = [], mode =
                         <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
                             Attachments
                         </h3>
-                         <p className="text-xs text-muted-foreground py-2">
-                            Supporting documents for this disbursement
+                        <p className="text-xs text-muted-foreground py-2">
+                            Supporting documents for this journal
                         </p>
                     </div>
-                  <DottedSeparator className='-mt-4'/>
-                    
+                    <DottedSeparator className='-mt-4' />
+
                     {attachments.length > 0 ? (
                         <button
                             onClick={() => setIsModalOpen(true)}
@@ -226,7 +226,7 @@ export function DisbursementAttachment({ onFilesChange, attachments = [], mode =
                                 <h2 className="text-lg font-semibold">Attachments</h2>
                             </div>
                             <p className="text-sm text-white/90 mt-1">
-                                Supporting documents for this disbursement
+                                Supporting documents for this journal
                             </p>
                         </div>
                         <div className="flex-1 space-y-3 overflow-hidden px-6 py-4">
@@ -294,10 +294,10 @@ export function DisbursementAttachment({ onFilesChange, attachments = [], mode =
                     Attachments
                 </h3>
                 <p className="text-xs text-muted-foreground mt-3 text-balance">
-                    {mode === 'generate' ? 'Upload supporting documents (PDF, Images, Excel, Word)' : 'Supporting documents for this disbursement'}
+                    {mode === 'generate' ? 'Upload supporting documents (PDF, Images, Excel, Word)' : 'Supporting documents for this journal'}
                 </p>
             </div>
-            <DottedSeparator className='-mt-2 pb-2'/>
+            <DottedSeparator className='-mt-2 pb-2' />
 
             {mode === 'generate' && (
                 <div className="mb-4 overflow-hidden">
@@ -308,8 +308,8 @@ export function DisbursementAttachment({ onFilesChange, attachments = [], mode =
                         onDrop={handleDrop}
                         className={`
                             cursor-pointer transition-all duration-400 ease-in-out
-                            ${!hasFiles 
-                                ? `border-2 border-dashed rounded-lg p-4 ${isDragging ? 'border-green-500 bg-green-50' : 'border-green-500 hover:border-green-600 hover:bg-green-50/50'}` 
+                            ${!hasFiles
+                                ? `border-2 border-dashed rounded-lg p-4 ${isDragging ? 'border-green-500 bg-green-50' : 'border-green-500 hover:border-green-600 hover:bg-green-50/50'}`
                                 : `border rounded-lg px-4 py-2 ${isDragging ? 'border-green-500 bg-green-50' : 'border-green-500 hover:bg-green-50/50 hover:border-green-600'}`
                             }
                         `}
@@ -371,12 +371,12 @@ export function DisbursementAttachment({ onFilesChange, attachments = [], mode =
 
                 {/* Selected Files with Status (Generate Mode) */}
                 {mode === 'generate' && filesWithStatus.map((item, index) => (
-                    <div 
-                        key={`${item.file.name}-${index}`} 
+                    <div
+                        key={`${item.file.name}-${index}`}
                         className={`
                             flex items-center gap-2 p-2 rounded-lg border transition-all
-                            ${item.status === 'error' 
-                                ? 'bg-red-50 border-red-200' 
+                            ${item.status === 'error'
+                                ? 'bg-red-50 border-red-200'
                                 : 'bg-white border-gray-200 hover:border-green-300 hover:shadow-sm'
                             }
                         `}

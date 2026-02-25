@@ -14,8 +14,7 @@ import { Head, router } from '@inertiajs/react';
 import { route } from 'ziggy-js';
 import type { BreadcrumbItem } from '@/types';
 import AccountingEntryTable from '@/components/accounting-entry-table';
-import { DisbursementAttachment } from './components/DisbursementAttachment';
-import { DottedSeparator } from '@/components/dotted-line';
+import { JournalAttachment } from './components/JournalAttachment';
 
 interface ControlNumberPrefixOption {
     id: number;
@@ -30,24 +29,25 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: route('dashboard'),
     },
     {
-        title: 'Disbursements',
-        href: route('disbursements'),
+        title: 'Vouchers',
+        href: route('vouchers'),
     },
     {
-        title: 'Create Disbursement',
-        href: route('disbursement.generate'),
+        title: 'Create Voucher',
+        href: route('vouchers.generate'),
     },
 ];
 
-export default function GenerateDisbursement() {
+export default function GenerateJournal() {
     const today = new Date().toISOString().split('T')[0];
     const [title, setTitle] = useState('');
     const [date, setDate] = useState(today);
     const [description, setDescription] = useState('');
-    const [disbursementData, setDisbursementData] = useState<any>(null);
+    const [journalData, setJournalData] = useState<any>(null);
     const [attachments, setAttachments] = useState<string[]>([]);
     const [prefixes, setPrefixes] = useState<ControlNumberPrefixOption[]>([]);
     const [controlNumberPrefixId, setControlNumberPrefixId] = useState<string>('');
+    const [voucherType, setVoucherType] = useState<'journal' | 'disbursement'>('journal');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errors, setErrors] = useState<Record<string, string[]>>({});
 
@@ -78,7 +78,7 @@ export default function GenerateDisbursement() {
     }, [prefixes, controlNumberPrefixId]);
 
     const handleSave = () => {
-        if (!disbursementData) return;
+        if (!journalData) return;
         if (!controlNumberPrefixId) {
             setErrors({ control_number_prefix_id: ['Please select a control number prefix.'] });
             return;
@@ -93,20 +93,21 @@ export default function GenerateDisbursement() {
         const formData = new FormData();
 
         // Append basic info
-        formData.append('title', disbursementData.title);
-        formData.append('date', disbursementData.date);
-        formData.append('description', disbursementData.description);
+        formData.append('title', journalData.title);
+        formData.append('date', journalData.date);
+        formData.append('description', journalData.description);
+        formData.append('type', voucherType);
         formData.append('control_number_prefix_id', controlNumberPrefixId);
 
         // Append accounting entries
-        formData.append('accounts', JSON.stringify(disbursementData.accounts));
+        formData.append('accounts', JSON.stringify(journalData.accounts));
 
         // Append temp IDs of uploaded files
         attachments.forEach((tempId) => {
             formData.append('attachments[]', tempId);
         });
 
-        fetch(route('disbursements.store'), {
+        fetch(route('journals.store'), {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': csrfToken,
@@ -130,12 +131,12 @@ export default function GenerateDisbursement() {
             })
             .then(data => {
                 if (data.id) {
-                    router.visit(route('disbursement.view', { id: data.id }));
+                    router.visit(route('vouchers.view', { id: data.id }));
                 }
             })
             .catch(error => {
-                console.error('Error saving disbursement:', error);
-                alert(error.message || 'Failed to save disbursement. Please try again.');
+                console.error('Error saving journal:', error);
+                alert(error.message || 'Failed to save journal. Please try again.');
                 setIsSubmitting(false);
             });
     };
@@ -146,13 +147,13 @@ export default function GenerateDisbursement() {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Create Disbursement" />
+            <Head title="Create Voucher" />
 
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
                 <div className="space-y-6">
                     <Card>
                         <div className="px-10 py-6">
-                            <div className="grid gap-4 grid-cols-[2fr_1fr_1fr]">
+                            <div className="grid gap-4 grid-cols-[2fr_1fr_1fr_1fr]">
                                 <div>
                                     <label htmlFor="title" className="text-sm font-medium text-foreground mb-2 flex items-center gap-1">
                                         Title
@@ -169,7 +170,7 @@ export default function GenerateDisbursement() {
                                                 }
                                             }}
                                             maxLength={TITLE_MAX_LENGTH}
-                                            placeholder="Disbursement - December 31, 2024"
+                                            placeholder="Journal - December 31, 2024"
                                             className={`bg-background border-gray-400 border-[1.6px] focus-visible:ring-primary pr-14 ${errors.title ? 'border-destructive' : ''}`}
                                         />
                                         {title.length > 0 && (
@@ -181,6 +182,22 @@ export default function GenerateDisbursement() {
 
                                     </div>
                                     {errors.title && <p className="text-[10px] text-destructive mt-1 font-medium">{errors.title[0]}</p>}
+                                </div>
+
+                                <div>
+                                    <label htmlFor="voucher-type" className="text-sm font-medium text-foreground mb-2 flex items-center gap-1">
+                                        Voucher Type
+                                        <span className="text-destructive text-xs">*</span>
+                                    </label>
+                                    <Select value={voucherType} onValueChange={(v) => setVoucherType(v as 'journal' | 'disbursement')}>
+                                        <SelectTrigger id="voucher-type" className="border-gray-400 border-[1.6px] text-xs text-muted-foreground">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="disbursement" className="text-xs">Disbursement Voucher</SelectItem>
+                                            <SelectItem value="journal" className="text-xs">Journal Voucher</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
 
                                 <div>
@@ -256,17 +273,17 @@ export default function GenerateDisbursement() {
                         onTitleChange={setTitle}
                         onDateChange={setDate}
                         onDescriptionChange={setDescription}
-                        onDataChange={setDisbursementData}
+                        onDataChange={setJournalData}
                         onSave={handleSave}
                         onCancel={handleCancel}
-                        saveButtonText={isSubmitting ? "Saving..." : "Save Disbursement"}
+                        saveButtonText={isSubmitting ? "Saving..." : "Save Voucher"}
                         isLoading={isSubmitting}
                         errors={errors}
                     />
                 </div>
 
                 <div className="sticky top-5 self-start h-fit max-h-[calc(100vh-6rem)] overflow-auto">
-                    <DisbursementAttachment onFilesChange={setAttachments} />
+                    <JournalAttachment onFilesChange={setAttachments} />
                 </div>
             </div>
         </AppLayout>

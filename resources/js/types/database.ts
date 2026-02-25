@@ -17,14 +17,14 @@ export interface Account {
     account_description?: string;
     status?: string;
     account_normal_side?: 'debit' | 'credit';
-    disbursement_items_count?: number;
+    journal_items_count?: number;
     created_at?: string;
     updated_at?: string;
 }
 
-export interface DisbursementItem {
+export interface JournalItem {
     id: number;
-    disbursement_id: number;
+    journal_id: number;
     account_id: number;
     type: 'debit' | 'credit';
     amount: number;
@@ -32,9 +32,9 @@ export interface DisbursementItem {
     account?: Account;
 }
 
-export interface DisbursementTracking {
+export interface JournalTracking {
     id: number;
-    disbursement_id: number;
+    journal_id: number;
     handled_by: number | null;
     step: number;
     role: 'accounting assistant' | 'accounting head' | 'auditor' | 'svp';
@@ -44,9 +44,9 @@ export interface DisbursementTracking {
     handler?: User;
 }
 
-export interface DisbursementAttachment {
+export interface JournalAttachment {
     id: number;
-    disbursement_id: number;
+    journal_id: number;
     file_path: string;
     file_name: string;
     file_type: string;
@@ -62,10 +62,11 @@ export interface StepFlowStep {
 }
 
 //Used in view
-export interface Disbursement {
+export interface Journal {
     id: number;
     control_number?: string;
     check_id?: string;
+    type?: string;
     title?: string;
     description?: string;
     check_number?: string;
@@ -76,9 +77,9 @@ export interface Disbursement {
     created_at?: string;
     updated_at?: string;
     total_amount?: number;
-    items?: DisbursementItem[];
-    tracking?: DisbursementTracking[];
-    attachments?: DisbursementAttachment[];
+    items?: JournalItem[];
+    tracking?: JournalTracking[];
+    attachments?: JournalAttachment[];
 }
 
 export interface Role {

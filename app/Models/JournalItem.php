@@ -6,12 +6,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class DisbursementItem extends Model
+class JournalItem extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'disbursement_id',
+        'journal_id',
         'account_id',
         'type',
         'amount',
@@ -23,11 +23,11 @@ class DisbursementItem extends Model
     ];
 
     /**
-     * Get the disbursement that owns this item.
+     * Get the journal that owns this item.
      */
-    public function disbursement(): BelongsTo
+    public function journal(): BelongsTo
     {
-        return $this->belongsTo(Disbursement::class);
+        return $this->belongsTo(Journal::class);
     }
 
     /**

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Account;
-use App\Models\DisbursementItem;
+use App\Models\JournalItem;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -39,24 +39,24 @@ class AccountReportController extends Controller
             ->pluck('count', 'account_type')
             ->all();
 
-        $itemsQuery = DisbursementItem::query()
-            ->join('disbursements', 'disbursement_items.disbursement_id', '=', 'disbursements.id');
+        $itemsQuery = JournalItem::query()
+            ->join('journals', 'journal_items.journal_id', '=', 'journals.id');
 
         if ($dateFrom) {
-            $itemsQuery->whereDate('disbursements.created_at', '>=', $dateFrom);
+            $itemsQuery->whereDate('journals.created_at', '>=', $dateFrom);
         }
         if ($dateTo) {
-            $itemsQuery->whereDate('disbursements.created_at', '<=', $dateTo);
+            $itemsQuery->whereDate('journals.created_at', '<=', $dateTo);
         }
 
         $usageAndAmounts = (clone $itemsQuery)
             ->select(
-                'disbursement_items.account_id',
+                'journal_items.account_id',
                 DB::raw('count(*) as usage_count'),
-                DB::raw("COALESCE(SUM(CASE WHEN disbursement_items.type = 'debit' THEN disbursement_items.amount ELSE 0 END), 0) as total_debit"),
-                DB::raw("COALESCE(SUM(CASE WHEN disbursement_items.type = 'credit' THEN disbursement_items.amount ELSE 0 END), 0) as total_credit")
+                DB::raw("COALESCE(SUM(CASE WHEN journal_items.type = 'debit' THEN journal_items.amount ELSE 0 END), 0) as total_debit"),
+                DB::raw("COALESCE(SUM(CASE WHEN journal_items.type = 'credit' THEN journal_items.amount ELSE 0 END), 0) as total_credit")
             )
-            ->groupBy('disbursement_items.account_id')
+            ->groupBy('journal_items.account_id')
             ->get()
             ->keyBy('account_id');
 

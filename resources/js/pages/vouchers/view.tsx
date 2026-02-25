@@ -4,7 +4,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { route } from 'ziggy-js';
 // @ts-ignore
 import html2pdf from 'html2pdf.js';
-import { Disbursement } from '@/types/database';
+import { Journal } from '@/types/database';
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -22,20 +22,21 @@ import {
 } from "@/components/ui/dialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
-import { VoucherTemplate } from './components/VoucherTemplate';
-import { DisbursementSidebar } from './components/DisbursementSidebar';
+import { VoucherTemplateDisbursement } from './components/VoucherTemplateDisbursement';
+import { VoucherTemplateJournal } from './components/VoucherTemplateJournal';
+import { JournalSidebar } from './components/JournalSidebar';
 import { DottedSeparator } from '@/components/dotted-line';
-import { disbursements } from '@/routes';
+
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Dashboard',
         href: route('dashboard')
     }, {
-        title: 'Disbursements',
-        href: route('disbursements')
+        title: 'Vouchers',
+        href: route('vouchers')
     }, {
-        title: 'View Disbursement',
+        title: 'View Voucher',
         href: '#'
     }
 ];
@@ -48,7 +49,7 @@ export default function View() {
     const { id, user } = usePage<any>().props;
     const userRoles = user?.roles || [];
 
-    const [disbursement, setDisbursement] = useState<Disbursement | null>(null);
+    const [journal, setJournal] = useState<Journal | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     const [isActionLoading, setIsActionLoading] = useState(false);
@@ -60,16 +61,16 @@ export default function View() {
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            const res = await fetch(route('disbursements.show', { id }), {
+            const res = await fetch(route('journals.show', { id }), {
                 headers: {
                     Accept: 'application/json',
                 },
             });
 
             const data = await res.json();
-            setDisbursement(data.disbursement);
+            setJournal(data.journal);
         } catch (err) {
-            console.error('Failed to fetch disbursement', err);
+            console.error('Failed to fetch journal', err);
         } finally {
             setIsLoading(false);
         }
@@ -80,22 +81,23 @@ export default function View() {
     }, [id]);
 
     const handleAction = async (action: 'approve' | 'decline', remarks?: string, checkIdValue?: string) => {
-        if (!disbursement) return;
+        if (!journal) return;
 
         if (action === 'decline' && !remarks) {
             setIsDeclineModalOpen(true);
             return;
         }
 
-        const currentStep = Number(disbursement.current_step) || 1;
-        if (action === 'approve' && isLastStep(currentStep) && !checkIdValue) {
+        const currentStep = Number(journal.current_step) || 1;
+        // Only show Check ID modal for disbursement vouchers (journal type goes straight through)
+        if (action === 'approve' && isLastStep(currentStep) && !checkIdValue && journal.type !== 'journal') {
             setIsApproveStep5ModalOpen(true);
             return;
         }
 
         const confirmMsg = action === 'approve'
-            ? 'Are you sure you want to approve this disbursement?'
-            : 'Are you sure you want to decline this disbursement?';
+            ? 'Are you sure you want to approve this voucher?'
+            : 'Are you sure you want to decline this voucher?';
 
         if (!confirm(confirmMsg)) return;
 
@@ -105,8 +107,8 @@ export default function View() {
             const token = meta?.content || '';
 
             const endpoint = action === 'approve'
-                ? route('disbursements.approve', { id: disbursement.id })
-                : route('disbursements.decline', { id: disbursement.id });
+                ? route('journals.approve', { id: journal.id })
+                : route('journals.decline', { id: journal.id });
 
             const requestBody: any = {
                 remarks: remarks || (action === 'approve' ? 'Approved through dashboard.' : 'Declined through dashboard.')
@@ -135,49 +137,38 @@ export default function View() {
                 await fetchData(); // Refresh data
             } else {
                 const data = await res.json();
-                alert(data.message || `Failed to ${action} disbursement.`);
+                alert(data.message || `Failed to ${action} journal.`);
             }
         } catch (err) {
             console.error(`Error during ${action}:`, err);
-            alert(`An error occurred while trying to ${action} the disbursement.`);
+            alert(`An error occurred while trying to ${action} the journal.`);
         } finally {
             setIsActionLoading(false);
         }
     };
 
     const isLastStep = (step: number) => {
-        const flow = disbursement?.step_flow || [];
-        // If flow exists, last step is flow.length. Current step is 1-based index.
+        const flow = journal?.step_flow || [];
         return flow.length > 0 ? step === flow.length : step === 5;
     };
 
     const canPerformAction = () => {
-        if (!disbursement || disbursement.status !== 'pending') return false;
+        if (!journal || journal.status !== 'pending') return false;
 
-        const currentStep = Number(disbursement.current_step) || 1;
-        const stepFlow = disbursement.step_flow ?? [];
-        const stepConfig = stepFlow[currentStep - 1]; // 0-based index
+        const currentStep = Number(journal.current_step) || 1;
+        const stepFlow = journal.step_flow ?? [];
+        const stepConfig = stepFlow[currentStep - 1];
 
-        // Use step role if available, fallback for defaults
         const stepRole = stepConfig?.role;
         const restrictedToUserId = stepConfig?.user_id ?? null;
 
         const rolesLower = (userRoles || []).map((r: string) => r.toLowerCase());
         const userId = user?.id;
 
-        // If restricted to specific user ID
         if (restrictedToUserId != null && userId !== restrictedToUserId) return false;
-
-        // If restricted to role
         if (stepRole && rolesLower.includes(stepRole.toLowerCase())) return true;
 
-        // If no role/user defined (e.g. initial step or user didn't set role), 
-        // fallback logic or maybe allow specific roles like admin?
-        // For Step 1 (creation), usually it requires 'accounting assistant' or is auto-approved.
-        // If we are at Step 1 pending approval (which is weird, normally it moves to 2), maybe allow creator?
         if (!stepRole && !restrictedToUserId) {
-            // Fallback: If it's step 1, allow accounting assistant? Or allow anyone if null?
-            // Usually step 1 is done instantly. If current_step is 1 and pending, something is wrong or waiting for initial review.
             if (currentStep === 1 && rolesLower.includes('accounting assistant')) return true;
         }
 
@@ -215,7 +206,7 @@ export default function View() {
 
         const opt = {
             margin: 0,
-            filename: `Voucher_${disbursement?.control_number}.pdf`,
+            filename: `Voucher_${journal?.control_number}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: {
                 scale: 2,
@@ -245,9 +236,9 @@ export default function View() {
     };
 
     const RejectionNotice = () => {
-        if (disbursement?.status !== 'rejected') return null;
+        if (journal?.status !== 'rejected') return null;
 
-        const rejectionTracking = disbursement.tracking
+        const rejectionTracking = journal.tracking
             ?.filter(t => t.action === 'rejected' && t.acted_at)
             .sort((a, b) => new Date(b.acted_at!).getTime() - new Date(a.acted_at!).getTime())[0];
 
@@ -258,7 +249,7 @@ export default function View() {
                 <XCircle className="h-5 w-5" />
                 <div className="ml-2">
                     <AlertTitle className="font-bold text-lg mb-1 flex items-center gap-2">
-                        Disbursement Rejected
+                        Voucher Rejected
                     </AlertTitle>
                     <AlertDescription className="mt-2 space-y-3">
                         <div className="bg-destructive/5 p-3 rounded-md border border-destructive/10">
@@ -279,24 +270,24 @@ export default function View() {
     if (isLoading) {
         return (
             <AppLayout breadcrumbs={breadcrumbs}>
-                <Head title="Loading Disbursement..." />
+                <Head title="Loading Voucher..." />
                 <div className="flex h-[400px] items-center justify-center">
-                    <div className="text-muted-foreground animate-pulse text-lg">Loading disbursement details...</div>
+                    <div className="text-muted-foreground animate-pulse text-lg">Loading voucher details...</div>
                 </div>
             </AppLayout>
         );
     }
 
-    if (!disbursement) {
+    if (!journal) {
         return (
             <AppLayout breadcrumbs={breadcrumbs}>
-                <Head title="Disbursement Not Found" />
+                <Head title="Voucher Not Found" />
                 <div className="flex flex-col items-center justify-center h-[400px] gap-4">
-                    <h2 className="text-2xl font-bold">Disbursement Not Found</h2>
+                    <h2 className="text-2xl font-bold">Voucher Not Found</h2>
                     <Button asChild>
-                        <Link href={route('disbursements')}>
+                        <Link href={route('vouchers')}>
                             <ArrowLeft className="mr-2 h-4 w-4" />
-                            Back to Disbursements
+                            Back to Vouchers
                         </Link>
                     </Button>
                 </div>
@@ -306,26 +297,26 @@ export default function View() {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title={`Disbursement - ${disbursement.control_number}`} />
+            <Head title={`Voucher - ${journal.control_number}`} />
             {userRoles}
             <div className="flex flex-col gap-6">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <Button variant="outline" size="icon" asChild>
-                            <Link href={route('disbursements')}>
+                            <Link href={route('vouchers')}>
                                 <ArrowLeft className="h-4 w-4" />
                             </Link>
                         </Button>
                         <div>
-                            <h2 className="text-3xl font-bold tracking-tight">{disbursement.control_number}</h2>
-                            <p className="text-muted-foreground">Detailed check voucher view for this disbursement.</p>
+                            <h2 className="text-3xl font-bold tracking-tight">{journal.control_number}</h2>
+                            <p className="text-muted-foreground">Detailed voucher view and accounting record.</p>
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        <Badge className="text-sm px-3 py-1" variant={getStatusBadgeVariant(disbursement.status)}>
-                            {disbursement.status?.toUpperCase()}
+                        <Badge className="text-sm px-3 py-1" variant={getStatusBadgeVariant(journal.status)}>
+                            {journal.status?.toUpperCase()}
                         </Badge>
-                        {disbursement.status === 'approved' && (
+                        {journal.status === 'approved' && (
                             <Button variant="outline" onClick={handlePrint} className="hidden sm:flex items-center gap-2">
                                 <FileText className="h-4 w-4" />
                                 Download PDF
@@ -341,9 +332,9 @@ export default function View() {
                             <CardHeader>
                                 <CardTitle className="text-xl flex items-center gap-2">
                                     <FileText className="h-6 w-6 text-primary -ml-1" />
-                                    Disbursement Info
+                                    Voucher Info
                                 </CardTitle>
-                                <p className='ml-7 -mt-1 text-sm opacity-60'>Record of approved fund disbursements</p>
+                                <p className='ml-7 -mt-1 text-sm opacity-60'>Record of approved fund journals</p>
                             </CardHeader>
                             <DottedSeparator />
                             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-6 px-10 pb-1">
@@ -352,14 +343,14 @@ export default function View() {
                                         <Tag className="h-3 w-3" />
                                         Title
                                     </p>
-                                    <p className="text-sm ml-5 font-semibold text-primary overflow-hidden text-ellipsis whitespace-nowrap">{disbursement.title}</p>
+                                    <p className="text-sm ml-5 font-semibold text-primary overflow-hidden text-ellipsis whitespace-nowrap">{journal.title}</p>
                                 </div>
                                 <div className="space-y-1">
                                     <p className="text-xs font-medium text-muted-foreground uppercase flex items-center gap-2">
                                         <Calendar className="h-3 w-3" />
                                         Date Created
                                     </p>
-                                    <p className="text-sm ml-5 font-semibold">{formatDate(disbursement.created_at)}</p>
+                                    <p className="text-sm ml-5 font-semibold">{formatDate(journal.created_at)}</p>
                                 </div>
                                 <div className="sm:col-span-2 space-y-1">
                                     <p className="text-xs font-medium text-muted-foreground uppercase flex items-center gap-2">
@@ -367,7 +358,7 @@ export default function View() {
                                         Description
                                     </p>
                                     <p className="text-sm ml-5 text-foreground">
-                                        {disbursement.description || 'No description provided.'}
+                                        {journal.description || 'No description provided.'}
                                     </p>
                                 </div>
                             </CardContent>
@@ -376,18 +367,21 @@ export default function View() {
                         {/* Main Voucher - Paper A4 Look */}
                         <div className="overflow-x-auto pb-4 flex justify-center bg-gray-100/50 rounded-xl border p-2 sm:p-4">
                             <div className="w-full max-w-[210mm] min-w-0">
-                                <VoucherTemplate disbursement={disbursement} />
+                                {journal.type === 'journal'
+                                    ? <VoucherTemplateJournal journal={journal} />
+                                    : <VoucherTemplateDisbursement disbursement={journal} />
+                                }
                             </div>
                         </div>
                     </div>
 
                     {/* Sidebar */}
                     <div className="sticky top-6">
-                        <DisbursementSidebar
-                            currentStep={Number(disbursement.current_step) || 1}
-                            stepFlow={disbursement.step_flow}
-                            tracking={disbursement.tracking}
-                            attachments={disbursement.attachments}
+                        <JournalSidebar
+                            currentStep={Number(journal.current_step) || 1}
+                            stepFlow={journal.step_flow}
+                            tracking={journal.tracking}
+                            attachments={journal.attachments}
                         />
                     </div>
                 </div>
@@ -409,7 +403,7 @@ export default function View() {
                         disabled={isActionLoading}
                         className="h-12 px-8 rounded-full bg-green-600 hover:bg-green-700 text-white shadow-xl font-semibold scale-105 transition-transform hover:scale-110 active:scale-95"
                     >
-                        {isActionLoading ? 'Processing...' : 'Approve Disbursement'}
+                        {isActionLoading ? 'Processing...' : 'Approve Voucher'}
                     </Button>
                 </div>
             )}
@@ -420,10 +414,10 @@ export default function View() {
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-destructive">
                             <AlertCircle className="h-5 w-5" />
-                            Decline Disbursement
+                            Decline Voucher
                         </DialogTitle>
                         <DialogDescription>
-                            Please provide a reason for declining this disbursement. This will be sent as a notification to the person who generated it.
+                            Please provide a reason for declining this voucher. This will be sent as a notification to the person who generated it.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">

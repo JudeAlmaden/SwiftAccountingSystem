@@ -79,7 +79,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">
-                                Disbursements
+                                Vouchers
                             </CardTitle>
                             <FileText className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
@@ -93,7 +93,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                                 {disbursements.rejected}
                             </p>
                             <Link
-                                href={route('disbursements')}
+                                href={route('vouchers')}
                                 className="text-xs font-medium text-primary hover:underline mt-1 inline-block"
                             >
                                 View all →
@@ -113,7 +113,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                                 {formatCurrency(disbursements.total_approved_amount)}
                             </div>
                             <p className="text-xs text-muted-foreground">
-                                Sum of approved disbursement credits
+                                Sum of approved journal credits
                             </p>
                         </CardContent>
                     </Card>
@@ -170,7 +170,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                     <CardHeader>
                         <CardTitle>Summary report</CardTitle>
                         <CardDescription>
-                            Disbursement status breakdown and key counts
+                            Journal status breakdown and key counts
                         </CardDescription>
                     </CardHeader>
                     <CardContent>

@@ -27,11 +27,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('inbox');
     })->name('inbox');
 
-    // Create Disbursement (Requires create permission)
-    Route::middleware(['can:create disbursements'])->group(function () {
-        Route::get('dashboard/disbursements/generate', function(){
-            return Inertia::render('disbursement/generate');
-        })->name('disbursement.generate');
+    // Create Voucher (Requires create journals permission)
+    Route::middleware(['can:create journals'])->group(function () {
+        Route::get('dashboard/vouchers/generate', function(){
+            return Inertia::render('vouchers/generate');
+        })->name('vouchers.generate');
     });
 
     // Control number prefixes (accounting head or permission)
@@ -41,19 +41,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
         })->name('control-number-prefixes.index');
     });
 
-    // View Disbursements (Requires view permission)
-    Route::middleware(['can:view disbursements'])->group(function () {
-        Route::get('/dashboard/disbursements', function(){
-            return Inertia::render('disbursement/index');
-        })->name('disbursements');
+    // View Vouchers (Requires view journals permission)
+    Route::middleware(['can:view journals'])->group(function () {
+        Route::get('/dashboard/vouchers', function(){
+            return Inertia::render('vouchers/index');
+        })->name('vouchers');
 
-        Route::get('dashboard/disbursements/{id}', function($id){
-            return Inertia::render('disbursement/view', ['id' => $id]);
-        })->name('disbursement.view');
+        Route::get('dashboard/vouchers/{id}', function($id){
+            return Inertia::render('vouchers/view', ['id' => $id]);
+        })->name('vouchers.view');
 
-        Route::get('/dashboard/reports/disbursements', function () {
-            return Inertia::render('reports/disbursement');
-        })->name('reports.disbursements');
+        Route::get('/dashboard/reports/journals', function () {
+            return Inertia::render('reports/journal');
+        })->name('reports.journals');
     });
 
     // Account Reports (Requires view accounts permission)
@@ -63,9 +63,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         })->name('reports.accounts');
     });
 
-    Route::get('dashboard/accounts/{id}', function($id){
-        return Inertia::render('Accounts/view', ['id' => $id]);
-    })->name('accounts.view');
+
     // Create/Edit/View Users (Requires view users permission at least, page handles nuances?)
     // Based on sidebar, this is "Users and Accounts"
     Route::middleware(['can:view users'])->group(function () {
@@ -83,9 +81,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         })->name('accounts.view');
     });
 
-    Route::get('dashboard/accounts/view/{id}', function($id){
-        return Inertia::render('Accounts/view');
-    })->name('accounts.view');
+
     // Audit Trails (auditor / admin)
     Route::middleware(['can:view audit trails'])->group(function () {
         Route::get('/dashboard/audit-trails', [AuditTrailController::class, 'indexPage'])->name('audit-trails.index');

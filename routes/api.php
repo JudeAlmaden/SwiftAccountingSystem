@@ -5,8 +5,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AccountsController;
 use App\Http\Controllers\AccountGroupController;
-use App\Http\Controllers\DisbursementController;
-use App\Http\Controllers\DisbursementReportController;
+use App\Http\Controllers\JournalController;
+use App\Http\Controllers\JournalReportController;
 use App\Http\Controllers\AccountReportController;
 use App\Http\Controllers\ControlNumberPrefixController;
 use App\Http\Controllers\NotificationController;
@@ -20,8 +20,8 @@ Route::get('/user', function (Request $request) {
 /*==================
   Report API Routes (permission-gated)
 ===================*/
-Route::middleware(['auth:sanctum', 'can:view disbursements'])->group(function () {
-    Route::get('/reports/disbursements', [DisbursementReportController::class, 'index'])->name('api.reports.disbursements');
+Route::middleware(['auth:sanctum', 'can:view journals'])->group(function () {
+    Route::get('/reports/journals', [JournalReportController::class, 'index'])->name('api.reports.journals');
 });
 
 Route::middleware(['auth:sanctum', 'can:view accounts'])->group(function () {
@@ -75,15 +75,15 @@ Route::middleware(['auth:sanctum', 'role:accounting head'])->group(function () {
 });
 
 /*==================
-  Disbursement API Routes
+  Journal API Routes
 ===================*/
-//For creating and deleting disbursement entries
+//For creating and managing journal entries (the accounting records behind vouchers)
 Route::middleware(['auth:sanctum'])->group(function () {
-    // Disbursement Management
-    Route::get('/disbursements', [DisbursementController::class, 'index'])->name('disbursements.index'); // List all disbursements
-    Route::post('/disbursements', [DisbursementController::class, 'store'])->name('disbursements.store');      // Save new disbursement
-    Route::get('/disbursements/{id}', [DisbursementController::class, 'show'])->name('disbursements.show'); // Show specific disbursement
-    Route::delete('/disbursements/{id}', [DisbursementController::class, 'destroy'])->name('disbursements.destroy');   // Delete disbursement
+    // Journal (Accounting Record) Management
+    Route::get('/journals', [JournalController::class, 'index'])->name('journals.index');         // List all journals
+    Route::post('/journals', [JournalController::class, 'store'])->name('journals.store');        // Save new journal
+    Route::get('/journals/{id}', [JournalController::class, 'show'])->name('journals.show');      // Show specific journal
+    Route::delete('/journals/{id}', [JournalController::class, 'destroy'])->name('journals.destroy'); // Delete journal
 
     /*==================
       Notification API Routes
@@ -93,15 +93,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.markAllRead');
 
     /*==================
-      Disbursement Actions
+      Journal Actions
     ===================*/
-    Route::post('/disbursements/{id}/approve', [DisbursementController::class, 'approve'])
-        ->middleware('can:approve disbursements')
-        ->name('disbursements.approve');
+    Route::post('/journals/{id}/approve', [JournalController::class, 'approve'])
+        ->middleware('can:approve journals')
+        ->name('journals.approve');
 
-    Route::post('/disbursements/{id}/decline', [DisbursementController::class, 'decline'])
-        ->middleware('can:approve disbursements')
-        ->name('disbursements.decline');
+    Route::post('/journals/{id}/decline', [JournalController::class, 'decline'])
+        ->middleware('can:approve journals')
+        ->name('journals.decline');
 
     /*==================
       Audit Trails

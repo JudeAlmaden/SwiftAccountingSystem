@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Account;
-use App\Models\Disbursement;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -31,22 +30,22 @@ class TrialBalanceController extends Controller
             ->get()
             ->map(function ($account) use ($startDate, $endDate) {
                 // Calculate Debits
-                $debit = DB::table('disbursement_items')
-                    ->join('disbursements', 'disbursement_items.disbursement_id', '=', 'disbursements.id')
-                    ->where('disbursements.status', 'approved')
-                    ->where('disbursement_items.account_id', $account->id)
-                    ->where('disbursement_items.type', 'debit')
-                    ->whereBetween('disbursements.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-                    ->sum('disbursement_items.amount');
+                $debit = DB::table('journal_items')
+                    ->join('journals', 'journal_items.journal_id', '=', 'journals.id')
+                    ->where('journals.status', 'approved')
+                    ->where('journal_items.account_id', $account->id)
+                    ->where('journal_items.type', 'debit')
+                    ->whereBetween('journals.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+                    ->sum('journal_items.amount');
 
                 // Calculate Credits
-                $credit = DB::table('disbursement_items')
-                    ->join('disbursements', 'disbursement_items.disbursement_id', '=', 'disbursements.id')
-                    ->where('disbursements.status', 'approved')
-                    ->where('disbursement_items.account_id', $account->id)
-                    ->where('disbursement_items.type', 'credit')
-                    ->whereBetween('disbursements.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-                    ->sum('disbursement_items.amount');
+                $credit = DB::table('journal_items')
+                    ->join('journals', 'journal_items.journal_id', '=', 'journals.id')
+                    ->where('journals.status', 'approved')
+                    ->where('journal_items.account_id', $account->id)
+                    ->where('journal_items.type', 'credit')
+                    ->whereBetween('journals.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+                    ->sum('journal_items.amount');
 
                 $account->total_debit = $debit;
                 $account->total_credit = $credit;

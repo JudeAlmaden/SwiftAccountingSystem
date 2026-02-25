@@ -26,9 +26,9 @@ export function AppSidebar() {
     const navItemDetails: Record<string, NavItem & { permission?: string; role?: string }> = {
         dashboard: { title: 'Dashboard', href: route('dashboard'), icon: LayoutGrid },
         users: { title: 'Users and Accounts', href: route('users'), icon: User, permission: 'view users' },
-        disbursements: { title: 'Disbursement', href: route('disbursements'), icon: WalletCards, permission: 'view disbursements' },
+        vouchers: { title: 'Vouchers', href: route('vouchers'), icon: WalletCards, permission: 'view journals' },
         chartAccounts: { title: 'Chart of Accounts', href: route('accounts'), icon: BookOpen, permission: 'view accounts' },
-        disbursementReports: { title: 'Disbursement Reports', href: route('reports.disbursements'), icon: BarChart3, permission: 'view disbursements' },
+        vouchersReports: { title: 'Reports', href: route('reports.journals'), icon: BarChart3, permission: 'view journals' },
         accountReports: { title: 'Account Reports', href: route('reports.accounts'), icon: PieChart, permission: 'view accounts' },
         controlPrefixes: { title: 'Control number prefixes', href: route('control-number-prefixes.index'), icon: Tag, permission: 'manage control number prefixes', role: 'accounting head' },
         auditTrails: { title: 'Audit Trails', href: route('audit-trails.index'), icon: ClipboardList, permission: 'view audit trails' },

@@ -38,7 +38,7 @@ import {
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: route('dashboard') },
-    { title: 'Disbursement Reports', href: route('reports.disbursements') },
+    { title: 'Journal Reports', href: route('reports.journals') },
 ];
 
 type Period = 'daily' | 'monthly' | 'yearly';
@@ -168,7 +168,7 @@ function defaultDateTo(): string {
     return `${y}-${m}-${day}`;
 }
 
-export default function DisbursementReportPage() {
+export default function JournalReportPage() {
     const [period, setPeriod] = useState<Period>('monthly');
     const [dateFrom, setDateFrom] = useState(() => defaultDateFrom());
     const [dateTo, setDateTo] = useState(() => defaultDateTo());
@@ -185,7 +185,7 @@ export default function DisbursementReportPage() {
             date_to: dateTo,
         });
         // Use web route path so session auth is used (API route has same name and uses Sanctum).
-        const url = `/api/reports/disbursements?${params}`;
+        const url = `/api/reports/journals?${params}`;
         fetch(url, {
             headers: { Accept: 'application/json' },
             credentials: 'include',
@@ -208,7 +208,7 @@ export default function DisbursementReportPage() {
                 return res.json();
             })
             .then(setData)
-            .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load disbursement report.'))
+            .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load journal report.'))
             .finally(() => setLoading(false));
     }, [period, dateFrom, dateTo]);
 
@@ -223,7 +223,7 @@ export default function DisbursementReportPage() {
     if (loading && !data) {
         return (
             <AppLayout breadcrumbs={breadcrumbs}>
-                <Head title="Disbursement Reports" />
+                <Head title="Journal Reports" />
                 <div className="flex items-center justify-center py-12 text-muted-foreground">
                     Loading report…
                 </div>
@@ -233,14 +233,14 @@ export default function DisbursementReportPage() {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Disbursement Reports" />
+            <Head title="Journal Reports" />
             <div className="report-print-root min-w-0 space-y-8 overflow-x-auto">
                 <div className="print:hidden">
                     <h1 className="text-2xl font-semibold tracking-tight">
-                        Disbursement Reports
+                        Journal Reports
                     </h1>
                     <p className="text-muted-foreground mt-1">
-                        Aggregated disbursement summary by time range with expense and account breakdown
+                        Aggregated journal summary by time range with expense and account breakdown
                     </p>
                 </div>
 
@@ -303,7 +303,7 @@ export default function DisbursementReportPage() {
                 {data && (
                     <div id="report-paper" className="min-w-0 space-y-8">
                         <div className="pb-4 border-b">
-                            <h2 className="text-xl font-semibold">Disbursement Report</h2>
+                            <h2 className="text-xl font-semibold">Journal Report</h2>
                             <p className="text-sm text-muted-foreground mt-1">
                                 {data.date_from} to {data.date_to} · Grouped by {data.period}
                             </p>
@@ -388,7 +388,7 @@ export default function DisbursementReportPage() {
                             </Card>
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Disbursements</CardTitle>
+                                    <CardTitle className="text-sm font-medium">Journals</CardTitle>
                                     <FileText className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
                                 <CardContent>

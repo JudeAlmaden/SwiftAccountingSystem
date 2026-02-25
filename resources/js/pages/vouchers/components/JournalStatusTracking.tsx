@@ -1,6 +1,6 @@
 import { DottedSeparator } from '@/components/dotted-line';
 import { Card } from '@/components/ui/card';
-import { DisbursementTracking, StepFlowStep } from '@/types/database';
+import { JournalTracking, StepFlowStep } from '@/types/database';
 import { useState } from 'react';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -22,10 +22,10 @@ function stepLabel(stepFlow: StepFlowStep[] | null | undefined, index: number): 
 interface StatusTrackingProps {
     currentStep?: number;
     stepFlow?: StepFlowStep[] | null;
-    tracking?: DisbursementTracking[];
+    tracking?: JournalTracking[];
 }
 
-export function DisbursementStatusTracking({ currentStep = 1, stepFlow, tracking = [] }: StatusTrackingProps) {
+export function JournalStatusTracking({ currentStep = 1, stepFlow, tracking = [] }: StatusTrackingProps) {
     const [expandedRemarks, setExpandedRemarks] = useState<number[]>([]);
     const currentStepNum = Number(currentStep) || 1;
     const pendingStep = tracking.find(t => t.action === 'pending')?.step;

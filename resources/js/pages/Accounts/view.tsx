@@ -9,7 +9,7 @@ import type { Account } from '@/types/database';
 import { route } from 'ziggy-js';
 import { Search, ArrowLeft } from 'lucide-react';
 
-interface Disbursement {
+interface Journal {
     id: number;
     control_number: string;
     title: string;
@@ -23,8 +23,8 @@ interface Disbursement {
     }[];
 }
 
-interface PaginatedDisbursements {
-    data: Disbursement[];
+interface PaginatedJournals {
+    data: Journal[];
     current_page: number;
     last_page: number;
     total: number;
@@ -43,7 +43,7 @@ export default function AccountView({ id }: Props) {
     const token = meta?.content || '';
 
     const [account, setAccount] = useState<Account | null>(null);
-    const [disbursements, setDisbursements] = useState<Disbursement[]>([]);
+    const [journals, setJournals] = useState<Journal[]>([]);
     const [pagination, setPagination] = useState({
         current_page: 1,
         last_page: 1,
@@ -81,15 +81,15 @@ export default function AccountView({ id }: Props) {
             .then(res => res.json())
             .then(data => {
                 setAccount(data.account);
-                setDisbursements(data.disbursements.data);
+                setJournals(data.journals.data);
                 setPagination({
-                    current_page: data.disbursements.current_page,
-                    last_page: data.disbursements.last_page,
-                    next_page_url: data.disbursements.next_page_url,
-                    prev_page_url: data.disbursements.prev_page_url,
-                    total: data.disbursements.total,
-                    from: data.disbursements.from,
-                    to: data.disbursements.to,
+                    current_page: data.journals.current_page,
+                    last_page: data.journals.last_page,
+                    next_page_url: data.journals.next_page_url,
+                    prev_page_url: data.journals.prev_page_url,
+                    total: data.journals.total,
+                    from: data.journals.from,
+                    to: data.journals.to,
                 });
                 setIsLoading(false);
             })
@@ -170,21 +170,21 @@ export default function AccountView({ id }: Props) {
                             <p className="font-medium">{account?.account_description || '-'}</p>
                         </div>
                         <div>
-                            <p className="text-sm text-muted-foreground">Referenced in Disbursements</p>
-                            <p className="font-medium">{account?.disbursement_items_count || 0} times</p>
+                            <p className="text-sm text-muted-foreground">Referenced in Journals</p>
+                            <p className="font-medium">{account?.journal_items_count || 0} times</p>
                         </div>
                     </div>
                 </div>
 
-                {/* Disbursements Section */}
+                {/* Journals Section */}
                 <div className="flex flex-col gap-4">
-                    <h3 className="text-2xl font-semibold">Disbursement History</h3>
+                    <h3 className="text-2xl font-semibold">Journal History</h3>
 
                     {/* Search */}
                     <div className="relative max-w-lg">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                         <Input
-                            placeholder="Search disbursements..."
+                            placeholder="Search journals..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             className="pl-9 border-gray-300 border-[1.7px] rounded-sm"
@@ -209,26 +209,26 @@ export default function AccountView({ id }: Props) {
                                     <TableRow>
                                         <TableCell colSpan={6} className="text-center h-24">Loading...</TableCell>
                                     </TableRow>
-                                ) : disbursements.length === 0 ? (
+                                ) : journals.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
-                                            No disbursements found.
+                                            No journals found.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    disbursements.map((disbursement) => {
-                                        const accountItem = disbursement.items?.[0];
+                                    journals.map((journal) => {
+                                        const accountItem = journal.items?.[0];
                                         return (
-                                            <TableRow key={disbursement.id} className="h-16">
+                                            <TableRow key={journal.id} className="h-16">
                                                 <TableCell className="font-medium px-4">
                                                     <Link
-                                                        href={route('disbursement.view', { id: disbursement.id })}
+                                                        href={route('vouchers.view', { id: journal.id })}
                                                         className="text-primary hover:underline"
                                                     >
-                                                        {disbursement.control_number}
+                                                        {journal.control_number}
                                                     </Link>
                                                 </TableCell>
-                                                <TableCell className="px-4">{disbursement.title}</TableCell>
+                                                <TableCell className="px-4">{journal.title}</TableCell>
                                                 <TableCell className="px-4">
                                                     {accountItem ? formatCurrency(accountItem.amount) : '-'}
                                                 </TableCell>
@@ -241,16 +241,16 @@ export default function AccountView({ id }: Props) {
                                                     </span>
                                                 </TableCell>
                                                 <TableCell className="px-4 text-sm text-muted-foreground">
-                                                    {formatDate(disbursement.created_at)}
+                                                    {formatDate(journal.created_at)}
                                                 </TableCell>
                                                 <TableCell className="px-4">
-                                                    <span className={`px-2 py-1 rounded text-xs font-medium capitalize ${disbursement.status === 'approved'
+                                                    <span className={`px-2 py-1 rounded text-xs font-medium capitalize ${journal.status === 'approved'
                                                         ? 'bg-green-100 text-green-700'
-                                                        : disbursement.status === 'rejected'
+                                                        : journal.status === 'rejected'
                                                             ? 'bg-red-100 text-red-700'
                                                             : 'bg-yellow-100 text-yellow-700'
                                                         }`}>
-                                                        {disbursement.status}
+                                                        {journal.status}
                                                     </span>
                                                 </TableCell>
                                             </TableRow>

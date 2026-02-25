@@ -100,7 +100,7 @@ export default function AppSidebarLayout({
             }
         };
         checkForNewNotifications();
-        const interval = setInterval(checkForNewNotifications, 5000);
+        const interval = setInterval(checkForNewNotifications, 60000);
 
         return () => clearInterval(interval);
     }, [user]);

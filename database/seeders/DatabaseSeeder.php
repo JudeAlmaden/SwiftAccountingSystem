@@ -28,7 +28,7 @@ class DatabaseSeeder extends Seeder
             UsersSeeder::class,
             ChartOfAccountsSeeder::class,
             ControlNumberPrefixSeeder::class,
-            DisbursementSeeder::class,
+            JournalSeeder::class,
         ]);
     }
 }

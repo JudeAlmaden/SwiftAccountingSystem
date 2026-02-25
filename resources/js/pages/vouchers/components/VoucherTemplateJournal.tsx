@@ -1,28 +1,38 @@
-import { Disbursement } from '@/types/database';
+import { Journal } from '@/types/database';
 
 interface VoucherTemplateProps {
-    disbursement: Disbursement;
+    journal: Journal;
 }
 
-export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
-    const debitItems = disbursement.items?.filter(item => item.type === 'debit') || [];
-    const creditItems = disbursement.items?.filter(item => item.type === 'credit') || [];
+export function VoucherTemplateJournal({ journal }: VoucherTemplateProps) {
+    const allItems = journal.items || [];
+    const debitItems = allItems.filter(item => item.type === 'debit');
+    const creditItems = allItems.filter(item => item.type === 'credit');
 
     const totalDebit = debitItems.reduce((sum, item) => sum + Number(item.amount), 0);
     const totalCredit = creditItems.reduce((sum, item) => sum + Number(item.amount), 0);
+
+    const emptyRowsNeeded = Math.max(0, 11 - allItems.length);
 
     const formatDate = (dateString?: string) => {
         if (!dateString) return '';
         return new Date(dateString).toLocaleDateString('en-US', {
             month: 'long',
             day: 'numeric',
-            year: 'numeric'
+            year: 'numeric',
         });
     };
 
-    // Ensure we have at least 11 rows for the table
-    const allItems = disbursement.items || [];
-    const emptyRowsNeeded = Math.max(0, 11 - allItems.length);
+    const signatureRows = [
+        [
+            { label: 'PREPARED BY', step: 1 },
+            { label: 'RECOMMENDED BY', step: 2 },
+        ],
+        [
+            { label: 'CHECKED BY', step: 3 },
+            { label: 'APPROVED BY', step: 4 },
+        ],
+    ];
 
     return (
         <div id="voucher-paper" className="bg-white text-black w-full max-w-[210mm] min-h-[297mm] mx-auto shadow-2xl" style={{ fontFamily: 'Times New Roman, serif' }}>
@@ -30,69 +40,29 @@ export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
                 {/* Header */}
                 <div className="text-center mb-0">
                     <img src="/Sacli/Format_3.jpg" alt="ST. ANNE COLLEGE LUCENA, INC." className="w-full max-w-[400px] mx-auto mb-2" />
-                    <h2 style={{ fontSize: '20px', fontWeight: 'bold', letterSpacing: '0.05em', marginTop: '8px', marginBottom: '4px' }}>CHECK VOUCHER</h2>
+                    <h2 style={{ fontSize: '20px', fontWeight: 'bold', letterSpacing: '0.05em', marginTop: '8px', marginBottom: '4px' }}>JOURNAL VOUCHER</h2>
                 </div>
 
-                {/* Top Right Info - NO and DATE */}
-                <div
-                    className="flex justify-end mb-1"
-                    style={{ gap: '20px', fontSize: '11px' }}
-                >
-                    {/* Check No */}
-                    <div style={{ display: 'flex', alignItems: 'baseline' }}>
-                        <span className="font-bold" style={{ marginRight: '6px' }}>
-                            Check No.
-                        </span>
-                        <span
-                            style={{
-                                borderBottom: '1px dotted black',
-                                flex: 1,
-                                paddingBottom: '3px',
-                                minHeight: '16px',
-                                minWidth: '80px',
-                                textAlign: 'left',
-                            }}
-                        >
-                            {disbursement.check_id}
-                        </span>
-                    </div>
-
+                {/* Top Right Info — No. and DATE only (no Check No.) */}
+                <div className="flex justify-end mb-1" style={{ gap: '20px', fontSize: '11px' }}>
                     {/* No */}
                     <div style={{ display: 'flex', alignItems: 'baseline', minWidth: '140px' }}>
-                        <span className="font-bold" style={{ marginRight: '6px' }}>
-                            No.
-                        </span>
-                        <span
-                            style={{
-                                borderBottom: '1px dotted black',
-                                flex: 1,
-                                paddingBottom: '3px',
-                                minHeight: '16px',
-                            }}
-                        >
-                            {disbursement.control_number?.split('-').pop()}
+                        <span className="font-bold" style={{ marginRight: '6px' }}>No.</span>
+                        <span style={{ borderBottom: '1px dotted black', flex: 1, paddingBottom: '3px', minHeight: '16px' }}>
+                            {journal.control_number}
                         </span>
                     </div>
 
                     {/* Date */}
                     <div style={{ display: 'flex', alignItems: 'baseline', minWidth: '120px' }}>
-                        <span className="font-bold" style={{ marginRight: '6px' }}>
-                            Date
-                        </span>
-                        <span
-                            style={{
-                                borderBottom: '1px dotted black',
-                                flex: 1,
-                                paddingBottom: '3px',
-                                minHeight: '16px',
-                            }}
-                        >
-                            {formatDate(disbursement.created_at)}
+                        <span className="font-bold" style={{ marginRight: '6px' }}>Date</span>
+                        <span style={{ borderBottom: '1px dotted black', flex: 1, paddingBottom: '3px', minHeight: '16px' }}>
+                            {formatDate(journal.created_at)}
                         </span>
                     </div>
                 </div>
 
-                {/* Main Table - Extended to fill page */}
+                {/* Main Table */}
                 <div className="flex-grow flex flex-col mb-2">
                     <table className="w-full border-collapse flex-grow" style={{ borderCollapse: 'collapse' }}>
                         <thead>
@@ -115,7 +85,6 @@ export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
                             </tr>
                         </thead>
                         <tbody>
-                            {/* Actual data rows */}
                             {allItems.map((item) => (
                                 <tr key={item.id}>
                                     <td style={{ borderRight: '1px solid black', height: '5px', padding: '4px 2px', fontSize: '11px', textAlign: 'center' }}>
@@ -136,38 +105,21 @@ export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
                                 </tr>
                             ))}
 
-                            {/* Empty rows to fill remaining space */}
                             {Array.from({ length: emptyRowsNeeded }).map((_, index) => (
                                 <tr key={`empty-${index}`}>
-                                    <td className="px-0 py-0 text-[10px] text-center" style={{ borderRight: '1px solid black', height: 'auto' }}>
-                                        &nbsp;
-                                    </td>
-                                    <td className="px-0 py-0 text-[10px]" style={{ borderRight: '1px solid black', height: 'auto' }}>
-                                        &nbsp;
-                                    </td>
-                                    <td className="px-0 py-0 text-[10px] text-center" style={{ borderRight: '1px solid black', height: 'auto' }}>
-                                        &nbsp;
-                                    </td>
-                                    <td className="px-0 py-0 text-[10px] text-center" style={{ borderRight: '1px solid black', height: 'auto' }}>
-                                        &nbsp;
-                                    </td>
-                                    <td className="px-0 py-0 text-[10px] text-center" style={{ height: 'auto' }}>
-                                        &nbsp;
-                                    </td>
+                                    <td className="px-0 py-0 text-[10px] text-center" style={{ borderRight: '1px solid black', height: 'auto' }}>&nbsp;</td>
+                                    <td className="px-0 py-0 text-[10px]" style={{ borderRight: '1px solid black', height: 'auto' }}>&nbsp;</td>
+                                    <td className="px-0 py-0 text-[10px] text-center" style={{ borderRight: '1px solid black', height: 'auto' }}>&nbsp;</td>
+                                    <td className="px-0 py-0 text-[10px] text-center" style={{ borderRight: '1px solid black', height: 'auto' }}>&nbsp;</td>
+                                    <td className="px-0 py-0 text-[10px] text-center" style={{ height: 'auto' }}>&nbsp;</td>
                                 </tr>
                             ))}
 
                             {/* Total Row */}
                             <tr style={{ fontWeight: 'bold' }}>
-                                <td style={{ borderRight: '1px solid black', borderBottom: '2px solid black', height: '28px', padding: '6px 4px 4px 4px', fontSize: '11px', textAlign: 'center', verticalAlign: 'top' }}>
-                                    &nbsp;
-                                </td>
-                                <td style={{ borderRight: '1px solid black', borderBottom: '2px solid black', height: '28px', padding: '6px 4px 4px 4px', fontSize: '11px', textAlign: 'center', verticalAlign: 'top' }}>
-                                    TOTAL
-                                </td>
-                                <td style={{ borderRight: '1px solid black', borderBottom: '2px solid black', height: '28px', padding: '6px 4px 4px 4px', fontSize: '11px', textAlign: 'center', verticalAlign: 'top' }}>
-                                    &nbsp;
-                                </td>
+                                <td style={{ borderRight: '1px solid black', borderBottom: '2px solid black', height: '28px', padding: '6px 4px 4px 4px', fontSize: '11px', textAlign: 'center', verticalAlign: 'top' }}>&nbsp;</td>
+                                <td style={{ borderRight: '1px solid black', borderBottom: '2px solid black', height: '28px', padding: '6px 4px 4px 4px', fontSize: '11px', textAlign: 'center', verticalAlign: 'top' }}>TOTAL</td>
+                                <td style={{ borderRight: '1px solid black', borderBottom: '2px solid black', height: '28px', padding: '6px 4px 4px 4px', fontSize: '11px', textAlign: 'center', verticalAlign: 'top' }}>&nbsp;</td>
                                 <td style={{ borderRight: '1px solid black', borderBottom: '2px solid black', textDecoration: 'underline', height: '28px', padding: '6px 4px 4px 4px', fontSize: '11px', textAlign: 'center', verticalAlign: 'top' }}>
                                     {totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                 </td>
@@ -183,26 +135,13 @@ export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
                 <div style={{ padding: '8px', minHeight: '80px', fontSize: '10px', marginBottom: '16px', borderBottom: '2px solid black' }}>
                     <div style={{ lineHeight: '1.4', display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
                         <span style={{ fontWeight: 'bold', marginTop: '6px' }}>EXPLANATION:</span>
-                        <span style={{ marginTop: '6px' }}>{disbursement.description}</span>
+                        <span style={{ marginTop: '6px' }}>{journal.description}</span>
                     </div>
                 </div>
 
-                {/* Footer Signature Lines */}
+                {/* Footer Signature Lines — no Paid/Received By */}
                 <div style={{ fontSize: '11px', marginTop: '20px' }}>
-                    {[
-                        [
-                            { label: 'PREPARED BY', step: 1 },
-                            { label: 'RECOMMENDED BY', step: 2 }
-                        ],
-                        [
-                            { label: 'CHECKED BY', step: 3 },
-                            { label: 'APPROVED BY', step: 4 }
-                        ],
-                        [
-                            { label: 'PAID BY', step: null },
-                            { label: 'RECEIVED BY', step: null }
-                        ],
-                    ].map((row, i) => (
+                    {signatureRows.map((row, i) => (
                         <div
                             key={i}
                             style={{
@@ -213,40 +152,16 @@ export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
                             }}
                         >
                             {row.map(({ label, step }) => {
-                                // Find the user who performed the action for this step
-                                const trackingInfo = step
-                                    ? disbursement.tracking?.find(t => t.step === step && t.action === 'approved')
-                                    : null;
-
+                                const trackingInfo = journal.tracking?.find(t => t.step === step && t.action === 'approved');
                                 const actorName = trackingInfo?.handler?.name || '';
 
                                 return (
-                                    <div
-                                        key={label}
-                                        style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}
-                                    >
+                                    <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                         <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                            <p
-                                                style={{
-                                                    fontWeight: 'bold',
-                                                    color: '#1f2937',
-                                                    whiteSpace: 'nowrap',
-                                                    minWidth: '100px'
-                                                }}
-                                            >
+                                            <p style={{ fontWeight: 'bold', color: '#1f2937', whiteSpace: 'nowrap', minWidth: '100px' }}>
                                                 {label}
                                             </p>
-                                            <div
-                                                style={{
-                                                    borderBottom: '1px dotted black',
-                                                    flex: 1,
-                                                    display: 'flex',
-                                                    justifyContent: 'center',
-                                                    paddingBottom: '4px',
-                                                    minHeight: '20px',
-                                                    alignItems: 'flex-end'
-                                                }}
-                                            >
+                                            <div style={{ borderBottom: '1px dotted black', flex: 1, display: 'flex', justifyContent: 'center', paddingBottom: '4px', minHeight: '20px', alignItems: 'flex-end' }}>
                                                 <span style={{ fontWeight: 'bold', fontSize: '11px', textTransform: 'uppercase', paddingBottom: '2px' }}>
                                                     {actorName}
                                                 </span>
@@ -258,8 +173,7 @@ export function VoucherTemplate({ disbursement }: VoucherTemplateProps) {
                         </div>
                     ))}
                 </div>
-
             </div>
-        </div >
+        </div>
     );
 }

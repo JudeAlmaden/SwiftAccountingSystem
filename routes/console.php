@@ -10,4 +10,4 @@ Artisan::command('inspire', function () {
 use Illuminate\Support\Facades\Schedule;
 
 Schedule::command('uploads:prune')->daily();
-Schedule::command('disbursements:cleanup-rejected')->daily();
+Schedule::command('journals:cleanup-rejected')->daily();

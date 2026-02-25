@@ -48,11 +48,11 @@ class Account extends Model
     }
 
     /**
-     * Get the disbursement items associated with the account.
+     * Get the journal items associated with the account.
      */
-    public function disbursementItems()
+    public function journalItems()
     {
-        return $this->hasMany(DisbursementItem::class);
+        return $this->hasMany(JournalItem::class);
     }
 
     /**
