@@ -104,7 +104,7 @@ export function JournalStatusTracking({ currentStep = 1, stepFlow, tracking = []
                         }
 
                         return (
-                            <div key={step.role} className="flex items-start gap-4 relative">
+                            <div key={`step-${stepNum}`} className="flex items-start gap-4 relative">
                                 <div className={`relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full z-10 border transition-all duration-300 ${circleClass}`}>
                                     {isPending && (
                                         <div className="absolute inset-0 rounded-full bg-green-500/20 animate-ping"></div>

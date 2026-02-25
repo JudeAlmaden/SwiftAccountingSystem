@@ -13,10 +13,10 @@ class AccountGroupController extends Controller
         $validated = $request->validate([
             'search' => 'nullable|string',
             'account_type' => 'nullable|string',
-            'all' => 'nullable|boolean'
+            'all' => 'nullable' // Accept any value for 'all' parameter
         ]);
 
-        $query = AccountGroup::query();
+        $query = AccountGroup::query()->withCount('accounts');
 
         if (!empty($validated['search'])) {
             $search = $validated['search'];
@@ -30,7 +30,8 @@ class AccountGroupController extends Controller
             $query->where('account_type', $validated['account_type']);
         }
 
-        if ($request->boolean('all')) {
+        // Check if 'all' parameter exists (regardless of value)
+        if ($request->has('all')) {
             return response()->json(['data' => $query->orderBy('name')->get()]);
         }
 
