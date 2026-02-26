@@ -1,8 +1,14 @@
-import AppLayout from '@/layouts/app-layout';
-import type { BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
-import { route } from 'ziggy-js';
+import {
+    FileText,
+    Banknote,
+    TrendingUp,
+    ArrowDownCircle,
+    Printer,
+} from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { route } from 'ziggy-js';
+import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
@@ -10,7 +16,6 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Label } from '@/components/ui/label';
 import {
@@ -28,13 +33,8 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import {
-    FileText,
-    Banknote,
-    TrendingUp,
-    ArrowDownCircle,
-    Printer,
-} from 'lucide-react';
+import AppLayout from '@/layouts/app-layout';
+import type { BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: route('dashboard') },
@@ -172,6 +172,7 @@ export default function JournalReportPage() {
     const [period, setPeriod] = useState<Period>('monthly');
     const [dateFrom, setDateFrom] = useState(() => defaultDateFrom());
     const [dateTo, setDateTo] = useState(() => defaultDateTo());
+    const [documentType, setDocumentType] = useState<'all' | 'journal' | 'disbursement'>('all');
     const [data, setData] = useState<ReportData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -184,6 +185,9 @@ export default function JournalReportPage() {
             date_from: dateFrom,
             date_to: dateTo,
         });
+        if (documentType && documentType !== 'all') {
+            params.set('type', documentType);
+        }
         // Use web route path so session auth is used (API route has same name and uses Sanctum).
         const url = `/api/reports/journals?${params}`;
         fetch(url, {
@@ -210,7 +214,7 @@ export default function JournalReportPage() {
             .then(setData)
             .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load journal report.'))
             .finally(() => setLoading(false));
-    }, [period, dateFrom, dateTo]);
+    }, [period, dateFrom, dateTo, documentType]);
 
     useEffect(() => {
         fetchReport();
@@ -263,6 +267,19 @@ export default function JournalReportPage() {
                                     <SelectItem value="daily">Daily</SelectItem>
                                     <SelectItem value="monthly">Monthly</SelectItem>
                                     <SelectItem value="yearly">Yearly</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-xs text-muted-foreground">Document type</Label>
+                            <Select value={documentType} onValueChange={(v) => setDocumentType(v as 'all' | 'journal' | 'disbursement')}>
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All vouchers</SelectItem>
+                                    <SelectItem value="journal">Journal vouchers only</SelectItem>
+                                    <SelectItem value="disbursement">Disbursement vouchers only</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
