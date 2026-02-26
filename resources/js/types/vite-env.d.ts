@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { AxiosInstance } from "axios";
+import type { AxiosInstance } from "axios";
 
 declare global {
     interface Window {

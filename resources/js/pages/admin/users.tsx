@@ -1,10 +1,15 @@
-import { route } from 'ziggy-js';
-import { dashboard } from '@/routes';
 import { Head, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
+import { route } from 'ziggy-js';
+import { StatusIndicator } from '@/components/status-indicator';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
-import type { User, Role, Permission } from '@/types/database';
+import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
+import type { User, Role, Permission } from '@/types/database';
 
 interface SharedData {
     auth: {
@@ -14,15 +19,10 @@ interface SharedData {
     permissions: Permission[];
     [key: string]: any;
 }
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Input } from "@/components/ui/input";
 import { Shield, Briefcase, FileText, Search } from 'lucide-react';
 import { SpecialUserCard } from './components/special-user-card';
 import { UserFormModal } from './components/user-form-modal';
 import { UserStats } from './components/user-stats';
-import { StatusIndicator } from '@/components/status-indicator';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {

@@ -1,3 +1,6 @@
+import { Link, usePage } from '@inertiajs/react';
+import { LayoutGrid, User, FileText, WalletCards, BookOpen, Bell, BarChart3, PieChart, Tag, ClipboardList } from 'lucide-react';
+import { route } from 'ziggy-js';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -12,11 +15,8 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
-import { Link, usePage } from '@inertiajs/react';
-import { LayoutGrid, User, FileText, WalletCards, BookOpen, Bell, BarChart3, PieChart, Tag, ClipboardList } from 'lucide-react';
-import AppLogo from './app-logo';
 import type { SharedData } from '@/types';
-import { route } from 'ziggy-js';
+import AppLogo from './app-logo';
 
 export function AppSidebar() {
     const { user } = usePage<SharedData>().props;

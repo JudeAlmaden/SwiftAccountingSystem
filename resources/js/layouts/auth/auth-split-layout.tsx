@@ -1,7 +1,7 @@
+import { usePage } from '@inertiajs/react';
 import { AnimatedGridPattern } from '@/components/ui/animated-grid-pattern';
 import { cn } from '@/lib/utils';
 import type { AuthLayoutProps, SharedData } from '@/types';
-import { usePage } from '@inertiajs/react';
 
 export default function AuthSplitLayout({
     children,
