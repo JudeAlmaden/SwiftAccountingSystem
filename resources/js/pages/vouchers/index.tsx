@@ -1,24 +1,23 @@
-import AppLayout from '@/layouts/app-layout';
-import { BreadcrumbItem } from '@/types';
-import { Head, usePage } from '@inertiajs/react';
-import type { SharedData } from '@/types';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { DatePicker } from '@/components/ui/date-picker';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Calendar, Search, Filter, ArrowUpDown, Inbox, MoreHorizontal } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { route } from 'ziggy-js';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from '@/components/ui/button';
+import { DatePicker } from '@/components/ui/date-picker';
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { Link } from '@inertiajs/react';
-import { Calendar, Search, Filter, ArrowUpDown, Inbox, MoreHorizontal } from 'lucide-react';
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import AppLayout from '@/layouts/app-layout';
+import { BreadcrumbItem } from '@/types';
+import type { SharedData } from '@/types';
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -189,13 +188,13 @@ export default function Journals() {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Journals" />
+            <Head title="Vouchers" />
 
             <div className="flex flex-col gap-6">
                 <div className="flex items-center justify-between">
                     <div className="flex flex-col gap-2">
                         <h2 className="text-3xl text-header">Vouchers</h2>
-                        <p className="text-muted-foreground">Manage and track all voucher entries.</p>
+                        <p className="text-muted-foreground">Manage and track all journal and disbursement vouchers.</p>
                     </div>
                     {canCreate && (
                         <div className="flex gap-2">
@@ -238,7 +237,7 @@ export default function Journals() {
                         <SelectContent>
                             <SelectItem value="all">All Types</SelectItem>
                             <SelectItem value="disbursement">Disbursement</SelectItem>
-                            <SelectItem value="general">General</SelectItem>
+                            <SelectItem value="journal">Journal</SelectItem>
                         </SelectContent>
                     </Select>
 
@@ -339,7 +338,16 @@ export default function Journals() {
                                 </TableRow>
                             ) : (
                                 journals.map((journal) => (
-                                    <TableRow key={journal.id} className="h-16">
+                                    <TableRow
+                                        key={journal.id}
+                                        className="h-16 cursor-pointer hover:bg-muted/40 transition-colors"
+                                        onClick={(event) => {
+                                            if (!canView) return;
+                                            const target = event.target as HTMLElement;
+                                            if (target.closest('a,button,input,select,textarea')) return;
+                                            router.visit(route('vouchers.view', journal.id));
+                                        }}
+                                    >
                                         <TableCell className="font-medium px-4 truncate" title={journal.control_number}>
                                             {journal.control_number}
                                         </TableCell>
@@ -347,11 +355,18 @@ export default function Journals() {
                                             {journal.title}
                                         </TableCell>
                                         <TableCell className="px-4">
-                                            <span className={`inline-flex items-center justify-center rounded-full border px-2.5 py-0.5 text-xs font-semibold capitalize ${journal.type === 'journal'
-                                                ? 'bg-teal-100 text-teal-700 border-teal-200'
-                                                : 'bg-orange-100 text-orange-700 border-orange-200'
-                                                }`}>
-                                                {journal.type ?? 'disbursement'}
+                                            <span
+                                                className={`inline-flex items-center justify-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
+                                                    journal.type === 'journal'
+                                                        ? 'bg-teal-100 text-teal-700 border-teal-200'
+                                                        : 'bg-orange-100 text-orange-700 border-orange-200'
+                                                }`}
+                                            >
+                                                {journal.type === 'journal'
+                                                    ? 'Journal Voucher'
+                                                    : journal.type === 'disbursement'
+                                                        ? 'Disbursement Voucher'
+                                                        : 'Voucher'}
                                             </span>
                                         </TableCell>
                                         <TableCell className="text-muted-foreground px-4 truncate" title={journal.description}>

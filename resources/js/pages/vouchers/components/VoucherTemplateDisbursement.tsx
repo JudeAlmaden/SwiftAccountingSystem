@@ -1,10 +1,11 @@
-import { Journal } from '@/types/database';
+import type { Journal } from '@/types/database';
 
 interface VoucherTemplateProps {
     disbursement: Journal;
+    sheetSize?: 'full' | 'half';
 }
 
-export function VoucherTemplateDisbursement({ disbursement }: VoucherTemplateProps) {
+export function VoucherTemplateDisbursement({ disbursement, sheetSize = 'full' }: VoucherTemplateProps) {
     const debitItems = disbursement.items?.filter(item => item.type === 'debit') || [];
     const creditItems = disbursement.items?.filter(item => item.type === 'credit') || [];
 
@@ -24,9 +25,17 @@ export function VoucherTemplateDisbursement({ disbursement }: VoucherTemplatePro
     const allItems = disbursement.items || [];
     const emptyRowsNeeded = Math.max(0, 11 - allItems.length);
 
+    const sizeClasses = sheetSize === 'half'
+        ? 'max-w-[210mm] min-h-[148mm]'
+        : 'max-w-[210mm] min-h-[297mm]';
+
     return (
-        <div id="voucher-paper" className="bg-white text-black w-full max-w-[210mm] min-h-[297mm] mx-auto shadow-2xl" style={{ fontFamily: 'Times New Roman, serif' }}>
-            <div className="px-[0.8cm] py-[0.8cm] pb-[2cm] min-h-[297mm] flex flex-col font-serif">
+        <div
+            id="voucher-paper"
+            className={`bg-white text-black w-full mx-auto shadow-2xl ${sizeClasses}`}
+            style={{ fontFamily: 'Times New Roman, serif' }}
+        >
+            <div className="px-[0.8cm] py-[0.8cm] pb-[2cm] flex flex-col font-serif min-h-full">
                 {/* Header */}
                 <div className="text-center mb-0">
                     <img src="/Sacli/Format_3.jpg" alt="ST. ANNE COLLEGE LUCENA, INC." className="w-full max-w-[400px] mx-auto mb-2" />
