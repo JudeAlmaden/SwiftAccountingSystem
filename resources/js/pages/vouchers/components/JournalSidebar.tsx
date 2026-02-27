@@ -1,6 +1,6 @@
+import type { JournalTracking, JournalAttachment as DBAttachment, StepFlowStep } from '@/types/database';
 import { JournalAttachment } from './JournalAttachment';
 import { JournalStatusTracking } from './JournalStatusTracking';
-import { JournalTracking, JournalAttachment as DBAttachment, StepFlowStep } from '@/types/database';
 
 interface JournalSidebarProps {
     currentStep?: number;

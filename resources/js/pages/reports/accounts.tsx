@@ -1,8 +1,8 @@
-import AppLayout from '@/layouts/app-layout';
-import type { BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
-import { route } from 'ziggy-js';
+import { BookOpen, PieChart } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { route } from 'ziggy-js';
+import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
@@ -10,7 +10,6 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Label } from '@/components/ui/label';
 import {
@@ -28,7 +27,8 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { BookOpen, PieChart } from 'lucide-react';
+import AppLayout from '@/layouts/app-layout';
+import type { BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: route('dashboard') },

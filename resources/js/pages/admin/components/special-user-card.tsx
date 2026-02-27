@@ -1,9 +1,9 @@
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { UserPlus } from 'lucide-react';
-import type { User } from '@/types/database';
 import { DottedSeparator } from '@/components/dotted-line';
 import { StatusIndicator } from '@/components/status-indicator';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import type { User } from '@/types/database';
 
 interface SpecialUserCardProps {
     title: string;

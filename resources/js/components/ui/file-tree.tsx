@@ -1,3 +1,5 @@
+import * as AccordionPrimitive from "@radix-ui/react-accordion"
+import { FileIcon, FolderIcon, FolderOpenIcon } from "lucide-react"
 import React, {
   createContext,
   forwardRef,
@@ -6,12 +8,10 @@ import React, {
   useEffect,
   useState,
 } from "react"
-import * as AccordionPrimitive from "@radix-ui/react-accordion"
-import { FileIcon, FolderIcon, FolderOpenIcon } from "lucide-react"
 
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { cn } from "@/lib/utils"
 
 type TreeViewElement = {
   id: string

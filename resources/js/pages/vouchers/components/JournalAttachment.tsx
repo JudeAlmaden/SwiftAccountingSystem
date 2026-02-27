@@ -1,12 +1,12 @@
-import { Card } from '@/components/ui/card';
-import { useState, useRef, useEffect } from 'react';
 import { FileText, Image as ImageIcon, X, Paperclip, FileIcon, Plus, Download, Loader2, AlertCircle } from 'lucide-react';
-import { JournalAttachment as DBAttachment } from '@/types/database';
+import { useState, useRef, useEffect } from 'react';
 import { DottedSeparator } from '@/components/dotted-line';
+import { Card } from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
 } from '@/components/ui/dialog';
+import type { JournalAttachment as DBAttachment } from '@/types/database';
 
 interface FileWithStatus {
     file: File;

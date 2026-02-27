@@ -1,9 +1,9 @@
 //app layout is the layout we use when user is logged in
+import { usePage } from '@inertiajs/react';
 import AppLayoutTemplate from '@/layouts/app/app-sidebar-layout';
 import type { AppLayoutProps } from '@/types';
-import { usePage } from '@inertiajs/react';
-import { User } from '@/types/auth'
 import type { SharedData } from '@/types';
+import type { User } from '@/types/auth'
 
 
 interface PageProps {

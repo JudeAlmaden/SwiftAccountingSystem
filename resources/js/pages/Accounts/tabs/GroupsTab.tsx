@@ -1,14 +1,14 @@
-import { useState, useEffect } from "react";
 import { usePage } from "@inertiajs/react";
+import { Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { route } from "ziggy-js";
-import { SharedData } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2 } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import type { SharedData } from "@/types";
 
 interface AccountGroup {
     id: number;

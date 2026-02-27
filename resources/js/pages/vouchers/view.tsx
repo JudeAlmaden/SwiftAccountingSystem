@@ -1,16 +1,25 @@
+import { Head, Link, usePage } from '@inertiajs/react';
+import html2pdf from 'html2pdf.js';
+import { ArrowLeft, Calendar, FileText, Tag, Info, AlertCircle, XCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { route } from 'ziggy-js';
+import { DottedSeparator } from '@/components/dotted-line';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem } from '@/types';
-import { Head, Link, usePage } from '@inertiajs/react';
-import { route } from 'ziggy-js';
 // @ts-ignore
-import html2pdf from 'html2pdf.js';
-import { Journal } from '@/types/database';
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import type { Journal } from '@/types/database';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, Calendar, FileText, Tag, Info, AlertCircle, XCircle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import {
     Dialog,
@@ -20,12 +29,10 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
+import { JournalSidebar } from './components/JournalSidebar';
 import { VoucherTemplateDisbursement } from './components/VoucherTemplateDisbursement';
 import { VoucherTemplateJournal } from './components/VoucherTemplateJournal';
-import { JournalSidebar } from './components/JournalSidebar';
-import { DottedSeparator } from '@/components/dotted-line';
 
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -57,6 +64,7 @@ export default function View() {
     const [declineRemarks, setDeclineRemarks] = useState('');
     const [isApproveStep5ModalOpen, setIsApproveStep5ModalOpen] = useState(false);
     const [checkId, setCheckId] = useState('');
+    const [sheetSize, setSheetSize] = useState<'full' | 'half'>('full');
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -204,6 +212,8 @@ export default function View() {
         const element = document.getElementById('voucher-paper');
         if (!element) return;
 
+        const pdfFormat = sheetSize === 'half' ? 'a5' : 'a4';
+
         const opt = {
             margin: 0,
             filename: `Voucher_${journal?.control_number}.pdf`,
@@ -226,7 +236,7 @@ export default function View() {
                     doc.head.appendChild(style);
                 }
             },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' }
         };
 
         html2pdf().from(element).set(opt as any).save().catch((err: any) => {
@@ -311,10 +321,22 @@ export default function View() {
                             <p className="text-muted-foreground">Detailed voucher view and accounting record.</p>
                         </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-3">
                         <Badge className="text-sm px-3 py-1" variant={getStatusBadgeVariant(journal.status)}>
                             {journal.status?.toUpperCase()}
                         </Badge>
+                        <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>Sheet size:</span>
+                            <Select value={sheetSize} onValueChange={(v) => setSheetSize(v as 'full' | 'half')}>
+                                <SelectTrigger className="h-8 w-[130px]">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="full">Full (A4)</SelectItem>
+                                    <SelectItem value="half">Half (A5)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                         {journal.status === 'approved' && (
                             <Button variant="outline" onClick={handlePrint} className="hidden sm:flex items-center gap-2">
                                 <FileText className="h-4 w-4" />
@@ -367,8 +389,8 @@ export default function View() {
                         <div className="overflow-x-auto pb-4 flex justify-center bg-gray-100/50 rounded-xl border p-2 sm:p-4">
                             <div className="w-full max-w-[210mm] min-w-0">
                                 {journal.type === 'journal'
-                                    ? <VoucherTemplateJournal journal={journal} />
-                                    : <VoucherTemplateDisbursement disbursement={journal} />
+                                    ? <VoucherTemplateJournal journal={journal} sheetSize={sheetSize} />
+                                    : <VoucherTemplateDisbursement disbursement={journal} sheetSize={sheetSize} />
                                 }
                             </div>
                         </div>

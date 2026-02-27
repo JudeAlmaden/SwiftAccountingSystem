@@ -1,13 +1,13 @@
+import { usePage, router } from '@inertiajs/react';
+import { ExternalLink, X } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { Toaster, toast } from 'sonner';
+import { route } from 'ziggy-js';
 import { AppContent } from '@/components/app-content';
 import { AppShell } from '@/components/app-shell';
 import { AppSidebar } from '@/components/app-sidebar';
 import { AppSidebarHeader } from '@/components/app-sidebar-header';
 import type { AppLayoutProps, SharedData } from '@/types';
-import { Toaster, toast } from 'sonner';
-import { usePage, router } from '@inertiajs/react';
-import { ExternalLink, X } from 'lucide-react';
-import { route } from 'ziggy-js';
-import { useEffect, useRef } from 'react';
 
 export default function AppSidebarLayout({
     children,

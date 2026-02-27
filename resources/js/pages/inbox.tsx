@@ -1,13 +1,13 @@
+import { Head, Link, router } from '@inertiajs/react';
+import { formatDistanceToNow } from 'date-fns';
+import { Bell, BellOff, CheckCheck, ExternalLink, Inbox as InboxIcon, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
-import { Head, Link, router } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Bell, BellOff, CheckCheck, ExternalLink, Inbox as InboxIcon, Loader2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { formatDistanceToNow } from 'date-fns';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -117,7 +117,7 @@ export default function Inbox() {
                         </div>
                         <div>
                             <h1 className="text-2xl font-bold tracking-tight text-foreground">Notifications</h1>
-                            <p className="text-sm text-muted-foreground">Stay updated on your disbursement approval tasks.</p>
+                            <p className="text-sm text-muted-foreground">Stay updated on your voucher approval tasks.</p>
                         </div>
                     </div>
                     {unreadCount > 0 && (
@@ -146,7 +146,7 @@ export default function Inbox() {
                             </div>
                             <h3 className="text-lg font-semibold text-foreground">All caught up!</h3>
                             <p className="text-sm text-muted-foreground max-w-xs mt-2">
-                                You don't have any notifications at the moment. When someone approves a disbursement, you'll see it here.
+                                You don't have any notifications at the moment. When someone approves a voucher, you'll see it here.
                             </p>
                         </CardContent>
                     </Card>

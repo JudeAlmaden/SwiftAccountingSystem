@@ -1,7 +1,7 @@
+import { useState } from 'react';
 import { DottedSeparator } from '@/components/dotted-line';
 import { Card } from '@/components/ui/card';
-import { JournalTracking, StepFlowStep } from '@/types/database';
-import { useState } from 'react';
+import type { JournalTracking, StepFlowStep } from '@/types/database';
 
 const ROLE_LABELS: Record<string, string> = {
     'accounting assistant': 'Accounting Assistant',

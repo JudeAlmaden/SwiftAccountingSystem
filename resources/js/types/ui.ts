@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import type { BreadcrumbItem } from './navigation';
 import type { User } from './auth'
+import type { BreadcrumbItem } from './navigation';
 
 
 //Props for main app

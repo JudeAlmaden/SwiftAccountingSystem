@@ -23,11 +23,13 @@ class JournalReportController extends Controller
             'period'    => 'nullable|string|in:daily,monthly,yearly',
             'date_from' => 'nullable|date',
             'date_to'   => 'nullable|date|after_or_equal:date_from',
+            'type'      => 'nullable|string|in:journal,disbursement,all',
         ]);
 
         $period   = $validated['period']    ?? 'monthly';
         $dateFrom = $validated['date_from'] ?? null;
         $dateTo   = $validated['date_to']   ?? null;
+        $type     = $validated['type']      ?? 'all';
 
         if (!$dateFrom) {
             $dateFrom = now()->startOfYear()->toDateString();
@@ -40,18 +42,32 @@ class JournalReportController extends Controller
             ->whereDate('created_at', '>=', $dateFrom)
             ->whereDate('created_at', '<=', $dateTo);
 
+        if ($type !== 'all') {
+            $journalQuery->where('type', $type);
+        }
+
         $itemsBaseQuery = JournalItem::query()
             ->join('journals', 'journal_items.journal_id', '=', 'journals.id')
             ->whereDate('journals.created_at', '>=', $dateFrom)
             ->whereDate('journals.created_at', '<=', $dateTo)
             ->select('journal_items.*', 'journals.created_at as journal_created_at', 'journals.status as journal_status');
 
+        if ($type !== 'all') {
+            $itemsBaseQuery->where('journals.type', $type);
+        }
+
         // --- Per-voucher amounts (credit sum = voucher amount) ---
-        $voucherAmounts = JournalItem::query()
+        $voucherAmountsQuery = JournalItem::query()
             ->join('journals', 'journal_items.journal_id', '=', 'journals.id')
             ->whereDate('journals.created_at', '>=', $dateFrom)
             ->whereDate('journals.created_at', '<=', $dateTo)
-            ->where('journal_items.type', 'credit')
+            ->where('journal_items.type', 'credit');
+
+        if ($type !== 'all') {
+            $voucherAmountsQuery->where('journals.type', $type);
+        }
+
+        $voucherAmountsAll = (clone $voucherAmountsQuery)
             ->groupBy('journals.id', 'journals.control_number', 'journals.created_at', 'journals.status')
             ->select(
                 'journals.id',
@@ -62,16 +78,18 @@ class JournalReportController extends Controller
             )
             ->get();
 
-        $pendingTotal  = $voucherAmounts->where('status', 'pending')->sum('voucher_amount');
-        $approvedTotal = $voucherAmounts->where('status', 'approved')->sum('voucher_amount');
-        $rejectedTotal = $voucherAmounts->where('status', 'rejected')->sum('voucher_amount');
-        $totalDisbursed = round($approvedTotal, 2);
-        $totalVouchers  = $voucherAmounts->count();
-        $approvedCount  = $voucherAmounts->where('status', 'approved')->count();
-        $pendingCount   = $voucherAmounts->where('status', 'pending')->count();
-        $rejectedCount  = $voucherAmounts->where('status', 'rejected')->count();
+        $voucherAmountsApproved = $voucherAmountsAll->where('status', 'approved');
 
-        $largestVoucher = $voucherAmounts->where('status', 'approved')->sortByDesc('voucher_amount')->first();
+        $pendingTotal   = $voucherAmountsAll->where('status', 'pending')->sum('voucher_amount');
+        $approvedTotal  = $voucherAmountsApproved->sum('voucher_amount');
+        $rejectedTotal  = $voucherAmountsAll->where('status', 'rejected')->sum('voucher_amount');
+        $totalDisbursed = round($approvedTotal, 2);
+        $totalVouchers  = $voucherAmountsAll->count();
+        $approvedCount  = $voucherAmountsApproved->count();
+        $pendingCount   = $voucherAmountsAll->where('status', 'pending')->count();
+        $rejectedCount  = $voucherAmountsAll->where('status', 'rejected')->count();
+
+        $largestVoucher = $voucherAmountsApproved->sortByDesc('voucher_amount')->first();
         $avgAmountPerVoucher = $approvedCount > 0 ? round($approvedTotal / $approvedCount, 2) : 0;
 
         // --- Summary counts ---
@@ -124,7 +142,7 @@ class JournalReportController extends Controller
         $prevTo   = $from->copy()->subDay();
         $prevFrom = $prevTo->copy()->subDays($daysDiff - 1);
 
-        $dailyRows = $voucherAmounts->groupBy(fn ($v) => Carbon::parse($v->created_at)->format('Y-m-d'))
+        $dailyRows = $voucherAmountsAll->groupBy(fn ($v) => Carbon::parse($v->created_at)->format('Y-m-d'))
             ->map(function ($vouchers, $date) {
                 $pendingAmt  = $vouchers->where('status', 'pending')->sum('voucher_amount');
                 $approvedAmt = $vouchers->where('status', 'approved')->sum('voucher_amount');
@@ -142,13 +160,18 @@ class JournalReportController extends Controller
             ->values()
             ->all();
 
-        $prevPeriodVouchers = JournalItem::query()
+        $prevPeriodQuery = JournalItem::query()
             ->join('journals', 'journal_items.journal_id', '=', 'journals.id')
             ->whereDate('journals.created_at', '>=', $prevFrom->toDateString())
             ->whereDate('journals.created_at', '<=', $prevTo->toDateString())
             ->where('journal_items.type', 'credit')
-            ->where('journals.status', 'approved')
-            ->sum('journal_items.amount');
+            ->where('journals.status', 'approved');
+
+        if ($type !== 'all') {
+            $prevPeriodQuery->where('journals.type', $type);
+        }
+
+        $prevPeriodVouchers = $prevPeriodQuery->sum('journal_items.amount');
         $currentPeriodDisbursed = $totalDisbursed;
         $pctChange = $prevPeriodVouchers > 0
             ? round((($currentPeriodDisbursed - $prevPeriodVouchers) / $prevPeriodVouchers) * 100, 1)
@@ -188,13 +211,19 @@ class JournalReportController extends Controller
             });
 
         // --- Top accounts (approved only) ---
-        $topAccountsRaw = JournalItem::query()
+        $topAccountsQuery = JournalItem::query()
             ->join('journals', 'journal_items.journal_id', '=', 'journals.id')
             ->join('accounts', 'journal_items.account_id', '=', 'accounts.id')
             ->whereDate('journals.created_at', '>=', $dateFrom)
             ->whereDate('journals.created_at', '<=', $dateTo)
             ->where('journals.status', 'approved')
-            ->where('journal_items.type', 'credit')
+            ->where('journal_items.type', 'credit');
+
+        if ($type !== 'all') {
+            $topAccountsQuery->where('journals.type', $type);
+        }
+
+        $topAccountsRaw = $topAccountsQuery
             ->groupBy('accounts.id', 'accounts.account_code', 'accounts.account_name', 'accounts.account_type')
             ->select(
                 'accounts.id as account_id',
@@ -250,14 +279,13 @@ class JournalReportController extends Controller
         $ranking = collect($byAccount)->sortByDesc('total_debit')->values()->map(fn ($row, $index) => array_merge($row, ['rank' => $index + 1]))->all();
 
         // --- Voucher-level details ---
-        $vouchersForList = Journal::query()
-            ->whereDate('created_at', '>=', $dateFrom)
-            ->whereDate('created_at', '<=', $dateTo)
+        $vouchersForList = (clone $journalQuery)
+            ->where('status', 'approved')
             ->with(['items.account', 'tracking' => fn ($q) => $q->orderByDesc('acted_at')->with('handler')])
             ->orderByDesc('created_at')
             ->get();
 
-        $voucherAmountsById = $voucherAmounts->keyBy('id');
+        $voucherAmountsById = $voucherAmountsApproved->keyBy('id');
         $voucher_details = $vouchersForList->map(function ($j) use ($voucherAmountsById) {
             $amount     = $voucherAmountsById->get($j->id);
             $voucherAmt = $amount ? (float) $amount->voucher_amount : 0;

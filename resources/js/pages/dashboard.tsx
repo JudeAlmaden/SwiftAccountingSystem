@@ -1,15 +1,4 @@
-import AppLayout from '@/layouts/app-layout';
-import { dashboard } from '@/routes';
-import type { BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
-import { route } from 'ziggy-js';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
 import {
     FileText,
     Users,
@@ -19,6 +8,17 @@ import {
     XCircle,
     Banknote,
 } from 'lucide-react';
+import { route } from 'ziggy-js';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import AppLayout from '@/layouts/app-layout';
+import { dashboard } from '@/routes';
+import type { BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -113,7 +113,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                                 {formatCurrency(disbursements.total_approved_amount)}
                             </div>
                             <p className="text-xs text-muted-foreground">
-                                Sum of approved journal credits
+                                Sum of approved voucher credits
                             </p>
                         </CardContent>
                     </Card>
@@ -167,12 +167,12 @@ export default function Dashboard({ stats }: DashboardProps) {
 
                 {/* Simple report summary */}
                 <Card>
-                    <CardHeader>
-                        <CardTitle>Summary report</CardTitle>
-                        <CardDescription>
-                            Journal status breakdown and key counts
-                        </CardDescription>
-                    </CardHeader>
+                        <CardHeader>
+                            <CardTitle>Summary report</CardTitle>
+                            <CardDescription>
+                                Voucher status breakdown and key counts
+                            </CardDescription>
+                        </CardHeader>
                     <CardContent>
                         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                             <div className="flex items-center gap-3 rounded-lg border p-4">

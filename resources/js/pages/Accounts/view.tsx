@@ -1,13 +1,13 @@
-import AppLayout from '@/layouts/app-layout';
-import type { BreadcrumbItem, SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Search, ArrowLeft } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { route } from 'ziggy-js';
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input";
-import { useEffect, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import AppLayout from '@/layouts/app-layout';
+import type { BreadcrumbItem, SharedData } from '@/types';
 import type { Account } from '@/types/database';
-import { route } from 'ziggy-js';
-import { Search, ArrowLeft } from 'lucide-react';
 
 interface Journal {
     id: number;

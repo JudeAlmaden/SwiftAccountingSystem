@@ -18,6 +18,7 @@ export interface Account {
     status?: string;
     account_normal_side?: 'debit' | 'credit';
     journal_items_count?: number;
+    disbursement_items_count?: number;
     created_at?: string;
     updated_at?: string;
 }
