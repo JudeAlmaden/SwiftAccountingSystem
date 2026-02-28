@@ -1,6 +1,6 @@
 import { Head } from '@inertiajs/react';
 import { Printer } from 'lucide-react';
-import { useState, Fragment } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { route } from 'ziggy-js';
 import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
@@ -37,11 +37,34 @@ interface AccountData {
 }
 
 export default function TrialBalance() {
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+    // Get first day of current month and today
+    const getFirstDayOfMonth = () => {
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        const year = firstDay.getFullYear();
+        const month = String(firstDay.getMonth() + 1).padStart(2, '0');
+        const day = '01';
+        return `${year}-${month}-${day}`;
+    };
+    
+    const getToday = () => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const [startDate, setStartDate] = useState(getFirstDayOfMonth());
+    const [endDate, setEndDate] = useState(getToday());
     const [data, setData] = useState<AccountData[]>([]);
     const [loading, setLoading] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
+
+    // Auto-load data on mount
+    useEffect(() => {
+        fetchData();
+    }, []);
 
     const fetchData = async () => {
         if (!startDate || !endDate) {
@@ -86,6 +109,15 @@ export default function TrialBalance() {
 
     const handlePrint = () => {
         window.print();
+    };
+
+    const handleResetFilter = () => {
+        setStartDate(getFirstDayOfMonth());
+        setEndDate(getToday());
+        // Automatically fetch data with reset dates
+        setTimeout(() => {
+            fetchData();
+        }, 100);
     };
 
     return (
@@ -148,7 +180,14 @@ export default function TrialBalance() {
                             />
                         </div>
                         <Button onClick={fetchData} disabled={loading || !startDate || !endDate}>
-                            {loading ? 'Generating...' : 'Generate Report'}
+                            {loading ? 'Filtering...' : 'Filter Report'}
+                        </Button>
+                        <Button 
+                            onClick={handleResetFilter} 
+                            disabled={loading}
+                            variant="outline"
+                        >
+                            Reset Filter
                         </Button>
                         <Button 
                             onClick={handlePrint} 
@@ -160,6 +199,12 @@ export default function TrialBalance() {
                             Print
                         </Button>
                     </div>
+
+                    {loading && !hasSearched && (
+                        <div className="text-center py-8 text-muted-foreground">
+                            Loading trial balance data...
+                        </div>
+                    )}
 
                     {hasSearched && (
                         <div id="trial-balance-print-area" className="rounded-sm border bg-card overflow-hidden">

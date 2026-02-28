@@ -318,8 +318,8 @@ export default function Journals() {
                             <TableRow className="bg-table-head hover:bg-table-head border-0">
                                 <TableHead className="w-[14%] px-4 py-5 text-white text-base font-extrabold bg-table-head first:rounded-tl-sm">Control Number</TableHead>
                                 <TableHead className="w-[18%] px-4 py-5 text-white text-base font-extrabold bg-table-head">Title</TableHead>
-                                <TableHead className="w-[10%] px-4 py-5 text-white text-base font-extrabold bg-table-head">Type</TableHead>
-                                <TableHead className="w-[22%] px-4 py-5 text-white text-base font-extrabold bg-table-head">Description</TableHead>
+                                <TableHead className="w-[10%] pl-2 pr-6 py-5 text-white text-base font-extrabold bg-table-head">Voucher Type</TableHead>
+                                <TableHead className="w-[22%] px-4 py-5 pl-6 text-white text-base font-extrabold bg-table-head">Description</TableHead>
                                 <TableHead className="w-[10%] px-4 py-5 text-white text-base font-extrabold bg-table-head">Status</TableHead>
                                 <TableHead className="w-[14%] px-4 py-5 text-white text-base font-extrabold bg-table-head">Date Created</TableHead>
                                 <TableHead className="w-[10%] px-4 py-5 text-white text-base font-extrabold bg-table-head text-right last:rounded-tr-sm">Actions</TableHead>
@@ -348,33 +348,29 @@ export default function Journals() {
                                             router.visit(route('vouchers.view', journal.id));
                                         }}
                                     >
-                                        <TableCell className="font-medium px-4 truncate" title={journal.control_number}>
+                                        <TableCell className="font-medium px-4 truncate text-sm" title={journal.control_number}>
                                             {journal.control_number}
                                         </TableCell>
-                                        <TableCell className="px-4 truncate" title={journal.title}>
+                                        <TableCell className="px-4 truncate text-sm" title={journal.title}>
                                             {journal.title}
                                         </TableCell>
                                         <TableCell className="px-4">
                                             <span
-                                                className={`inline-flex items-center justify-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
+                                                className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-semibold ${
                                                     journal.type === 'journal'
                                                         ? 'bg-teal-100 text-teal-700 border-teal-200'
                                                         : 'bg-orange-100 text-orange-700 border-orange-200'
                                                 }`}
                                             >
-                                                {journal.type === 'journal'
-                                                    ? 'Journal Voucher'
-                                                    : journal.type === 'disbursement'
-                                                        ? 'Disbursement Voucher'
-                                                        : 'Voucher'}
+                                                {journal.type === 'journal' ? 'Journal' : 'Disbursement'}
                                             </span>
                                         </TableCell>
-                                        <TableCell className="text-muted-foreground px-4 truncate" title={journal.description}>
+                                        <TableCell className="text-muted-foreground px-4 truncate text-xs" title={journal.description}>
                                             {journal.description}
                                         </TableCell>
                                         <TableCell className="px-4">
                                             <span
-                                                className={`inline-flex items-center justify-center rounded-full border px-3 py-0.5 text-xs font-semibold ${journal.status.toLowerCase() === 'approved'
+                                                className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-semibold ${journal.status.toLowerCase() === 'approved'
                                                     ? 'bg-green-100 text-green-700 border-green-200'
                                                     : journal.status.toLowerCase() === 'pending'
                                                         ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
@@ -384,11 +380,11 @@ export default function Journals() {
                                                 {journal.status}
                                             </span>
                                         </TableCell>
-                                        <TableCell className="px-4">{formatDate(journal.created_at)}</TableCell>
+                                        <TableCell className="px-4 text-xs">{formatDate(journal.created_at)}</TableCell>
                                         <TableCell className="text-right px-4">
                                             <div className="flex justify-end gap-2 text-center">
                                                 {canView && (
-                                                    <Link href={route('vouchers.view', journal.id)}>
+                                                    <Link href={route('vouchers.view', journal.id)} className="text-xs">
                                                         View
                                                     </Link>
                                                 )}

@@ -141,15 +141,15 @@ export function VoucherTemplateJournal({ journal, sheetSize = 'full' }: VoucherT
                 </div>
 
                 {/* Explanation */}
-                <div style={{ padding: '8px', minHeight: '80px', fontSize: '10px', marginBottom: '16px', borderBottom: '2px solid black' }}>
-                    <div style={{ lineHeight: '1.4', display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
-                        <span style={{ fontWeight: 'bold', marginTop: '6px' }}>EXPLANATION:</span>
-                        <span style={{ marginTop: '6px' }}>{journal.description}</span>
+                <div style={{ padding: '2px 8px', minHeight: '40px', fontSize: '10px', marginBottom: '4px', borderBottom: '2px solid black' }}>
+                    <div style={{ lineHeight: '1.3', display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+                        <span style={{ fontWeight: 'bold', marginTop: '1px' }}>EXPLANATION:</span>
+                        <span style={{ marginTop: '1px' }}>{journal.description}</span>
                     </div>
                 </div>
 
                 {/* Footer Signature Lines — no Paid/Received By */}
-                <div style={{ fontSize: '11px', marginTop: '20px' }}>
+                <div style={{ fontSize: '11px', marginTop: '4px' }}>
                     {signatureRows.map((row, i) => (
                         <div
                             key={i}

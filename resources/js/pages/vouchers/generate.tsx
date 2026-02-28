@@ -153,7 +153,7 @@ export default function GenerateJournal() {
                 <div className="space-y-6">
                     <Card>
                         <div className="px-10 py-6">
-                            <div className="grid gap-4 grid-cols-[2fr_1fr_1fr_1fr]">
+                            <div className="grid gap-4 grid-cols-[2fr_1fr_1fr]">
                                 <div>
                                     <label htmlFor="title" className="text-sm font-medium text-foreground mb-2 flex items-center gap-1">
                                         Title
@@ -220,7 +220,7 @@ export default function GenerateJournal() {
                                     {errors.control_number_prefix_id && <p className="text-[10px] text-destructive mt-1 font-medium">{errors.control_number_prefix_id[0]}</p>}
                                 </div>
 
-                                <div>
+                                <div className="hidden">
                                     <label htmlFor="date" className="text-sm font-medium text-foreground mb-2 flex items-center gap-1">
                                         Date of transaction
                                         <span className="text-destructive text-xs">*</span>

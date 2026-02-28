@@ -329,7 +329,7 @@ class JournalReportController extends Controller
             'approved_pct'          => $totalVouchers > 0 ? round(($approvedCount / $totalVouchers) * 100, 1) : 0,
             'avg_days_to_approve'   => count($approvalDays) > 0 ? round(array_sum($approvalDays) / count($approvalDays), 1) : 0,
             'max_days_pending'      => (int) $maxDaysPending,
-            'vouchers_above_100k'   => $voucherAmounts->filter(fn ($v) => (float) $v->voucher_amount > 100000)->count(),
+            'vouchers_above_100k'   => $voucherAmountsAll->filter(fn ($v) => (float) $v->voucher_amount > 100000)->count(),
         ];
 
         $journalsByPeriod = (clone $journalQuery)

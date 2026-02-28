@@ -90,10 +90,12 @@ class TrialBalanceController extends Controller
             'Contra Expenses' => 4,
         ];
 
-        // Filter out accounts with zero balance if desired? Usually Trial Balance shows all or active.
-        // The user said "table of all accounts". I will keep all.
+        // Filter out accounts with zero balance (no transactions in the date range)
+        $accountsWithTransactions = $accounts->filter(function ($account) {
+            return $account->total_debit > 0 || $account->total_credit > 0;
+        });
 
-        $sortedAccounts = $accounts->sortBy(function ($account) use ($typeOrder, $subTypeOrder) {
+        $sortedAccounts = $accountsWithTransactions->sortBy(function ($account) use ($typeOrder, $subTypeOrder) {
             $typeRank = $typeOrder[$account->account_type] ?? 99;
             $subTypeRank = $subTypeOrder[$account->sub_account_type] ?? 99;
             $groupCode = $account->group ? $account->group->grp_code : '';
