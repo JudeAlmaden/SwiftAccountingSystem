@@ -64,7 +64,18 @@ export default function View() {
     const [declineRemarks, setDeclineRemarks] = useState('');
     const [isApproveStep5ModalOpen, setIsApproveStep5ModalOpen] = useState(false);
     const [checkId, setCheckId] = useState('');
-    const [sheetSize, setSheetSize] = useState<'full' | 'half'>('full');
+    const [sheetSize, setSheetSize] = useState<'full' | 'half'>(() => {
+
+        const saved = localStorage.getItem('voucherSheetSize');
+        return (saved === 'half' || saved === 'full') ? saved : 'full';
+    });
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+    const [pendingAction, setPendingAction] = useState<'approve' | 'decline' | null>(null);
+
+
+    useEffect(() => {
+        localStorage.setItem('voucherSheetSize', sheetSize);
+    }, [sheetSize]);
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -97,34 +108,38 @@ export default function View() {
         }
 
         const currentStep = Number(journal.current_step) || 1;
-        // Only show Check ID modal for disbursement vouchers (journal type goes straight through)
+      
         if (action === 'approve' && isLastStep(currentStep) && !checkIdValue && journal.type !== 'journal') {
             setIsApproveStep5ModalOpen(true);
             return;
         }
 
-        const confirmMsg = action === 'approve'
-            ? 'Are you sure you want to approve this voucher?'
-            : 'Are you sure you want to decline this voucher?';
+     
+        setPendingAction(action);
+        setIsConfirmModalOpen(true);
+    };
 
-        if (!confirm(confirmMsg)) return;
+    const handleConfirmAction = async () => {
+        if (!pendingAction || !journal) return;
 
+        setIsConfirmModalOpen(false);
         setIsActionLoading(true);
         try {
             const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
             const token = meta?.content || '';
 
-            const endpoint = action === 'approve'
+            const endpoint = pendingAction === 'approve'
                 ? route('journals.approve', { id: journal.id })
                 : route('journals.decline', { id: journal.id });
 
             const requestBody: any = {
-                remarks: remarks || (action === 'approve' ? 'Approved through dashboard.' : 'Declined through dashboard.')
+                remarks: pendingAction === 'approve' ? 'Approved through dashboard.' : (declineRemarks || 'Declined through dashboard.')
             };
 
-            // Add check_id for final step approval
-            if (action === 'approve' && isLastStep(currentStep) && checkIdValue) {
-                requestBody.check_id = checkIdValue;
+       
+            const currentStep = Number(journal.current_step) || 1;
+            if (pendingAction === 'approve' && isLastStep(currentStep) && checkId) {
+                requestBody.check_id = checkId;
             }
 
             const res = await fetch(endpoint, {
@@ -142,14 +157,15 @@ export default function View() {
                 setDeclineRemarks('');
                 setIsApproveStep5ModalOpen(false);
                 setCheckId('');
+                setPendingAction(null);
                 await fetchData(); // Refresh data
             } else {
                 const data = await res.json();
-                alert(data.message || `Failed to ${action} journal.`);
+                alert(data.message || `Failed to ${pendingAction} journal.`);
             }
         } catch (err) {
-            console.error(`Error during ${action}:`, err);
-            alert(`An error occurred while trying to ${action} the journal.`);
+            console.error(`Error during ${pendingAction}:`, err);
+            alert(`An error occurred while trying to ${pendingAction} the journal.`);
         } finally {
             setIsActionLoading(false);
         }
@@ -255,21 +271,21 @@ export default function View() {
         if (!rejectionTracking) return null;
 
         return (
-            <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive mb-6 shadow-md animate-in fade-in slide-in-from-top-4 duration-500">
-                <XCircle className="h-5 w-5" />
+            <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive mb-6 shadow-md animate-in fade-in slide-in-from-top-4 duration-500 p-3">
+                <XCircle className="h-5 w-5 mt-1" />
                 <div className="ml-2">
-                    <AlertTitle className="font-bold text-lg mb-1 flex items-center gap-2">
+                    <AlertTitle className="font-bold text-lg mb-2 flex items-center gap-2">
                         Voucher Rejected
                     </AlertTitle>
-                    <AlertDescription className="mt-2 space-y-3">
-                        <div className="bg-destructive/5 p-3 rounded-md border border-destructive/10">
-                            <p className="font-semibold text-sm">Reason:</p>
-                            <p className="text-sm italic opacity-90 mt-1">"{rejectionTracking.remarks}"</p>
+                    <AlertDescription className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm">
+                            <span className="font-semibold">Reason:</span>
+                            <span className="italic opacity-90">"{rejectionTracking.remarks}"</span>
                         </div>
-                        <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider opacity-70">
-                            <span className="bg-destructive/20 px-2 py-0.5 rounded">Rejected by {rejectionTracking.role}</span>
+                        <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider">
+                            <span className="bg-destructive text-white px-2 py-1 rounded">Rejected by {rejectionTracking.role}</span>
                             <span>•</span>
-                            <span>{formatDate(rejectionTracking.acted_at ?? undefined)}</span>
+                            <span className="opacity-90">{formatDate(rejectionTracking.acted_at ?? undefined)}</span>
                         </div>
                     </AlertDescription>
                 </div>
@@ -385,7 +401,7 @@ export default function View() {
                             </CardContent>
                         </Card>
 
-                        {/* Main Voucher - Paper A4 Look */}
+                        {}
                         <div className="overflow-x-auto pb-4 flex justify-center bg-gray-100/50 rounded-xl border p-2 sm:p-4">
                             <div className="w-full max-w-[210mm] min-w-0">
                                 {journal.type === 'journal'
@@ -396,8 +412,8 @@ export default function View() {
                         </div>
                     </div>
 
-                    {/* Sidebar */}
-                    <div className="sticky top-6">
+                    {}
+                    <div className="sticky top-6 mb-16">
                         <JournalSidebar
                             currentStep={Number(journal.current_step) || 1}
                             stepFlow={journal.step_flow}
@@ -408,28 +424,29 @@ export default function View() {
                 </div>
             </div>
 
-            {/* Floating Action Buttons */}
+            {}
             {canPerformAction() && (
-                <div className="fixed bottom-8 right-8 flex items-center gap-3 z-50 print:hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <div className="fixed bottom-6 right-8 flex items-center gap-3 z-50 print:hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
                     <Button
-                        variant="outline"
+                        variant="destructive"
                         onClick={() => handleAction('decline')}
                         disabled={isActionLoading}
-                        className="h-12 px-6 rounded-full border-destructive text-destructive hover:bg-destructive/5 shadow-lg bg-white font-semibold"
+                        className="h-10 px-5 rounded-full shadow-lg font-semibold"
                     >
                         {isActionLoading ? 'Processing...' : 'Decline'}
                     </Button>
                     <Button
+                        variant="default"
                         onClick={() => handleAction('approve')}
                         disabled={isActionLoading}
-                        className="h-12 px-8 rounded-full bg-green-600 hover:bg-green-700 text-white shadow-xl font-semibold scale-105 transition-transform hover:scale-110 active:scale-95"
+                        className="h-10 px-6 rounded-full shadow-lg font-semibold"
                     >
                         {isActionLoading ? 'Processing...' : 'Approve Voucher'}
                     </Button>
                 </div>
             )}
 
-            {/* Decline Reason Modal */}
+            {}
             <Dialog open={isDeclineModalOpen} onOpenChange={setIsDeclineModalOpen}>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
@@ -462,7 +479,30 @@ export default function View() {
                 </DialogContent>
             </Dialog>
 
-            {/* Step 5 Approval - Check ID Modal */}
+            {}
+            <Dialog open={isConfirmModalOpen} onOpenChange={setIsConfirmModalOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>
+                            {pendingAction === 'approve' ? 'Approve Voucher' : 'Decline Voucher'}
+                        </DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to {pendingAction === 'approve' ? 'approve' : 'decline'} this voucher?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsConfirmModalOpen(false)}>Cancel</Button>
+                        <Button
+                            variant={pendingAction === 'approve' ? 'default' : 'destructive'}
+                            onClick={handleConfirmAction}
+                        >
+                            {pendingAction === 'approve' ? 'Approve' : 'Decline'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {}
             <Dialog open={isApproveStep5ModalOpen} onOpenChange={setIsApproveStep5ModalOpen}>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>

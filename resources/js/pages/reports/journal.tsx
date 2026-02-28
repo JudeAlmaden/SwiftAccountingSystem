@@ -176,6 +176,9 @@ export default function JournalReportPage() {
     const [data, setData] = useState<ReportData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [dailyTrendPage, setDailyTrendPage] = useState(1);
+    const [byPeriodPage, setByPeriodPage] = useState(1);
+    const ITEMS_PER_PAGE = 10;
 
     const fetchReport = useCallback(() => {
         setLoading(true);
@@ -418,57 +421,100 @@ export default function JournalReportPage() {
                         </div>
 
                         {/* 2. Daily disbursement trend */}
-                        {data.daily_trend && data.daily_trend.rows.length > 0 && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Daily disbursement trend</CardTitle>
-                                    <CardDescription>
-                                        Totals by date. Vs previous period: {data.daily_trend.pct_change >= 0 ? '+' : ''}{data.daily_trend.pct_change}% change in disbursed amount.
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Date</TableHead>
-                                                <TableHead className="text-right">Total Disbursed</TableHead>
-                                                <TableHead className="text-right">Pending</TableHead>
-                                                <TableHead className="text-right">Approved</TableHead>
-                                                <TableHead className="text-right">Rejected</TableHead>
-                                                <TableHead className="text-right">Vouchers</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {data.daily_trend.rows.map((row) => (
-                                                <TableRow key={row.date}>
-                                                    <TableCell className="font-medium">{row.date}</TableCell>
-                                                    <TableCell className="text-right">{formatCurrency(row.total_disbursed)}</TableCell>
-                                                    <TableCell className="text-right">{formatCurrency(row.pending_amount)}</TableCell>
-                                                    <TableCell className="text-right">{formatCurrency(row.approved_amount)}</TableCell>
-                                                    <TableCell className="text-right">{formatCurrency(row.rejected_amount)}</TableCell>
-                                                    <TableCell className="text-right">{row.vouchers}</TableCell>
+                        {data.daily_trend && data.daily_trend.rows.length > 0 && (() => {
+                            const totalPages = Math.ceil(data.daily_trend.rows.length / ITEMS_PER_PAGE);
+                            const startIndex = (dailyTrendPage - 1) * ITEMS_PER_PAGE;
+                            const endIndex = startIndex + ITEMS_PER_PAGE;
+                            const paginatedRows = data.daily_trend.rows.slice(startIndex, endIndex);
+                            
+                            return (
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Daily disbursement trend</CardTitle>
+                                        <CardDescription>
+                                            Totals by date. Vs previous period: {data.daily_trend.pct_change >= 0 ? '+' : ''}{data.daily_trend.pct_change}% change in disbursed amount.
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Date</TableHead>
+                                                    <TableHead className="text-right">Total Disbursed</TableHead>
+                                                    <TableHead className="text-right">Pending</TableHead>
+                                                    <TableHead className="text-right">Approved</TableHead>
+                                                    <TableHead className="text-right">Rejected</TableHead>
+                                                    <TableHead className="text-right">Vouchers</TableHead>
                                                 </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </CardContent>
-                            </Card>
-                        )}
+                                            </TableHeader>
+                                            <TableBody>
+                                                {paginatedRows.map((row) => (
+                                                    <TableRow key={row.date}>
+                                                        <TableCell className="font-medium">{row.date}</TableCell>
+                                                        <TableCell className="text-right">{formatCurrency(row.total_disbursed)}</TableCell>
+                                                        <TableCell className="text-right">{formatCurrency(row.pending_amount)}</TableCell>
+                                                        <TableCell className="text-right">{formatCurrency(row.approved_amount)}</TableCell>
+                                                        <TableCell className="text-right">{formatCurrency(row.rejected_amount)}</TableCell>
+                                                        <TableCell className="text-right">{row.vouchers}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                        
+                                        {totalPages > 1 && (
+                                            <div className="flex items-center justify-between mt-4 print:hidden">
+                                                <p className="text-sm text-muted-foreground">
+                                                    Showing {startIndex + 1} to {Math.min(endIndex, data.daily_trend.rows.length)} of {data.daily_trend.rows.length} entries
+                                                </p>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-muted-foreground">
+                                                        Page {dailyTrendPage} of {totalPages}
+                                                    </span>
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => setDailyTrendPage(p => Math.max(1, p - 1))}
+                                                            disabled={dailyTrendPage === 1}
+                                                        >
+                                                            Previous
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => setDailyTrendPage(p => Math.min(totalPages, p + 1))}
+                                                            disabled={dailyTrendPage === totalPages}
+                                                        >
+                                                            Next
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            );
+                        })()}
 
                         {/* By period */}
-                        {Object.keys(data.by_period).length > 0 && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>By {period}</CardTitle>
-                                    <CardDescription>
-                                        Expense and disbursed amount per {period === 'daily' ? 'day' : period === 'monthly' ? 'month' : 'year'}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-3">
-                                        {Object.entries(data.by_period)
-                                            .sort(([a], [b]) => b.localeCompare(a))
-                                            .map(([key, val]) => (
+                        {Object.keys(data.by_period).length > 0 && (() => {
+                            const sortedEntries = Object.entries(data.by_period).sort(([a], [b]) => b.localeCompare(a));
+                            const totalPages = Math.ceil(sortedEntries.length / ITEMS_PER_PAGE);
+                            const startIndex = (byPeriodPage - 1) * ITEMS_PER_PAGE;
+                            const endIndex = startIndex + ITEMS_PER_PAGE;
+                            const paginatedEntries = sortedEntries.slice(startIndex, endIndex);
+                            
+                            return (
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>By {period}</CardTitle>
+                                        <CardDescription>
+                                            Expense and disbursed amount per {period === 'daily' ? 'day' : period === 'monthly' ? 'month' : 'year'}
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="space-y-3">
+                                            {paginatedEntries.map(([key, val]) => (
                                                 <div
                                                     key={key}
                                                     className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
@@ -479,10 +525,42 @@ export default function JournalReportPage() {
                                                     </span>
                                                 </div>
                                             ))}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
+                                        </div>
+                                        
+                                        {totalPages > 1 && (
+                                            <div className="flex items-center justify-between mt-4 print:hidden">
+                                                <p className="text-sm text-muted-foreground">
+                                                    Showing {startIndex + 1} to {Math.min(endIndex, sortedEntries.length)} of {sortedEntries.length} entries
+                                                </p>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-muted-foreground">
+                                                        Page {byPeriodPage} of {totalPages}
+                                                    </span>
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => setByPeriodPage(p => Math.max(1, p - 1))}
+                                                            disabled={byPeriodPage === 1}
+                                                        >
+                                                            Previous
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => setByPeriodPage(p => Math.min(totalPages, p + 1))}
+                                                            disabled={byPeriodPage === totalPages}
+                                                        >
+                                                            Next
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            );
+                        })()}
 
                         {/* 3. Top accounts by disbursement (approved) */}
                         {data.top_accounts && data.top_accounts.length > 0 && (
