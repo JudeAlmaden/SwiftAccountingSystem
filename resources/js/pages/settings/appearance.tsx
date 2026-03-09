@@ -25,9 +25,9 @@ export default function Appearance() {
                     <Heading
                         variant="small"
                         title="Appearance settings"
-                        description="Update your account's appearance settings"
+                        description="Light mode is enabled by default"
                     />
-                    <AppearanceTabs />
+                    <p className="text-sm text-muted-foreground">The application is set to light mode.</p>
                 </div>
             </SettingsLayout>
         </AppLayout>

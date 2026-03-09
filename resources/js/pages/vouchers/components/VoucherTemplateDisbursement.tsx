@@ -200,7 +200,7 @@ export function VoucherTemplateDisbursement({ disbursement, sheetSize = 'full' }
                 </div>
 
                 {/* Footer Signature Lines */}
-                <div style={{ fontSize: '11px', marginTop: '4px' }}>
+                <div style={{ fontSize: sheetSize === 'half' ? '10px' : '11px', marginTop: '4px' }}>
                     {[
                         [
                             { label: 'PREPARED BY', step: 1 },
@@ -220,8 +220,8 @@ export function VoucherTemplateDisbursement({ disbursement, sheetSize = 'full' }
                             style={{
                                 display: 'grid',
                                 gridTemplateColumns: '1fr 1fr',
-                                gap: '40px',
-                                marginBottom: '16px',
+                                gap: sheetSize === 'half' ? '30px' : '40px',
+                                marginBottom: sheetSize === 'half' ? '12px' : '16px',
                             }}
                         >
                             {row.map(({ label, step }) => {
@@ -237,13 +237,13 @@ export function VoucherTemplateDisbursement({ disbursement, sheetSize = 'full' }
                                         key={label}
                                         style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}
                                     >
-                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: sheetSize === 'half' ? '6px' : '8px' }}>
                                             <p
                                                 style={{
                                                     fontWeight: 'bold',
                                                     color: '#1f2937',
                                                     whiteSpace: 'nowrap',
-                                                    minWidth: '100px'
+                                                    minWidth: sheetSize === 'half' ? '90px' : '100px'
                                                 }}
                                             >
                                                 {label}
@@ -255,11 +255,11 @@ export function VoucherTemplateDisbursement({ disbursement, sheetSize = 'full' }
                                                     display: 'flex',
                                                     justifyContent: 'center',
                                                     paddingBottom: '4px',
-                                                    minHeight: '20px',
+                                                    minHeight: sheetSize === 'half' ? '18px' : '20px',
                                                     alignItems: 'flex-end'
                                                 }}
                                             >
-                                                <span style={{ fontWeight: 'bold', fontSize: '11px', textTransform: 'uppercase', paddingBottom: '2px' }}>
+                                                <span style={{ fontWeight: 'bold', fontSize: sheetSize === 'half' ? '10px' : '11px', textTransform: 'uppercase', paddingBottom: '2px' }}>
                                                     {actorName}
                                                 </span>
                                             </div>
