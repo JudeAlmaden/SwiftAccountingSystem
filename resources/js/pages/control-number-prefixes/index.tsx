@@ -1,6 +1,6 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { Tag, Plus, Pencil, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { route } from 'ziggy-js';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,33 +37,17 @@ interface Prefix {
     sort_order: number;
 }
 
-export default function ControlNumberPrefixesPage() {
-    const [prefixes, setPrefixes] = useState<Prefix[]>([]);
-    const [loading, setLoading] = useState(true);
+interface Props {
+    prefixes: Prefix[];
+}
+
+export default function ControlNumberPrefixesPage({ prefixes }: Props) {
     const [modalOpen, setModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [formCode, setFormCode] = useState('');
     const [formLabel, setFormLabel] = useState('');
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
-    const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
-    const token = meta?.content || '';
-
-    const fetchPrefixes = () => {
-        fetch('/api/control-number-prefixes', {
-            headers: { Accept: 'application/json' },
-            credentials: 'include',
-        })
-            .then((res) => (res.ok ? res.json() : Promise.reject(new Error('Failed to load'))))
-            .then((data) => setPrefixes(data.data || []))
-            .catch(() => setPrefixes([]))
-            .finally(() => setLoading(false));
-    };
-
-    useEffect(() => {
-        fetchPrefixes();
-    }, []);
 
     const openCreate = () => {
         setEditingId(null);
@@ -85,44 +69,22 @@ export default function ControlNumberPrefixesPage() {
         e.preventDefault();
         setSaving(true);
         setError(null);
-        const url = editingId
-            ? `/api/control-number-prefixes/${editingId}`
-            : '/api/control-number-prefixes';
-        const method = editingId ? 'PUT' : 'POST';
-        const body = JSON.stringify({ code: formCode.trim(), label: formLabel.trim() || null });
-        fetch(url, {
-            method,
-            headers: {
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-                'X-CSRF-TOKEN': token,
-            },
-            credentials: 'include',
-            body,
-        })
-            .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
-            .then(({ ok, data }) => {
-                if (ok) {
-                    setModalOpen(false);
-                    fetchPrefixes();
-                } else {
-                    setError(data.message || (data.errors ? Object.values(data.errors).flat().join(' ') : 'Failed to save'));
-                }
-            })
-            .catch(() => setError('Request failed'))
-            .finally(() => setSaving(false));
+        const data = { code: formCode.trim(), label: formLabel.trim() || null };
+        const onError = (errors: any) => {
+            setError(Object.values(errors).flat().join(' ') || 'Failed to save');
+            setSaving(false);
+        };
+        const onSuccess = () => { setModalOpen(false); setSaving(false); };
+        if (editingId) {
+            router.put(route('api.control-number-prefixes.update', { controlNumberPrefix: editingId }), data, { onSuccess, onError });
+        } else {
+            router.post(route('api.control-number-prefixes.store'), data, { onSuccess, onError });
+        }
     };
 
     const handleDelete = (p: Prefix) => {
         if (!confirm(`Delete prefix "${p.code}"? This may affect new disbursement control numbers.`)) return;
-        fetch(`/api/control-number-prefixes/${p.id}`, {
-            method: 'DELETE',
-            headers: { Accept: 'application/json', 'X-CSRF-TOKEN': token },
-            credentials: 'include',
-        })
-            .then((res) => {
-                if (res.ok) fetchPrefixes();
-            });
+        router.delete(route('api.control-number-prefixes.destroy', { controlNumberPrefix: p.id }));
     };
 
     return (
@@ -148,9 +110,7 @@ export default function ControlNumberPrefixesPage() {
                         <CardDescription>These appear in the dropdown when creating a disbursement. Control number format: PREFIX-YY-RANDOM6 (e.g. DV-26-ABC123).</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {loading ? (
-                            <p className="text-muted-foreground">Loading…</p>
-                        ) : prefixes.length === 0 ? (
+                        {prefixes.length === 0 ? (
                             <p className="text-muted-foreground">No prefixes yet. Add one to use when creating disbursements.</p>
                         ) : (
                             <Table>

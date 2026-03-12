@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import {
     FileText,
     Banknote,
@@ -6,7 +6,7 @@ import {
     ArrowDownCircle,
     Printer,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { route } from 'ziggy-js';
 import { Button } from '@/components/ui/button';
 import {
@@ -38,7 +38,7 @@ import type { BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: route('dashboard') },
-    { title: 'Journal Reports', href: route('reports.journals') },
+    { title: 'Voucher Statistics', href: route('vouchers.statistics') },
 ];
 
 type Period = 'daily' | 'monthly' | 'yearly';
@@ -168,75 +168,44 @@ function defaultDateTo(): string {
     return `${y}-${m}-${day}`;
 }
 
-export default function JournalReportPage() {
-    const [period, setPeriod] = useState<Period>('monthly');
-    const [dateFrom, setDateFrom] = useState(() => defaultDateFrom());
-    const [dateTo, setDateTo] = useState(() => defaultDateTo());
-    const [documentType, setDocumentType] = useState<'all' | 'journal' | 'disbursement'>('all');
-    const [data, setData] = useState<ReportData | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+interface Props {
+    reportData: ReportData | null;
+    filters: {
+        period?: Period;
+        date_from?: string;
+        date_to?: string;
+        type?: string;
+    };
+}
+
+export default function JournalReportPage({ reportData, filters }: Props) {
+    const [period, setPeriod] = useState<Period>((filters.period as Period) || 'monthly');
+    const [dateFrom, setDateFrom] = useState(() => filters.date_from || defaultDateFrom());
+    const [dateTo, setDateTo] = useState(() => filters.date_to || defaultDateTo());
+    const [documentType, setDocumentType] = useState<'all' | 'journal' | 'disbursement'>((filters.type as any) || 'all');
+    const [loading, setLoading] = useState(false);
+    const [error] = useState<string | null>(null);
     const [dailyTrendPage, setDailyTrendPage] = useState(1);
     const [byPeriodPage, setByPeriodPage] = useState(1);
     const ITEMS_PER_PAGE = 10;
 
-    const fetchReport = useCallback(() => {
-        setLoading(true);
-        setError(null);
-        const params = new URLSearchParams({
-            period,
-            date_from: dateFrom,
-            date_to: dateTo,
-        });
-        if (documentType && documentType !== 'all') {
-            params.set('type', documentType);
-        }
-        // Use web route path so session auth is used (API route has same name and uses Sanctum).
-        const url = `/api/reports/journals?${params}`;
-        fetch(url, {
-            headers: { Accept: 'application/json' },
-            credentials: 'include',
-        })
-            .then((res) => {
-                if (!res.ok) {
-                    return res.text().then((text) => {
-                        let msg = 'Failed to load report';
-                        try {
-                            const j = JSON.parse(text);
-                            if (j.message) msg = j.message;
-                        } catch {
-                            if (res.status === 401) msg = 'Please log in again.';
-                            else if (res.status === 403) msg = 'You do not have permission to view this report.';
-                            else if (res.status >= 500) msg = 'Server error. Try again later.';
-                        }
-                        throw new Error(msg);
-                    });
-                }
-                return res.json();
-            })
-            .then(setData)
-            .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load journal report.'))
-            .finally(() => setLoading(false));
-    }, [period, dateFrom, dateTo, documentType]);
+    const data = reportData;
 
-    useEffect(() => {
-        fetchReport();
-    }, [fetchReport]);
+    const fetchReport = () => {
+        setLoading(true);
+        const params: Record<string, string> = { period, date_from: dateFrom, date_to: dateTo };
+        if (documentType && documentType !== 'all') params.type = documentType;
+        router.get(route('vouchers.statistics'), params, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            onFinish: () => setLoading(false),
+        });
+    };
 
     const handlePrint = () => {
         window.print();
     };
-
-    if (loading && !data) {
-        return (
-            <AppLayout breadcrumbs={breadcrumbs}>
-                <Head title="Journal Reports" />
-                <div className="flex items-center justify-center py-12 text-muted-foreground">
-                    Loading report…
-                </div>
-            </AppLayout>
-        );
-    }
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -426,7 +395,7 @@ export default function JournalReportPage() {
                             const startIndex = (dailyTrendPage - 1) * ITEMS_PER_PAGE;
                             const endIndex = startIndex + ITEMS_PER_PAGE;
                             const paginatedRows = data.daily_trend.rows.slice(startIndex, endIndex);
-                            
+
                             return (
                                 <Card>
                                     <CardHeader>
@@ -460,7 +429,7 @@ export default function JournalReportPage() {
                                                 ))}
                                             </TableBody>
                                         </Table>
-                                        
+
                                         {totalPages > 1 && (
                                             <div className="flex items-center justify-between mt-4 print:hidden">
                                                 <p className="text-sm text-muted-foreground">
@@ -503,7 +472,7 @@ export default function JournalReportPage() {
                             const startIndex = (byPeriodPage - 1) * ITEMS_PER_PAGE;
                             const endIndex = startIndex + ITEMS_PER_PAGE;
                             const paginatedEntries = sortedEntries.slice(startIndex, endIndex);
-                            
+
                             return (
                                 <Card>
                                     <CardHeader>
@@ -526,7 +495,7 @@ export default function JournalReportPage() {
                                                 </div>
                                             ))}
                                         </div>
-                                        
+
                                         {totalPages > 1 && (
                                             <div className="flex items-center justify-between mt-4 print:hidden">
                                                 <p className="text-sm text-muted-foreground">

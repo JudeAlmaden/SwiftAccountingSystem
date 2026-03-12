@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class Journal extends Model
 {
@@ -28,7 +29,7 @@ class Journal extends Model
     ];
 
     /**
-     * Default approval flow: 
+     * Default approval flow: Type Disbursement
      * Step 1 = accounting assistant generates voucher
      * Step 2 = accounting head approval
      * Step 3 = auditor approval
@@ -111,5 +112,38 @@ class Journal extends Model
     public function attachments(): HasMany
     {
         return $this->hasMany(JournalAttachment::class);
+    }
+
+    /**
+     * Scope to filter vouchers requiring action from a specific user.
+     */
+    public function scopePendingForUser($query, $user)
+    {
+        $roles = array_map('strtolower', $user->getRoleNames()->toArray());
+        $userId = $user->id;
+
+        return $query->where('journals.status', 'pending')
+            ->where(function ($q) use ($roles, $userId) {
+                $q->whereIn(DB::raw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(step_flow, CONCAT('$[', current_step - 1, '].role'))))"), $roles)
+                    ->orWhere(DB::raw("JSON_EXTRACT(step_flow, CONCAT('$[', current_step - 1, '].user_id'))"), (int) $userId);
+            });
+    }
+
+    /**
+     * Scope to filter vouchers waiting for others.
+     */
+    public function scopePendingForOthers($query, $user)
+    {
+        $roles = array_map('strtolower', $user->getRoleNames()->toArray());
+        $userId = $user->id;
+
+        return $query->where('journals.status', 'pending')
+            ->where(function ($q) use ($roles, $userId) {
+                $q->whereNotIn(DB::raw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(step_flow, CONCAT('$[', current_step - 1, '].role'))))"), $roles)
+                    ->where(function ($sq) use ($userId) {
+                        $sq->where(DB::raw("JSON_EXTRACT(step_flow, CONCAT('$[', current_step - 1, '].user_id'))"), '!=', (int) $userId)
+                            ->orWhereNull(DB::raw("JSON_EXTRACT(step_flow, CONCAT('$[', current_step - 1, '].user_id'))"));
+                    });
+            });
     }
 }

@@ -26,7 +26,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
     {
         title: 'Vouchers',
-        href: route('vouchers'),
+        href: route('vouchers.index'),
     },
 ];
 
@@ -43,109 +43,58 @@ interface Journal {
 }
 
 export default function Journals() {
-    const { user } = usePage<SharedData>().props;
-    const permissions = user.permissions || [];
+    const { journals, filters, auth, user: propsUser, pending_count } = usePage<any>().props;
+    const user = auth?.user || propsUser || {};
+    const pendingCount = pending_count || user?.pending_vouchers_count || 0;
+    const permissions = user?.permissions || [];
     const canCreate = permissions.includes('create journals');
     const canView = permissions.includes('view journals');
 
-    const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
-    const token = meta?.content || '';
+    const [search, setSearch] = useState(filters.search || '');
+    const [statusFilter, setStatusFilter] = useState(filters.status || 'all');
+    const [typeFilter, setTypeFilter] = useState(filters.type || 'all');
+    const [handlingFilter, setHandlingFilter] = useState(filters.handling || 'all');
+    const [dateFrom, setDateFrom] = useState(filters.date_from || '');
+    const [dateTo, setDateTo] = useState(filters.date_to || '');
+    const [sortBy, setSortBy] = useState(filters.sort_by || 'created_at');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(filters.sort_order || 'desc');
 
-    const [journals, setJournals] = useState<Journal[]>([]);
-    const [pagination, setPagination] = useState({
-        current_page: 1,
-        last_page: 1,
-        next_page_url: null as string | null,
-        prev_page_url: null as string | null,
-        total: 0,
-        from: 0,
-        to: 0,
-    });
-    const [isLoading, setIsLoading] = useState(true);
+    const handleFilterChange = (newFilters: any) => {
+        const params = {
+            search,
+            status: statusFilter,
+            type: typeFilter,
+            handling: handlingFilter,
+            date_from: dateFrom,
+            date_to: dateTo,
+            sort_by: sortBy,
+            sort_order: sortOrder,
+            ...newFilters
+        };
 
+        // Remove empty or 'all' filters
+        Object.keys(params).forEach(key => {
+            if (!params[key] || params[key] === 'all') {
+                delete params[key];
+            }
+        });
 
-
-
-    const [search, setSearch] = useState('');
-    const [searchQuery, setSearchQuery] = useState('');
-
-
-    const [dateFrom, setDateFrom] = useState('');
-    const [dateTo, setDateTo] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
-    const [typeFilter, setTypeFilter] = useState('all');
-    const [sortBy, setSortBy] = useState('created_at');
-    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-
-    const fetchJournals = (url?: string | null) => {
-        setIsLoading(true);
-
-        const targetUrl = new URL(url || route('journals.index'));
-
-        if (searchQuery) {
-            targetUrl.searchParams.set('search', searchQuery);
-        }
-        if (dateFrom) {
-            targetUrl.searchParams.set('date_from', dateFrom);
-        }
-        if (dateTo) {
-            targetUrl.searchParams.set('date_to', dateTo);
-        }
-        if (statusFilter && statusFilter !== 'all') {
-            targetUrl.searchParams.set('status', statusFilter);
-        }
-        if (typeFilter && typeFilter !== 'all') {
-            targetUrl.searchParams.set('type', typeFilter);
-        }
-        if (sortBy) {
-            targetUrl.searchParams.set('sort_by', sortBy);
-        }
-        if (sortOrder) {
-            targetUrl.searchParams.set('sort_order', sortOrder);
-        }
-
-        fetch(targetUrl.toString(), {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': token,
-            },
-        })
-            .then(res => res.json())
-            .then(data => {
-                setJournals(data.data || []);
-                setPagination({
-                    current_page: data.current_page,
-                    last_page: data.last_page,
-                    next_page_url: data.next_page_url,
-                    prev_page_url: data.prev_page_url,
-                    total: data.total,
-                    from: data.from,
-                    to: data.to,
-                });
-
-
-
-                setIsLoading(false);
-            })
-            .catch(err => {
-                console.error('Failed to fetch journals', err);
-                setJournals([]);
-                setIsLoading(false);
-            });
+        router.get(route('vouchers.index'), params, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true
+        });
     };
 
+    // Debounce search
     useEffect(() => {
         const timeoutId = setTimeout(() => {
-            setSearchQuery(search);
+            if (search !== (filters.search || '')) {
+                handleFilterChange({ search });
+            }
         }, 500);
         return () => clearTimeout(timeoutId);
     }, [search]);
-
-    useEffect(() => {
-        fetchJournals();
-    }, [searchQuery, dateFrom, dateTo, statusFilter, typeFilter, sortBy, sortOrder]);
 
     const getStatusBadgeVariant = (status: string) => {
         switch (status?.toLowerCase()) {
@@ -169,21 +118,16 @@ export default function Journals() {
         });
     };
 
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'PHP'
-        }).format(amount);
-    };
-
     const clearFilters = () => {
         setSearch('');
         setDateFrom('');
         setDateTo('');
         setStatusFilter('all');
         setTypeFilter('all');
+        setHandlingFilter('all');
         setSortBy('created_at');
         setSortOrder('desc');
+        router.get(route('vouchers.index'));
     };
 
     return (
@@ -199,7 +143,7 @@ export default function Journals() {
                     {canCreate && (
                         <div className="flex gap-2">
                             <Button asChild>
-                                <Link href={route('vouchers.generate')}>
+                                <Link href={route('vouchers.create')}>
                                     Create Voucher
                                 </Link>
                             </Button>
@@ -218,7 +162,13 @@ export default function Journals() {
                         />
                     </div>
 
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <Select
+                        value={statusFilter}
+                        onValueChange={(v) => {
+                            setStatusFilter(v);
+                            handleFilterChange({ status: v });
+                        }}
+                    >
                         <SelectTrigger className="w-[120px] h-9">
                             <SelectValue placeholder="Status" />
                         </SelectTrigger>
@@ -230,7 +180,13 @@ export default function Journals() {
                         </SelectContent>
                     </Select>
 
-                    <Select value={typeFilter} onValueChange={setTypeFilter}>
+                    <Select
+                        value={typeFilter}
+                        onValueChange={(v) => {
+                            setTypeFilter(v);
+                            handleFilterChange({ type: v });
+                        }}
+                    >
                         <SelectTrigger className="w-[130px] h-9">
                             <SelectValue placeholder="Type" />
                         </SelectTrigger>
@@ -238,6 +194,37 @@ export default function Journals() {
                             <SelectItem value="all">All Types</SelectItem>
                             <SelectItem value="disbursement">Disbursement</SelectItem>
                             <SelectItem value="journal">Journal</SelectItem>
+                        </SelectContent>
+                    </Select>
+
+                    <Select
+                        value={handlingFilter}
+                        onValueChange={(v) => {
+                            setHandlingFilter(v);
+                            handleFilterChange({ handling: v });
+                        }}
+                    >
+                        <SelectTrigger className="w-[150px] h-9 relative group">
+                            <SelectValue placeholder="Handling" />
+                            {handlingFilter === 'all' && pendingCount > 0 && (
+                                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-white animate-pulse">
+                                    {pendingCount}
+                                </span>
+                            )}
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Vouchers</SelectItem>
+                            <SelectItem value="me">
+                                <div className="flex items-center gap-2">
+                                    <span>To Handle (Me)</span>
+                                    {pendingCount > 0 && (
+                                        <span className="flex h-4 w-auto min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white shadow-sm">
+                                            {pendingCount}
+                                        </span>
+                                    )}
+                                </div>
+                            </SelectItem>
+                            <SelectItem value="others">Waiting for Others</SelectItem>
                         </SelectContent>
                     </Select>
 
@@ -255,12 +242,18 @@ export default function Journals() {
                                     <div className="flex flex-col gap-2">
                                         <DatePicker
                                             value={dateFrom}
-                                            onChange={setDateFrom}
+                                            onChange={(v) => {
+                                                setDateFrom(v);
+                                                handleFilterChange({ date_from: v });
+                                            }}
                                             placeholder="From date"
                                         />
                                         <DatePicker
                                             value={dateTo}
-                                            onChange={setDateTo}
+                                            onChange={(v) => {
+                                                setDateTo(v);
+                                                handleFilterChange({ date_to: v });
+                                            }}
                                             placeholder="To date"
                                         />
                                     </div>
@@ -271,7 +264,13 @@ export default function Journals() {
                                 <div className="space-y-2">
                                     <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Sorting</Label>
                                     <div className="flex gap-2">
-                                        <Select value={sortBy} onValueChange={setSortBy}>
+                                        <Select
+                                            value={sortBy}
+                                            onValueChange={(v) => {
+                                                setSortBy(v);
+                                                handleFilterChange({ sort_by: v });
+                                            }}
+                                        >
                                             <SelectTrigger className="h-8 text-xs flex-1">
                                                 <SelectValue placeholder="Sort by" />
                                             </SelectTrigger>
@@ -287,7 +286,9 @@ export default function Journals() {
                                             size="sm"
                                             onClick={(e) => {
                                                 e.preventDefault();
-                                                setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                                                const newOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+                                                setSortOrder(newOrder);
+                                                handleFilterChange({ sort_order: newOrder });
                                             }}
                                             className="h-8 px-2 gap-1 text-[10px]"
                                         >
@@ -326,18 +327,14 @@ export default function Journals() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {isLoading ? (
-                                <TableRow className="h-16">
-                                    <TableCell colSpan={7} className="text-center h-24 px-4">Loading vouchers...</TableCell>
-                                </TableRow>
-                            ) : journals.length === 0 ? (
+                            {journals.data.length === 0 ? (
                                 <TableRow className="h-16">
                                     <TableCell colSpan={7} className="text-center h-24 text-muted-foreground px-4">
                                         No vouchers found.
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                journals.map((journal) => (
+                                journals.data.map((journal: any) => (
                                     <TableRow
                                         key={journal.id}
                                         className="h-16 cursor-pointer hover:bg-muted/40 transition-colors"
@@ -345,7 +342,7 @@ export default function Journals() {
                                             if (!canView) return;
                                             const target = event.target as HTMLElement;
                                             if (target.closest('a,button,input,select,textarea')) return;
-                                            router.visit(route('vouchers.view', journal.id));
+                                            router.visit(route('vouchers.show', journal.id));
                                         }}
                                     >
                                         <TableCell className="font-medium px-4 truncate text-sm" title={journal.control_number}>
@@ -356,11 +353,10 @@ export default function Journals() {
                                         </TableCell>
                                         <TableCell className="px-4">
                                             <span
-                                                className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-semibold ${
-                                                    journal.type === 'journal'
-                                                        ? 'bg-teal-100 text-teal-700 border-teal-200'
-                                                        : 'bg-orange-100 text-orange-700 border-orange-200'
-                                                }`}
+                                                className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-semibold ${journal.type === 'journal'
+                                                    ? 'bg-teal-100 text-teal-700 border-teal-200'
+                                                    : 'bg-orange-100 text-orange-700 border-orange-200'
+                                                    }`}
                                             >
                                                 {journal.type === 'journal' ? 'Journal' : 'Disbursement'}
                                             </span>
@@ -384,7 +380,7 @@ export default function Journals() {
                                         <TableCell className="text-right px-4">
                                             <div className="flex justify-end gap-2 text-center">
                                                 {canView && (
-                                                    <Link href={route('vouchers.view', journal.id)} className="text-xs">
+                                                    <Link href={route('vouchers.show', journal.id)} className="text-xs">
                                                         View
                                                     </Link>
                                                 )}
@@ -399,28 +395,40 @@ export default function Journals() {
 
                 <div className="flex items-center justify-between space-x-2 py-4">
                     <div className="text-sm text-muted-foreground">
-                        Showing {pagination.from || 0} to {pagination.to || 0} of {pagination.total} entries
+                        Showing {journals.from || 0} to {journals.to || 0} of {journals.total} entries
                     </div>
                     <div className="flex items-center gap-2">
                         <span className="text-sm text-muted-foreground">
-                            Page {pagination.current_page} of {pagination.last_page}
+                            Page {journals.current_page} of {journals.last_page}
                         </span>
                         <div className="space-x-2">
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => fetchJournals(pagination.prev_page_url)}
-                                disabled={!pagination.prev_page_url || isLoading}
+                                asChild
+                                disabled={!journals.prev_page_url}
                             >
-                                Previous
+                                <Link
+                                    href={journals.prev_page_url || '#'}
+                                    preserveState
+                                    preserveScroll
+                                >
+                                    Previous
+                                </Link>
                             </Button>
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => fetchJournals(pagination.next_page_url)}
-                                disabled={!pagination.next_page_url || isLoading}
+                                asChild
+                                disabled={!journals.next_page_url}
                             >
-                                Next
+                                <Link
+                                    href={journals.next_page_url || '#'}
+                                    preserveState
+                                    preserveScroll
+                                >
+                                    Next
+                                </Link>
                             </Button>
                         </div>
                     </div>

@@ -30,11 +30,11 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
     {
         title: 'Vouchers',
-        href: route('vouchers'),
+        href: route('vouchers.index'),
     },
     {
         title: 'Create Voucher',
-        href: route('vouchers.generate'),
+        href: route('vouchers.create'),
     },
 ];
 
@@ -131,7 +131,7 @@ export default function GenerateJournal() {
             })
             .then(data => {
                 if (data.id) {
-                    router.visit(route('vouchers.view', { id: data.id }));
+                    router.visit(route('vouchers.show', { id: data.id }));
                 }
             })
             .catch(error => {

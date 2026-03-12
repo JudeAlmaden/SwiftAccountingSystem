@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { route } from 'ziggy-js';
 import AppLayout from '@/layouts/app-layout';
@@ -13,11 +13,12 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
     {
         title: 'Chart of Accounts',
-        href: route('accounts'),
+        href: route('accounts.index'),
     },
 ];
 
 export default function ChartOfAccounts() {
+    const { accounts, groups, filters } = usePage<any>().props;
     // Group State
     const [view, setView] = useState<'accounts' | 'groups'>('accounts');
 
@@ -47,8 +48,8 @@ export default function ChartOfAccounts() {
                     </button>
                 </div>
 
-                {view === 'groups' && <GroupsTab />}
-                {view === 'accounts' && <AccountsTab />}
+                {view === 'groups' && <GroupsTab initialGroups={groups} />}
+                {view === 'accounts' && <AccountsTab initialAccounts={accounts} initialGroups={groups} filters={filters} />}
             </div>
         </AppLayout>
     );

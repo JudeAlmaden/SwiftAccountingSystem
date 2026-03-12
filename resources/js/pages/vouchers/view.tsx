@@ -1,4 +1,4 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, usePage, router } from '@inertiajs/react';
 import html2pdf from 'html2pdf.js';
 import { ArrowLeft, Calendar, FileText, Tag, Info, AlertCircle, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -41,23 +41,24 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: route('dashboard')
     }, {
         title: 'Vouchers',
-        href: route('vouchers')
+        href: route('vouchers.index')
     }, {
         title: 'View Voucher',
         href: '#'
     }
 ];
 
-type PageProps = {
-    id: number
-}
-
 export default function View() {
-    const { id, user } = usePage<any>().props;
+    const { journal: initialJournal, auth, user: propsUser } = usePage<any>().props;
+    const user = auth?.user || propsUser || {};
     const userRoles = user?.roles || [];
 
-    const [journal, setJournal] = useState<Journal | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [journal, setJournal] = useState<Journal | null>(initialJournal);
+
+    // Sync state if props change (e.g. after a router action)
+    useEffect(() => {
+        setJournal(initialJournal);
+    }, [initialJournal]);
 
     const [isActionLoading, setIsActionLoading] = useState(false);
     const [isDeclineModalOpen, setIsDeclineModalOpen] = useState(false);
@@ -65,41 +66,17 @@ export default function View() {
     const [isApproveStep5ModalOpen, setIsApproveStep5ModalOpen] = useState(false);
     const [checkId, setCheckId] = useState('');
     const [sheetSize, setSheetSize] = useState<'full' | 'half'>(() => {
-
         const saved = localStorage.getItem('voucherSheetSize');
         return (saved === 'half' || saved === 'full') ? saved : 'full';
     });
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [pendingAction, setPendingAction] = useState<'approve' | 'decline' | null>(null);
 
-
     useEffect(() => {
         localStorage.setItem('voucherSheetSize', sheetSize);
     }, [sheetSize]);
 
-    const fetchData = async () => {
-        setIsLoading(true);
-        try {
-            const res = await fetch(route('journals.show', { id }), {
-                headers: {
-                    Accept: 'application/json',
-                },
-            });
-
-            const data = await res.json();
-            setJournal(data.journal);
-        } catch (err) {
-            console.error('Failed to fetch journal', err);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchData();
-    }, [id]);
-
-    const handleAction = async (action: 'approve' | 'decline', remarks?: string, checkIdValue?: string) => {
+    const handleAction = (action: 'approve' | 'decline', remarks?: string, checkIdValue?: string) => {
         if (!journal) return;
 
         if (action === 'decline' && !remarks) {
@@ -108,13 +85,12 @@ export default function View() {
         }
 
         const currentStep = Number(journal.current_step) || 1;
-      
+
         if (action === 'approve' && isLastStep(currentStep) && !checkIdValue && journal.type !== 'journal') {
             setIsApproveStep5ModalOpen(true);
             return;
         }
 
-     
         setPendingAction(action);
         setIsConfirmModalOpen(true);
     };
@@ -124,51 +100,36 @@ export default function View() {
 
         setIsConfirmModalOpen(false);
         setIsActionLoading(true);
-        try {
-            const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
-            const token = meta?.content || '';
 
-            const endpoint = pendingAction === 'approve'
-                ? route('journals.approve', { id: journal.id })
-                : route('journals.decline', { id: journal.id });
+        const endpoint = pendingAction === 'approve'
+            ? route('journals.approve', { id: journal.id })
+            : route('journals.decline', { id: journal.id });
 
-            const requestBody: any = {
-                remarks: pendingAction === 'approve' ? 'Approved through dashboard.' : (declineRemarks || 'Declined through dashboard.')
-            };
+        const data: any = {
+            remarks: pendingAction === 'approve' ? 'Approved through dashboard.' : (declineRemarks || 'Declined through dashboard.')
+        };
 
-       
-            const currentStep = Number(journal.current_step) || 1;
-            if (pendingAction === 'approve' && isLastStep(currentStep) && checkId) {
-                requestBody.check_id = checkId;
-            }
+        const currentStep = Number(journal.current_step) || 1;
+        if (pendingAction === 'approve' && isLastStep(currentStep) && checkId) {
+            data.check_id = checkId;
+        }
 
-            const res = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': token,
-                },
-                body: JSON.stringify(requestBody)
-            });
-
-            if (res.ok) {
+        router.post(endpoint, data, {
+            onSuccess: () => {
                 setIsDeclineModalOpen(false);
                 setDeclineRemarks('');
                 setIsApproveStep5ModalOpen(false);
                 setCheckId('');
                 setPendingAction(null);
-                await fetchData(); // Refresh data
-            } else {
-                const data = await res.json();
-                alert(data.message || `Failed to ${pendingAction} journal.`);
+            },
+            onError: (errors) => {
+                const firstError = Object.values(errors)[0];
+                alert(firstError || `Failed to ${pendingAction} journal.`);
+            },
+            onFinish: () => {
+                setIsActionLoading(false);
             }
-        } catch (err) {
-            console.error(`Error during ${pendingAction}:`, err);
-            alert(`An error occurred while trying to ${pendingAction} the journal.`);
-        } finally {
-            setIsActionLoading(false);
-        }
+        });
     };
 
     const isLastStep = (step: number) => {
@@ -293,16 +254,6 @@ export default function View() {
         );
     };
 
-    if (isLoading) {
-        return (
-            <AppLayout breadcrumbs={breadcrumbs}>
-                <Head title="Loading Voucher..." />
-                <div className="flex h-[400px] items-center justify-center">
-                    <div className="text-muted-foreground animate-pulse text-lg">Loading voucher details...</div>
-                </div>
-            </AppLayout>
-        );
-    }
 
     if (!journal) {
         return (
@@ -311,7 +262,7 @@ export default function View() {
                 <div className="flex flex-col items-center justify-center h-[400px] gap-4">
                     <h2 className="text-2xl font-bold">Voucher Not Found</h2>
                     <Button asChild>
-                        <Link href={route('vouchers')}>
+                        <Link href={route('vouchers.index')}>
                             <ArrowLeft className="mr-2 h-4 w-4" />
                             Back to Vouchers
                         </Link>
@@ -328,7 +279,7 @@ export default function View() {
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <Button variant="outline" size="icon" asChild>
-                            <Link href={route('vouchers')}>
+                            <Link href={route('vouchers.index')}>
                                 <ArrowLeft className="h-4 w-4" />
                             </Link>
                         </Button>
@@ -401,7 +352,7 @@ export default function View() {
                             </CardContent>
                         </Card>
 
-                        {}
+                        { }
                         <div className="overflow-x-auto pb-4 flex justify-center bg-gray-100/50 rounded-xl border p-2 sm:p-4">
                             <div className="w-full max-w-[210mm] min-w-0">
                                 {journal.type === 'journal'
@@ -412,7 +363,7 @@ export default function View() {
                         </div>
                     </div>
 
-                    {}
+                    { }
                     <div className="sticky top-6 mb-16">
                         <JournalSidebar
                             currentStep={Number(journal.current_step) || 1}
@@ -424,7 +375,7 @@ export default function View() {
                 </div>
             </div>
 
-            {}
+            { }
             {canPerformAction() && (
                 <div className="fixed bottom-6 right-8 flex items-center gap-3 z-50 print:hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
                     <Button
@@ -446,7 +397,7 @@ export default function View() {
                 </div>
             )}
 
-            {}
+            { }
             <Dialog open={isDeclineModalOpen} onOpenChange={setIsDeclineModalOpen}>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
@@ -479,7 +430,7 @@ export default function View() {
                 </DialogContent>
             </Dialog>
 
-            {}
+            { }
             <Dialog open={isConfirmModalOpen} onOpenChange={setIsConfirmModalOpen}>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
@@ -502,7 +453,7 @@ export default function View() {
                 </DialogContent>
             </Dialog>
 
-            {}
+            { }
             <Dialog open={isApproveStep5ModalOpen} onOpenChange={setIsApproveStep5ModalOpen}>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>

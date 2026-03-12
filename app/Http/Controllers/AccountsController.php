@@ -39,8 +39,13 @@ class AccountsController extends Controller
         }
 
         $accounts = $query->paginate($validated['limit'] ?? 15);
+        $groups = \App\Models\AccountGroup::withCount('accounts')->orderBy('name')->get();
         
-        return response()->json($accounts);
+        return \Inertia\Inertia::render('Accounts/accounts', [
+            'accounts' => $accounts,
+            'groups'   => $groups,
+            'filters'  => $request->only(['search', 'account_group_id'])
+        ]);
     }
 
     /**
@@ -75,7 +80,13 @@ class AccountsController extends Controller
         }
 
         $account = Account::create($validated);
-        return response()->json($account);
+        
+        if ($request->wantsJson()) {
+            return response()->json($account);
+        }
+
+        return redirect()->route('accounts.index', ['tab' => 'accounts'])
+                         ->with('message', 'Account created successfully.');
     }
 
     /**
@@ -111,9 +122,10 @@ class AccountsController extends Controller
 
         $journals = $query->orderBy('created_at', 'desc')->paginate(10);
 
-        return response()->json([
+        return \Inertia\Inertia::render('Accounts/view', [
             'account'  => $account,
             'journals' => $journals,
+            'filters'  => $request->only(['search'])
         ]);
     }
 
@@ -131,15 +143,23 @@ class AccountsController extends Controller
         }
 
         if ($account->journal_items_count > 0) {
-            return response()->json([
-                'message' => 'Cannot delete account as it has associated journal items.',
-            ], 422);
+            if (request()->wantsJson()) {
+                return response()->json([
+                    'message' => 'Cannot delete account as it has associated journal items.',
+                ], 422);
+            }
+            return back()->withErrors(['message' => 'Cannot delete account as it has associated journal items.']);
         }
 
         $account->delete();
-        return response()->json([
-            'message' => 'Account deleted successfully',
-        ], 200);
+        
+        if (request()->wantsJson()) {
+            return response()->json([
+                'message' => 'Account deleted successfully',
+            ], 200);
+        }
+
+        return back()->with('message', 'Account deleted successfully.');
     }
 
     /**
@@ -155,6 +175,10 @@ class AccountsController extends Controller
         $account->status = $account->status === 'active' ? 'inactive' : 'active';
         $account->save();
 
-        return response()->json($account);
+        if (request()->wantsJson()) {
+            return response()->json($account);
+        }
+
+        return back()->with('message', 'Account status updated.');
     }
 }

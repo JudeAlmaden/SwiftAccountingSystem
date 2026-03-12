@@ -13,22 +13,6 @@ use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
-    private const ACCOUNT_PERMISSIONS = [
-        'view accounts',
-        'create accounts',
-        'edit accounts',
-        'delete accounts',
-        'manage control number prefixes',
-    ];
-
-    /** Strip account-only permissions if the current user is not admin. */
-    private function filterPermissionsForNonAdmin(array $permissions): array
-    {
-        if (auth()->user()?->hasRole('admin')) {
-            return $permissions;
-        }
-        return array_values(array_diff($permissions, self::ACCOUNT_PERMISSIONS));
-    }
 
     // For Stat Card
     function stats()
@@ -58,57 +42,14 @@ class UserController extends Controller
     }
 
 
-    function indexPage()
-    {
-        $totalUsers = User::count();
-        $activeUsers = User::where('status', 'active')->count();
-        $inactiveUsers = User::where('status', 'inactive')->count();
-        $adminUsers = User::role('admin')->count();
-        
-        $accountingHead = User::role('accounting head')->where('status', 'active')->get();
-        $svp = User::role('svp')->where('status', 'active')->get();
-        $auditor = User::role('auditor')->where('status', 'active')->get();
-        
-        $specialUsers = [
-            'accounting_head' => $accountingHead,
-            'svp' => $svp,
-            'auditor' => $auditor,
-        ];
-
-        // Get initial users list
-        $users = User::with('roles')->paginate(10);
-
-        return Inertia::render('admin/users', [
-            'roles' => Role::with('permissions')->get(),
-            'permissions' => Permission::all(),
-            'stats' => [
-                'total_users' => $totalUsers,
-                'active_users' => $activeUsers,
-                'inactive_users' => $inactiveUsers,
-                'admin_users' => $adminUsers,
-            ],
-            'specialUsers' => $specialUsers,
-            'initialUsers' => $users,
-        ]);
-    }
-
-    /**
-     * Display a paginated list of accounts.
-     * Supports filtering by search, role, email.
-     * Used for listing / table views.
-     */
-    function index(Request $request)
+    public function index(Request $request)
     {
         $validated = $request->validate([
             'search' => 'nullable|string',
             'role'   => 'nullable|string',
             'email'  => 'nullable|string',
-            'page'   => 'nullable|integer|min:1',
-            'limit'  => 'nullable|integer|min:1|max:15',
             'status' => 'nullable|string|in:active,inactive',
         ]);
-
-        $limit = $validated['limit'] ?? 10;
 
         $users = User::with('roles')
             ->when($validated['search'] ?? null, fn ($q, $search) =>
@@ -128,9 +69,35 @@ class UserController extends Controller
             ->when($validated['status'] ?? null, fn ($q, $status) =>
                 $q->where('status', $status)
             )
-            ->paginate(10);
+            ->paginate(10)->withQueryString();
 
-        return response()->json($users);
+        if ($request->wantsJson()) {
+            return response()->json($users);
+        }
+
+        $totalUsers = User::count();
+        $activeUsers = User::where('status', 'active')->count();
+        $inactiveUsers = User::where('status', 'inactive')->count();
+        $adminUsers = User::role('admin')->count();
+        
+        $specialUsers = [
+            'accounting_head' => tap(User::role('accounting head')->where('status', 'active')->get(), function($collection) { $collection->makeHidden(['roles']); }),
+            'svp' => tap(User::role('svp')->where('status', 'active')->get(), function($collection) { $collection->makeHidden(['roles']); }),
+            'auditor' => tap(User::role('auditor')->where('status', 'active')->get(), function($collection) { $collection->makeHidden(['roles']); }),
+        ];
+
+        return Inertia::render('admin/users', [
+            'roles' => Role::all(),
+            'stats' => [
+                'total_users' => $totalUsers,
+                'active_users' => $activeUsers,
+                'inactive_users' => $inactiveUsers,
+                'admin_users' => $adminUsers,
+            ],
+            'specialUsers' => $specialUsers,
+            'initialUsers' => clone $users,
+            'filters' => $request->only(['search', 'role', 'email', 'status'])
+        ]);
     }
 
     /**
@@ -156,8 +123,6 @@ class UserController extends Controller
                 }
             },
         ],
-        'permissions'    => 'nullable|array', // Allow direct permissions
-        'permissions.*'  => 'exists:permissions,name',
         'status'         => 'nullable|string|in:active,inactive',
     ], [
         'email.unique'          => 'This email is already registered.',
@@ -200,10 +165,6 @@ class UserController extends Controller
         $user->syncRoles([$validated['role']]);
     }
 
-    // Sync Permissions (Direct assignments; non-admins cannot assign account permissions)
-    if (array_key_exists('permissions', $validated)) {
-        $user->syncPermissions($this->filterPermissionsForNonAdmin($validated['permissions'] ?? []));
-    }
 
     AuditTrail::log(
         'user_created',
@@ -214,29 +175,35 @@ class UserController extends Controller
         ['email' => $user->email, 'role' => $validated['role'] ?? null]
     );
 
-    return response()->json([
-        'message' => 'User created successfully.',
-        'data'    => [
-            'id'             => $user->id,
-            'name'           => $user->name,
-            'account_number' => $user->account_number,
-            'email'          => $user->email,
-            'status'         => $user->status,
-            'role'           => $user->getRoleNames()->first(),
-        ],
-    ], 201);
+    if ($request->wantsJson()) {
+        return response()->json([
+            'message' => 'User created successfully.',
+            'data'    => [
+                'id'             => $user->id,
+                'name'           => $user->name,
+                'account_number' => $user->account_number,
+                'email'          => $user->email,
+                'status'         => $user->status,
+                'role'           => $user->getRoleNames()->first(),
+            ],
+        ], 201);
+    }
+
+    return redirect()->route('users.index')
+        ->with('message', 'User created successfully.');
     }
 
     /**
      * Display the specified account.
      */
-    function show(Request $request, User $user){
-        $validated = $request->validate([
-            'id' => 'required|exists:users,id',
-        ]);
-        $user = User::with('roles')->find($validated['id']);
+    function show(Request $request, $id){
+        $user = User::with('roles')->findOrFail($id);
         
-        return response()->json($user);
+        if ($request->wantsJson()) {
+            return response()->json($user);
+        }
+        
+        return redirect()->route('users.index');
     }
 
     /**
@@ -264,8 +231,6 @@ class UserController extends Controller
                     }
                 },
             ],
-            'permissions'    => 'nullable|array',
-            'permissions.*'  => 'exists:permissions,name',
         ]);
 
 
@@ -341,10 +306,6 @@ class UserController extends Controller
              }
         }
 
-        // Sync Permissions (skip for admin: they cannot be given more or have permissions changed)
-        if (array_key_exists('permissions', $validated) && !$user->hasRole('admin')) {
-            $user->syncPermissions($this->filterPermissionsForNonAdmin($validated['permissions'] ?? []));
-        }
 
         AuditTrail::log(
             'user_updated',
@@ -358,16 +319,21 @@ class UserController extends Controller
             ]
         );
 
-        return response()->json([
-            'message' => 'User updated successfully.',
-            'data'    => [
-                'id'             => $user->id,
-                'name'           => $user->name,
-                'account_number' => $user->account_number,
-                'email'          => $user->email,
-                'status'         => $user->status,
-                'roles'          => $user->getRoleNames(),
-            ],
-        ]);
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => 'User updated successfully.',
+                'data'    => [
+                    'id'             => $user->id,
+                    'name'           => $user->name,
+                    'account_number' => $user->account_number,
+                    'email'          => $user->email,
+                    'status'         => $user->status,
+                    'roles'          => $user->getRoleNames(),
+                ],
+            ]);
+        }
+
+        return redirect()->route('users.index')
+            ->with('message', 'User updated successfully.');
     }
 }

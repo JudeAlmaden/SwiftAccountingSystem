@@ -15,7 +15,7 @@ export type WhenCurrentUrlFn = <TIfTrue, TIfFalse = null>(
 
 export type UseCurrentUrlReturn = {
     currentUrl: string;
-    isCurrentUrl: IsCurrentUrlFn;
+    isCurrentUrl: (urlToCheck: NonNullable<InertiaLinkProps['href']>, exact?: boolean) => boolean;
     whenCurrentUrl: WhenCurrentUrlFn;
 };
 
@@ -23,23 +23,26 @@ export function useCurrentUrl(): UseCurrentUrlReturn {
     const page = usePage();
     const currentUrlPath = new URL(page.url, window?.location.origin).pathname;
 
-    const isCurrentUrl: IsCurrentUrlFn = (
-        urlToCheck: NonNullable<InertiaLinkProps['href']>,
-        currentUrl?: string,
-    ) => {
-        const urlToCompare = currentUrl ?? currentUrlPath;
-        const urlString = toUrl(urlToCheck);
-
-        if (!urlString.startsWith('http')) {
-            return urlString === urlToCompare;
-        }
-
+    const getPathname = (url: string) => {
         try {
-            const absoluteUrl = new URL(urlString);
-            return absoluteUrl.pathname === urlToCompare;
+            return new URL(url, window?.location.origin).pathname;
         } catch {
-            return false;
+            return url;
         }
+    };
+
+    const isCurrentUrl = (
+        urlToCheck: NonNullable<InertiaLinkProps['href']>,
+        exact: boolean = true,
+    ) => {
+        const urlString = toUrl(urlToCheck);
+        const targetPath = getPathname(urlString);
+
+        if (exact) {
+            return targetPath === currentUrlPath;
+        }
+
+        return currentUrlPath.startsWith(targetPath);
     };
 
     const whenCurrentUrl: WhenCurrentUrlFn = <TIfTrue, TIfFalse = null>(

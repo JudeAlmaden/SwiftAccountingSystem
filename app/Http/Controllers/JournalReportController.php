@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class JournalReportController extends Controller
 {
@@ -17,7 +18,27 @@ class JournalReportController extends Controller
      * Supports period (daily|monthly|yearly) and date range.
      * Requires "view journals" permission.
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request)
+    {
+        // For Inertia page render, return the view with props
+        // For API/AJAX, return JSON
+        if (!$request->wantsJson()) {
+            $data = $this->buildReportData($request);
+            return Inertia::render('reports/journal', [
+                'reportData' => $data,
+                'filters'    => [
+                    'period'    => $request->input('period', 'monthly'),
+                    'date_from' => $request->input('date_from', now()->startOfYear()->toDateString()),
+                    'date_to'   => $request->input('date_to', now()->toDateString()),
+                    'type'      => $request->input('type', 'all'),
+                ],
+            ]);
+        }
+
+        return response()->json($this->buildReportData($request));
+    }
+
+    private function buildReportData(Request $request): array
     {
         $validated = $request->validate([
             'period'    => 'nullable|string|in:daily,monthly,yearly',
@@ -342,7 +363,7 @@ class JournalReportController extends Controller
                 'total'    => $items->count(),
             ]);
 
-        return response()->json([
+        return [
             'period'       => $period,
             'date_from'    => $dateFrom,
             'date_to'      => $dateTo,
@@ -361,7 +382,7 @@ class JournalReportController extends Controller
             'account_ranking_by_expense' => $ranking,
             'voucher_details'            => $voucher_details,
             'workflow'                   => $workflow,
-            'disbursements_by_period'    => $journalsByPeriod, // key kept for frontend compatibility
-        ]);
+            'disbursements_by_period'    => $journalsByPeriod,
+        ];
     }
 }

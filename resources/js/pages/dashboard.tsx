@@ -93,7 +93,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                                 {disbursements.rejected}
                             </p>
                             <Link
-                                href={route('vouchers')}
+                                href={route('vouchers.index')}
                                 className="text-xs font-medium text-primary hover:underline mt-1 inline-block"
                             >
                                 View all →
@@ -133,7 +133,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                                 {users.active} active
                             </p>
                             <Link
-                                href={route('users')}
+                                href={route('users.index')}
                                 className="text-xs font-medium text-primary hover:underline mt-1 inline-block"
                             >
                                 Manage users →
@@ -156,7 +156,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                                 {accounts.active} active accounts
                             </p>
                             <Link
-                                href={route('accounts')}
+                                href={route('accounts.index')}
                                 className="text-xs font-medium text-primary hover:underline mt-1 inline-block"
                             >
                                 View chart →
@@ -167,12 +167,12 @@ export default function Dashboard({ stats }: DashboardProps) {
 
                 {/* Simple report summary */}
                 <Card>
-                        <CardHeader>
-                            <CardTitle>Summary report</CardTitle>
-                            <CardDescription>
-                                Voucher status breakdown and key counts
-                            </CardDescription>
-                        </CardHeader>
+                    <CardHeader>
+                        <CardTitle>Summary report</CardTitle>
+                        <CardDescription>
+                            Voucher status breakdown and key counts
+                        </CardDescription>
+                    </CardHeader>
                     <CardContent>
                         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                             <div className="flex items-center gap-3 rounded-lg border p-4">

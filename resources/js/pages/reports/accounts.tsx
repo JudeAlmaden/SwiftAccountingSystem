@@ -1,6 +1,6 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { BookOpen, PieChart } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { route } from 'ziggy-js';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,7 +32,7 @@ import type { BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: route('dashboard') },
-    { title: 'Account Reports', href: route('reports.accounts') },
+    { title: 'Account Reports', href: route('accounts.reports') },
 ];
 
 type Period = 'daily' | 'monthly' | 'yearly';
@@ -85,48 +85,31 @@ function formatCurrency(value: number): string {
     }).format(value);
 }
 
-export default function AccountReportPage() {
-    const [period, setPeriod] = useState<Period>('monthly');
-    const [dateFrom, setDateFrom] = useState<string | null>(() => defaultDateFrom());
-    const [dateTo, setDateTo] = useState<string | null>(() => defaultDateTo());
-    const [data, setData] = useState<ReportData | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+interface Props {
+    data: ReportData;
+    filters: {
+        period?: Period;
+        date_from?: string;
+        date_to?: string;
+    };
+}
 
-    const fetchReport = useCallback(() => {
-        setLoading(true);
-        setError(null);
-        const params = new URLSearchParams();
-        params.set('period', period);
-        if (dateFrom) params.set('date_from', dateFrom);
-        if (dateTo) params.set('date_to', dateTo);
-        fetch(`/api/reports/accounts?${params}`, {
-            headers: { Accept: 'application/json' },
-            credentials: 'include',
-        })
-            .then((res) => {
-                if (!res.ok) throw new Error('Failed to load report');
-                return res.json();
-            })
-            .then(setData)
-            .catch(() => setError('Failed to load account report.'))
-            .finally(() => setLoading(false));
-    }, [period, dateFrom, dateTo]);
+export default function AccountReportPage({ data, filters }: Props) {
+    const [period, setPeriod] = useState<Period>(filters.period || 'monthly');
+    const [dateFrom, setDateFrom] = useState<string | null>(filters.date_from || defaultDateFrom());
+    const [dateTo, setDateTo] = useState<string | null>(filters.date_to || defaultDateTo());
 
-    useEffect(() => {
-        fetchReport();
-    }, [fetchReport]);
+    const handleApply = () => {
+        const params: Record<string, string> = { period };
+        if (dateFrom) params.date_from = dateFrom;
+        if (dateTo) params.date_to = dateTo;
 
-    if (loading && !data) {
-        return (
-            <AppLayout breadcrumbs={breadcrumbs}>
-                <Head title="Account Reports" />
-                <div className="flex items-center justify-center py-12 text-muted-foreground">
-                    Loading report…
-                </div>
-            </AppLayout>
-        );
-    }
+        router.get(route('accounts.reports'), params, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        });
+    };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -179,17 +162,9 @@ export default function AccountReportPage() {
                                 placeholder="To (optional)"
                             />
                         </div>
-                        <Button onClick={fetchReport} disabled={loading}>
-                            {loading ? 'Loading…' : 'Apply'}
-                        </Button>
+                        <Button onClick={handleApply}>Apply</Button>
                     </CardContent>
                 </Card>
-
-                {error && (
-                    <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive">
-                        {error}
-                    </div>
-                )}
 
                 {data && (
                     <>

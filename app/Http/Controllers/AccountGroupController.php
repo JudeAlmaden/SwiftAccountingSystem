@@ -13,7 +13,7 @@ class AccountGroupController extends Controller
         $validated = $request->validate([
             'search' => 'nullable|string',
             'account_type' => 'nullable|string',
-            'all' => 'nullable' // Accept any value for 'all' parameter
+            'all' => 'nullable'
         ]);
 
         $query = AccountGroup::query()->withCount('accounts');
@@ -30,13 +30,16 @@ class AccountGroupController extends Controller
             $query->where('account_type', $validated['account_type']);
         }
 
-        // Check if 'all' parameter exists (regardless of value)
-        if ($request->has('all')) {
-            return response()->json(['data' => $query->orderBy('name')->get()]);
+        if ($request->wantsJson()) {
+            if ($request->has('all')) {
+                return response()->json(['data' => $query->orderBy('name')->get()]);
+            }
+            return response()->json($query->orderBy('name')->paginate(20));
         }
 
-        $groups = $query->orderBy('name')->paginate(20);
-        return response()->json($groups);
+        // For Inertia, we suggest using AccountsController@index, 
+        // but if they hit this, redirect to chart of accounts
+        return redirect()->route('accounts.index', ['tab' => 'groups']);
     }
 
     public function store(Request $request)
@@ -49,11 +52,21 @@ class AccountGroupController extends Controller
         ]);
 
         $group = AccountGroup::create($validated);
-        return response()->json($group);
+
+        if ($request->wantsJson()) {
+            return response()->json($group);
+        }
+
+        return redirect()->route('accounts.index', ['tab' => 'groups'])
+            ->with('message', 'Account group created successfully.');
     }
 
     public function show($id) {
-        return response()->json(AccountGroup::with('accounts')->findOrFail($id));
+        $group = AccountGroup::with('accounts')->findOrFail($id);
+        if (request()->wantsJson()) {
+            return response()->json($group);
+        }
+        return redirect()->route('accounts.index', ['tab' => 'groups']);
     }
 
     public function update(Request $request, $id)
@@ -67,16 +80,32 @@ class AccountGroupController extends Controller
 
         $group = AccountGroup::findOrFail($id);
         $group->update($validated);
-        return response()->json($group);
+
+        if ($request->wantsJson()) {
+            return response()->json($group);
+        }
+
+        return redirect()->route('accounts.index', ['tab' => 'groups'])
+            ->with('message', 'Account group updated successfully.');
     }
 
     public function destroy($id)
     {
         $group = AccountGroup::withCount('accounts')->findOrFail($id);
         if ($group->accounts_count > 0) {
-            return response()->json(['message' => 'Cannot delete group with associated accounts.'], 422);
+            if (request()->wantsJson()) {
+                return response()->json(['message' => 'Cannot delete group with associated accounts.'], 422);
+            }
+            return back()->withErrors(['message' => 'Cannot delete group with associated accounts.']);
         }
+
         $group->delete();
-        return response()->json(['message' => 'Group deleted.']);
+
+        if (request()->wantsJson()) {
+            return response()->json(['message' => 'Group deleted.']);
+        }
+
+        return redirect()->route('accounts.index', ['tab' => 'groups'])
+            ->with('message', 'Account group deleted successfully.');
     }
 }

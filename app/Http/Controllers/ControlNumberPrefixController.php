@@ -5,20 +5,27 @@ namespace App\Http\Controllers;
 use App\Models\ControlNumberPrefix;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class ControlNumberPrefixController extends Controller
 {
     /**
-     * List all prefixes (for dropdown when creating disbursement).
+     * Render the Inertia page with all prefixes as props.
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request)
     {
         $prefixes = ControlNumberPrefix::query()
             ->orderBy('sort_order')
             ->orderBy('code')
             ->get(['id', 'code', 'label', 'sort_order']);
 
-        return response()->json(['data' => $prefixes]);
+        if ($request->wantsJson()) {
+            return response()->json(['data' => $prefixes]);
+        }
+
+        return Inertia::render('control-number-prefixes/index', [
+            'prefixes' => $prefixes,
+        ]);
     }
 
     /**
@@ -36,7 +43,12 @@ class ControlNumberPrefixController extends Controller
 
         $prefix = ControlNumberPrefix::create($validated);
 
-        return response()->json($prefix, 201);
+        if ($request->wantsJson()) {
+            return response()->json($prefix, 201);
+        }
+
+        return redirect()->route('control-number-prefixes.index')
+            ->with('message', 'Prefix created successfully.');
     }
 
     /**
@@ -56,7 +68,12 @@ class ControlNumberPrefixController extends Controller
 
         $controlNumberPrefix->update($validated);
 
-        return response()->json($controlNumberPrefix);
+        if ($request->wantsJson()) {
+            return response()->json($controlNumberPrefix);
+        }
+
+        return redirect()->route('control-number-prefixes.index')
+            ->with('message', 'Prefix updated successfully.');
     }
 
     /**
@@ -65,6 +82,12 @@ class ControlNumberPrefixController extends Controller
     public function destroy(ControlNumberPrefix $controlNumberPrefix): JsonResponse
     {
         $controlNumberPrefix->delete();
-        return response()->json(['message' => 'Deleted']);
+
+        if (request()->wantsJson()) {
+            return response()->json(['message' => 'Deleted']);
+        }
+
+        return redirect()->route('control-number-prefixes.index')
+            ->with('message', 'Prefix deleted.');
     }
 }
