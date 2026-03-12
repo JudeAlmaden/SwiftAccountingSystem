@@ -12,33 +12,57 @@ class ChartOfAccountsSeeder extends Seeder
      */
     public function run(): void
     {
-        // define groups
-        $groups = [
-            ['name' => 'Cash & Cash Equivalents', 'grp_code' => '100', 'account_type' => 'Assets', 'sub_account_type' => 'Current Assets'],
-            ['name' => 'Trade Payables', 'grp_code' => '200', 'account_type' => 'Liabilities', 'sub_account_type' => 'Current Liabilities'],
-            ['name' => 'Administrative Expenses', 'grp_code' => '500', 'account_type' => 'Expenses', 'sub_account_type' => 'Operating Expenses'],
-        ];
+        // Disable foreign key checks to allow truncation
+        \Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        \App\Models\Account::truncate();
+        \App\Models\AccountGroup::truncate();
+        \Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
-        $createdGroups = [];
-        foreach ($groups as $group) {
-            $createdGroups[$group['name']] = \App\Models\AccountGroup::create($group);
+        // 1. Seed Account Groups
+        $groupsFile = database_path('seeders/account_groups.csv');
+        $groupLookup = [];
+
+        if (($handle = fopen($groupsFile, "r")) !== FALSE) {
+            $header = fgetcsv($handle, 1000, ","); // Skip header
+            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+                if (count($data) < 4) continue;
+                
+                $group = \App\Models\AccountGroup::create([
+                    'name' => $data[0],
+                    'grp_code' => $data[1],
+                    'account_type' => $data[2],
+                    'sub_account_type' => $data[3],
+                ]);
+
+                if ($data[1]) {
+                    $groupLookup[$data[1]] = $group->id;
+                }
+            }
+            fclose($handle);
         }
 
-        $accounts = [
-            ['account_name' => 'Cash', 'account_description' => 'Cash on hand', 'account_code' => '1001', 'account_type' => 'Assets', 'sub_account_type' => 'Current Assets', 'account_normal_side' => 'debit', 'account_group_id' => $createdGroups['Cash & Cash Equivalents']->id ?? null],
-            ['account_name' => 'Bank', 'account_description' => 'Bank account', 'account_code' => '1002', 'account_type' => 'Assets', 'sub_account_type' => 'Current Assets', 'account_normal_side' => 'debit', 'account_group_id' => $createdGroups['Cash & Cash Equivalents']->id ?? null],
-            ['account_name' => 'Accounts Receivable', 'account_description' => 'Money owed by customers', 'account_code' => '1003', 'account_type' => 'Assets', 'sub_account_type' => 'Current Assets', 'account_normal_side' => 'debit', 'account_group_id' => null],
-            ['account_name' => 'Inventory', 'account_description' => 'Inventory of goods', 'account_code' => '1004', 'account_type' => 'Assets', 'sub_account_type' => 'Current Assets', 'account_normal_side' => 'debit', 'account_group_id' => null],
-            ['account_name' => 'Prepaid Expenses', 'account_description' => 'Expenses paid in advance', 'account_code' => '1005', 'account_type' => 'Assets', 'sub_account_type' => 'Current Assets', 'account_normal_side' => 'debit', 'account_group_id' => null],
-            ['account_name' => 'Accounts Payable', 'account_description' => 'Money owed to suppliers', 'account_code' => '2001', 'account_type' => 'Liabilities', 'sub_account_type' => 'Current Liabilities', 'account_normal_side' => 'credit', 'account_group_id' => $createdGroups['Trade Payables']->id ?? null],
-            ['account_name' => 'Loans Payable', 'account_description' => 'Bank loans', 'account_code' => '2002', 'account_type' => 'Liabilities', 'sub_account_type' => 'Non-Current Liabilities', 'account_normal_side' => 'credit', 'account_group_id' => null],
-            ['account_name' => 'Owner\'s Capital', 'account_description' => 'Owner investment', 'account_code' => '3001', 'account_type' => 'Equity', 'sub_account_type' => 'Capital', 'account_normal_side' => 'credit', 'account_group_id' => null],
-            ['account_name' => 'Sales Revenue', 'account_description' => 'Revenue from sales', 'account_code' => '4001', 'account_type' => 'Revenue', 'sub_account_type' => 'Operating Revenue', 'account_normal_side' => 'credit', 'account_group_id' => null],
-            ['account_name' => 'Rent Expense', 'account_description' => 'Office rent', 'account_code' => '5001', 'account_type' => 'Expenses', 'sub_account_type' => 'Operating Expenses', 'account_normal_side' => 'debit', 'account_group_id' => $createdGroups['Administrative Expenses']->id ?? null],
-        ];
+        // 2. Seed Accounts
+        $accountsFile = database_path('seeders/accounts.csv');
+        if (($handle = fopen($accountsFile, "r")) !== FALSE) {
+            $header = fgetcsv($handle, 1000, ","); // Skip header
+            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+                if (count($data) < 7) continue;
 
-        foreach ($accounts as $account) {
-            Account::create($account);
+                $grpCode = $data[6];
+                $groupId = $groupLookup[$grpCode] ?? null;
+
+                \App\Models\Account::create([
+                    'account_name' => $data[0],
+                    'account_description' => $data[1],
+                    'account_code' => $data[2],
+                    'account_type' => $data[3],
+                    'sub_account_type' => $data[4],
+                    'account_normal_side' => strtolower($data[5]),
+                    'account_group_id' => $groupId,
+                    'status' => 'active',
+                ]);
+            }
+            fclose($handle);
         }
     }
 }

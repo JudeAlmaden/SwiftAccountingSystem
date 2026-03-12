@@ -6,6 +6,7 @@ import type { User } from './auth';
 export type SharedData = {
     name: string;
     user: User;
+    csrf_token: string;
     sidebarOpen: boolean;
     [key: string]: unknown;
 };

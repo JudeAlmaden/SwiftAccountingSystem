@@ -219,20 +219,17 @@ export default function GroupsTab({ initialGroups }: GroupsTabProps) {
                                             <>
                                                 <SelectItem value="Current Liabilities">Current Liabilities</SelectItem>
                                                 <SelectItem value="Non-Current Liabilities">Non-Current Liabilities</SelectItem>
-                                                <SelectItem value="Contingent Liabilities">Contingent Liabilities</SelectItem>
                                             </>
                                         )}
                                         {groupForm.account_type === 'Equity' && (
                                             <>
                                                 <SelectItem value="Capital">Capital</SelectItem>
                                                 <SelectItem value="Retained Earnings">Retained Earnings</SelectItem>
-                                                <SelectItem value="Contra Equity">Contra Equity</SelectItem>
                                             </>
                                         )}
                                         {groupForm.account_type === 'Revenue' && (
                                             <>
                                                 <SelectItem value="Operating Revenue">Operating Revenue</SelectItem>
-                                                <SelectItem value="Non-Operating Revenue">Non-Operating Revenue</SelectItem>
                                                 <SelectItem value="Contra Revenue">Contra Revenue</SelectItem>
                                             </>
                                         )}
@@ -240,8 +237,6 @@ export default function GroupsTab({ initialGroups }: GroupsTabProps) {
                                             <>
                                                 <SelectItem value="Operating Expenses">Operating Expenses</SelectItem>
                                                 <SelectItem value="Non-Operating Expenses">Non-Operating Expenses</SelectItem>
-                                                <SelectItem value="Cost of Goods Sold">Cost of Goods Sold</SelectItem>
-                                                <SelectItem value="Contra Expenses">Contra Expenses</SelectItem>
                                             </>
                                         )}
                                     </SelectContent>

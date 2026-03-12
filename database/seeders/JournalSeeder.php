@@ -22,9 +22,16 @@ class JournalSeeder extends Seeder
 
     public function run(): void
     {
+        // Disable foreign key checks to allow truncation
+        \Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        Journal::truncate();
+        JournalItem::truncate();
+        JournalTracking::truncate();
+        \Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
         $this->resolveDependencies();
         
-        if (!$this->assistant || !$this->head || !$this->admin) {
+        if (!$this->assistant || !$this->head || !$this->admin || !$this->cashAccount) {
              return;
         }
 
@@ -253,10 +260,12 @@ class JournalSeeder extends Seeder
 
     private function resolveDependencies(): void
     {
-        $this->cashAccount    = Account::where('account_code', '1001')->first();
-        $this->bankAccount    = Account::where('account_code', '1002')->first();
-        $this->rentExpense    = Account::where('account_code', '5001')->first();
-        $this->accountsPayable = Account::where('account_code', '2001')->first();
+        // Using codes from accounts.csv
+        $this->cashAccount     = Account::where('account_code', '1010-000')->first(); // CASH ON HAND
+        $this->bankAccount     = Account::where('account_code', '1010-004')->first(); // CASH IN BANK - AUB
+        $this->rentExpense     = Account::where('account_code', '5000-013')->first(); // SALARIES & WAGES (used as dummy expense)
+        $this->accountsPayable = Account::where('account_code', '2020-009')->first(); // ACCOUNTS PAYABLE - SUPPLIER
+        
         $this->assistant      = User::where('email', 'assistant@example.com')->first();
         $this->head           = User::where('email', 'head@example.com')->first();
         $this->admin          = User::where('email', 'admin@example.com')->first();
