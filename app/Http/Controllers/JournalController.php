@@ -28,6 +28,7 @@ class JournalController extends Controller
             'current_step' => 'nullable|integer|in:1,2,3,4',
             'sort_by'      => 'nullable|string|in:created_at,control_number,title,status,current_step',
             'sort_order'   => 'nullable|string|in:asc,desc',
+            'handling'     => 'nullable|string|in:me,others',
         ]);
 
         // Build the query
@@ -67,34 +68,41 @@ class JournalController extends Controller
             $query->where('current_step', $validated['current_step']);
         }
 
+        // Filter by Handling (Me vs Others)
+        if (!empty($validated['handling'])) {
+            $user = Auth::user();
+            if ($validated['handling'] === 'me') {
+                $query->pendingForUser($user);
+            } elseif ($validated['handling'] === 'others') {
+                $query->pendingForOthers($user);
+            }
+        }
+
         // Sorting
         $sortBy    = $validated['sort_by']    ?? 'created_at';
         $sortOrder = $validated['sort_order'] ?? 'desc';
         $query->orderBy($sortBy, $sortOrder);
 
         // Get paginated results
-        $journals = $query->paginate(10);
+        $journals = $query->paginate(15);
 
-        // Return JSON response with pagination data
-        return response()->json([
-            'data'          => $journals->items(),
-            'current_page'  => $journals->currentPage(),
-            'last_page'     => $journals->lastPage(),
-            'next_page_url' => $journals->nextPageUrl(),
-            'prev_page_url' => $journals->previousPageUrl(),
-            'total'         => $journals->total(),
-            'from'          => $journals->firstItem(),
-            'to'            => $journals->lastItem(),
-            'per_page'      => $journals->perPage(),
+        return \Inertia\Inertia::render('vouchers/index', [
+            'journals' => $journals,
+            'pending_count' => Journal::pendingForUser(Auth::user())->count(),
+            'filters' => $request->only(['search', 'date_from', 'date_to', 'status', 'type', 'sort_by', 'sort_order', 'handling'])
         ]);
     }
 
-    public function show($id)
+    public function show(Request $request, $id)
     {
         $journal = Journal::with(['items.account', 'tracking.handler', 'attachments'])->findOrFail($id);
+        
         $data = $journal->toArray();
         $data['step_flow'] = $journal->step_flow_for_api;
-        return response()->json(['journal' => $data]);
+
+        return \Inertia\Inertia::render('vouchers/view', [
+            'journal' => $data
+        ]);
     }
 
     public function store(Request $request)
@@ -202,7 +210,7 @@ class JournalController extends Controller
         ]);
 
         // Notify Accounting Head(s) — Step 2
-        $this->notifyUsersWithRole('accounting head', 'New Journal for Review', "A new journal ({$journal->control_number}) has been generated and requires your approval.", route('vouchers.view', ['id' => $journal->id]));
+        $this->notifyUsersWithRole('accounting head', 'New Journal for Review', "A new journal ({$journal->control_number}) has been generated and requires your approval.", route('vouchers.show', ['id' => $journal->id]));
 
         return response()->json($journal);
     }
@@ -230,20 +238,23 @@ class JournalController extends Controller
 
         $totalSteps = count($stepFlow);
 
-        // Final step: check_id required only for disbursement vouchers
+        // Final step: check_id required only for disbursement vouchers. Checkque id is only for disbursement vouchers.
         if ($currentStep === $totalSteps && $journal->type !== 'journal') {
             $request->validate(['check_id' => 'required|string|max:255']);
         }
 
+        // Tracking Role
         $trackingRole = $currentStep === 1 ? 'accounting assistant' : ($stepConfig['role'] ?? 'admin');
         $nextStep     = $currentStep + 1;
         $status       = $nextStep > $totalSteps ? 'approved' : $journal->status;
 
+        // Update Data
         $updateData = [
             'current_step' => min($nextStep, $totalSteps + 1),
             'status'       => $status,
         ];
 
+        // Check id
         if ($currentStep === $totalSteps && $request->has('check_id')) {
             $updateData['check_id'] = $request->check_id;
         }
@@ -272,7 +283,7 @@ class JournalController extends Controller
         if ($nextStep <= $totalSteps) {
             $nextRole = $stepFlow[$nextStep - 1]['role'] ?? null;
             if ($nextRole) {
-                $this->notifyUsersWithRole($nextRole, 'Review Required', "Journal {$journal->control_number} needs your approval.", route('vouchers.view', ['id' => $journal->id]));
+                $this->notifyUsersWithRole($nextRole, 'Review Required', "Journal {$journal->control_number} needs your approval.", route('vouchers.show', ['id' => $journal->id]));
             }
         } else {
             // Final Approval — notify everyone involved
@@ -286,7 +297,7 @@ class JournalController extends Controller
                     'user_id' => $involvedUserId,
                     'title'   => 'Journal Approved',
                     'message' => "Journal ({$journal->control_number}) has been fully approved.",
-                    'link'    => route('vouchers.view', ['id' => $journal->id])
+                    'link'    => route('vouchers.show', ['id' => $journal->id])
                 ]);
             }
         }

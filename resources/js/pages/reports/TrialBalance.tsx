@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { Printer } from 'lucide-react';
 import { useState, Fragment } from 'react';
 import { route } from 'ziggy-js';
@@ -10,14 +10,8 @@ import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Dashboard',
-        href: route('dashboard'),
-    },
-    {
-        title: 'Trial Balance',
-        href: route('trial-balance.index'),
-    },
+    { title: 'Dashboard', href: route('dashboard') },
+    { title: 'Trial Balance', href: route('trial-balance.index') },
 ];
 
 interface AccountData {
@@ -36,41 +30,46 @@ interface AccountData {
     };
 }
 
-export default function TrialBalance() {
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
-    const [data, setData] = useState<AccountData[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [hasSearched, setHasSearched] = useState(false);
+interface Props {
+    trialBalanceData: AccountData[];
+    filters: {
+        start_date: string;
+        end_date: string;
+    };
+}
 
-    const fetchData = async () => {
+export default function TrialBalance({ trialBalanceData, filters }: Props) {
+    const [startDate, setStartDate] = useState(filters.start_date);
+    const [endDate, setEndDate] = useState(filters.end_date);
+    const [loading, setLoading] = useState(false);
+
+    const data = trialBalanceData || [];
+
+    const fetchData = () => {
         if (!startDate || !endDate) {
             alert('Please select both start and end dates.');
             return;
         }
-
         setLoading(true);
-        try {
-            const url = new URL(route('api.trial-balance.data'));
-            url.searchParams.set('start_date', startDate);
-            url.searchParams.set('end_date', endDate);
+        router.get(route('trial-balance.index'), { start_date: startDate, end_date: endDate }, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            onFinish: () => setLoading(false),
+        });
+    };
 
-            const res = await fetch(url.toString(), {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                },
-            });
-            const result = await res.json();
-            setData(result.data);
-            setHasSearched(true);
-        } catch (error) {
-            console.error('Error fetching trial balance:', error);
-            alert('Failed to fetch data.');
-        } finally {
-            setLoading(false);
-        }
+    const handleResetFilter = () => {
+        const now = new Date();
+        const firstDay = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        setStartDate(firstDay);
+        setEndDate(today);
+        setLoading(true);
+        router.get(route('trial-balance.index'), { start_date: firstDay, end_date: today }, {
+            preserveState: true, preserveScroll: true, replace: true,
+            onFinish: () => setLoading(false),
+        });
     };
 
     const formatCurrency = (amount: number) => {
@@ -87,6 +86,7 @@ export default function TrialBalance() {
     const handlePrint = () => {
         window.print();
     };
+
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -148,11 +148,18 @@ export default function TrialBalance() {
                             />
                         </div>
                         <Button onClick={fetchData} disabled={loading || !startDate || !endDate}>
-                            {loading ? 'Generating...' : 'Generate Report'}
+                            {loading ? 'Filtering...' : 'Filter Report'}
                         </Button>
-                        <Button 
-                            onClick={handlePrint} 
-                            disabled={!hasSearched || data.length === 0}
+                        <Button
+                            onClick={handleResetFilter}
+                            disabled={loading}
+                            variant="outline"
+                        >
+                            Reset Filter
+                        </Button>
+                        <Button
+                            onClick={handlePrint}
+                            disabled={data.length === 0}
                             variant="outline"
                             className="gap-2"
                         >
@@ -161,7 +168,13 @@ export default function TrialBalance() {
                         </Button>
                     </div>
 
-                    {hasSearched && (
+                    {loading && (
+                        <div className="text-center py-8 text-muted-foreground">
+                            Loading trial balance data...
+                        </div>
+                    )}
+
+                    {data.length > 0 && (
                         <div id="trial-balance-print-area" className="rounded-sm border bg-card overflow-hidden">
                             <Table className="border-collapse border border-black">
                                 <TableHeader>
@@ -228,7 +241,7 @@ export default function TrialBalance() {
                                                             </TableCell>
                                                             <TableCell className="px-2 py-1 text-xs border border-black h-auto font-mono text-black align-top">
                                                                 <a
-                                                                    href={route('accounts.view', { id: item.id })}
+                                                                    href={route('accounts.show', { id: item.id })}
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
                                                                     className="hover:underline text-blue-800"
@@ -239,7 +252,7 @@ export default function TrialBalance() {
                                                             <TableCell className="px-2 py-1 text-xs border border-black h-auto text-black align-top">
                                                                 <div className="flex flex-col">
                                                                     <a
-                                                                        href={route('accounts.view', { id: item.id })}
+                                                                        href={route('accounts.show', { id: item.id })}
                                                                         target="_blank"
                                                                         rel="noopener noreferrer"
                                                                         className="font-medium uppercase hover:underline text-blue-800"

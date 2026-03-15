@@ -44,10 +44,10 @@ export function VoucherTemplateDisbursement({ disbursement, sheetSize = 'full' }
 
                 {/* Top Right Info - NO and DATE */}
                 <div
-                    className="flex justify-end mb-1"
-                    style={{ gap: '20px', fontSize: '11px' }}
+                    className="flex justify-between mb-1"
+                    style={{ fontSize: '11px' }}
                 >
-                    {/* Check No */}
+                    {/* Check No - Left side */}
                     <div style={{ display: 'flex', alignItems: 'baseline' }}>
                         <span className="font-bold" style={{ marginRight: '6px' }}>
                             Check No.
@@ -66,38 +66,41 @@ export function VoucherTemplateDisbursement({ disbursement, sheetSize = 'full' }
                         </span>
                     </div>
 
-                    {/* No */}
-                    <div style={{ display: 'flex', alignItems: 'baseline', minWidth: '140px' }}>
-                        <span className="font-bold" style={{ marginRight: '6px' }}>
-                            No.
-                        </span>
-                        <span
-                            style={{
-                                borderBottom: '1px dotted black',
-                                flex: 1,
-                                paddingBottom: '3px',
-                                minHeight: '16px',
-                            }}
-                        >
-                            {disbursement.control_number}
-                        </span>
-                    </div>
+                    {/* No and Date - Right side */}
+                    <div style={{ display: 'flex', gap: '20px' }}>
+                        {/* No */}
+                        <div style={{ display: 'flex', alignItems: 'baseline', minWidth: '140px' }}>
+                            <span className="font-bold" style={{ marginRight: '6px' }}>
+                                No.
+                            </span>
+                            <span
+                                style={{
+                                    borderBottom: '1px dotted black',
+                                    flex: 1,
+                                    paddingBottom: '3px',
+                                    minHeight: '16px',
+                                }}
+                            >
+                                {disbursement.control_number}
+                            </span>
+                        </div>
 
-                    {/* Date */}
-                    <div style={{ display: 'flex', alignItems: 'baseline', minWidth: '120px' }}>
-                        <span className="font-bold" style={{ marginRight: '6px' }}>
-                            Date
-                        </span>
-                        <span
-                            style={{
-                                borderBottom: '1px dotted black',
-                                flex: 1,
-                                paddingBottom: '3px',
-                                minHeight: '16px',
-                            }}
-                        >
-                            {formatDate(disbursement.created_at)}
-                        </span>
+                        {/* Date */}
+                        <div style={{ display: 'flex', alignItems: 'baseline', minWidth: '120px' }}>
+                            <span className="font-bold" style={{ marginRight: '6px' }}>
+                                Date
+                            </span>
+                            <span
+                                style={{
+                                    borderBottom: '1px dotted black',
+                                    flex: 1,
+                                    paddingBottom: '3px',
+                                    minHeight: '16px',
+                                }}
+                            >
+                                {formatDate(disbursement.created_at)}
+                            </span>
+                        </div>
                     </div>
                 </div>
 
@@ -189,15 +192,15 @@ export function VoucherTemplateDisbursement({ disbursement, sheetSize = 'full' }
                 </div>
 
                 {/* Explanation */}
-                <div style={{ padding: '8px', minHeight: '80px', fontSize: '10px', marginBottom: '16px', borderBottom: '2px solid black' }}>
-                    <div style={{ lineHeight: '1.4', display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
-                        <span style={{ fontWeight: 'bold', marginTop: '6px' }}>EXPLANATION:</span>
-                        <span style={{ marginTop: '6px' }}>{disbursement.description}</span>
+                <div style={{ padding: '2px 8px', minHeight: '40px', fontSize: '10px', marginBottom: '4px', borderBottom: '2px solid black' }}>
+                    <div style={{ lineHeight: '1.3', display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+                        <span style={{ fontWeight: 'bold', marginTop: '1px' }}>EXPLANATION:</span>
+                        <span style={{ marginTop: '1px' }}>{disbursement.description}</span>
                     </div>
                 </div>
 
                 {/* Footer Signature Lines */}
-                <div style={{ fontSize: '11px', marginTop: '20px' }}>
+                <div style={{ fontSize: sheetSize === 'half' ? '10px' : '11px', marginTop: '4px' }}>
                     {[
                         [
                             { label: 'PREPARED BY', step: 1 },
@@ -217,8 +220,8 @@ export function VoucherTemplateDisbursement({ disbursement, sheetSize = 'full' }
                             style={{
                                 display: 'grid',
                                 gridTemplateColumns: '1fr 1fr',
-                                gap: '40px',
-                                marginBottom: '16px',
+                                gap: sheetSize === 'half' ? '30px' : '40px',
+                                marginBottom: sheetSize === 'half' ? '12px' : '16px',
                             }}
                         >
                             {row.map(({ label, step }) => {
@@ -234,13 +237,13 @@ export function VoucherTemplateDisbursement({ disbursement, sheetSize = 'full' }
                                         key={label}
                                         style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}
                                     >
-                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: sheetSize === 'half' ? '6px' : '8px' }}>
                                             <p
                                                 style={{
                                                     fontWeight: 'bold',
                                                     color: '#1f2937',
                                                     whiteSpace: 'nowrap',
-                                                    minWidth: '100px'
+                                                    minWidth: sheetSize === 'half' ? '90px' : '100px'
                                                 }}
                                             >
                                                 {label}
@@ -252,11 +255,11 @@ export function VoucherTemplateDisbursement({ disbursement, sheetSize = 'full' }
                                                     display: 'flex',
                                                     justifyContent: 'center',
                                                     paddingBottom: '4px',
-                                                    minHeight: '20px',
+                                                    minHeight: sheetSize === 'half' ? '18px' : '20px',
                                                     alignItems: 'flex-end'
                                                 }}
                                             >
-                                                <span style={{ fontWeight: 'bold', fontSize: '11px', textTransform: 'uppercase', paddingBottom: '2px' }}>
+                                                <span style={{ fontWeight: 'bold', fontSize: sheetSize === 'half' ? '10px' : '11px', textTransform: 'uppercase', paddingBottom: '2px' }}>
                                                     {actorName}
                                                 </span>
                                             </div>

@@ -1,4 +1,4 @@
-import { usePage } from "@inertiajs/react";
+import { usePage, router } from "@inertiajs/react";
 import { Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { route } from "ziggy-js";
@@ -19,17 +19,16 @@ interface AccountGroup {
     accounts_count?: number;
 }
 
-export default function GroupsTab() {
-    // Get CSRF token
-    const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
-    const token = meta?.content || '';
+interface GroupsTabProps {
+    initialGroups: AccountGroup[];
+}
 
-    const { user } = usePage<SharedData>().props;
-    const permissions = user.permissions || [];
+export default function GroupsTab({ initialGroups }: GroupsTabProps) {
+    const { auth, user: propsUser } = usePage<any>().props;
+    const user = auth?.user || propsUser || {};
+    const permissions = user?.permissions || [];
     const canManageGroups = permissions.includes('create accounts');
 
-    const [groups, setGroups] = useState<AccountGroup[]>([]);
-    const [isLoadingGroups, setIsLoadingGroups] = useState(false);
     const [isGroupCreateOpen, setIsGroupCreateOpen] = useState(false);
     const [groupForm, setGroupForm] = useState<{
         id?: number;
@@ -46,60 +45,35 @@ export default function GroupsTab() {
     const [isCreatingGroup, setIsCreatingGroup] = useState(false);
     const [groupErrors, setGroupErrors] = useState<any>({});
 
-    const fetchGroups = () => {
-        setIsLoadingGroups(true);
-        fetch(route('account-groups.index') + '?all=true', {
-            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': token },
-        })
-            .then(res => res.json())
-            .then(data => {
-                setGroups(data.data || []);
-                setIsLoadingGroups(false);
-            })
-            .catch(err => {
-                console.error(err);
-                setIsLoadingGroups(false);
-            });
-    }
-
-    useEffect(() => {
-        fetchGroups();
-    }, []);
-
     const handleGroupSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setIsCreatingGroup(true);
         setGroupErrors({});
-        const url = (groupForm as any).id
-            ? route('account-groups.update', (groupForm as any).id)
-            : route('account-groups.store');
-        const method = (groupForm as any).id ? 'PUT' : 'POST';
 
-        fetch(url, {
-            method: method,
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': token,
-            },
-            body: JSON.stringify(groupForm),
-        })
-            .then(async res => {
-                const data = await res.json();
-                if (!res.ok) {
-                    if (res.status === 422) setGroupErrors(data.errors);
-                    else alert('Error saving group');
-                    throw new Error('Validation failed');
-                }
-                return data;
-            })
-            .then(() => {
-                setIsGroupCreateOpen(false);
-                setGroupForm({ name: '', grp_code: '', account_type: '', sub_account_type: '' });
-                fetchGroups();
-            })
-            .catch(() => { })
-            .finally(() => setIsCreatingGroup(false));
+        const isUpdate = !!groupForm.id;
+        const submitRoute = isUpdate
+            ? route('account-groups.update', groupForm.id!)
+            : route('account-groups.store');
+
+        if (isUpdate) {
+            router.put(submitRoute, groupForm, {
+                onSuccess: () => {
+                    setIsGroupCreateOpen(false);
+                    setGroupForm({ name: '', grp_code: '', account_type: '', sub_account_type: '' });
+                },
+                onError: (errors) => setGroupErrors(errors),
+                onFinish: () => setIsCreatingGroup(false)
+            });
+        } else {
+            router.post(submitRoute, groupForm, {
+                onSuccess: () => {
+                    setIsGroupCreateOpen(false);
+                    setGroupForm({ name: '', grp_code: '', account_type: '', sub_account_type: '' });
+                },
+                onError: (errors) => setGroupErrors(errors),
+                onFinish: () => setIsCreatingGroup(false)
+            });
+        }
     };
 
     const handleDeleteGroup = (group: AccountGroup) => {
@@ -110,22 +84,15 @@ export default function GroupsTab() {
         }
         if (!confirm('Are you sure you want to delete this group?')) return;
 
-        fetch(route('account-groups.destroy', group.id), {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': token,
-            },
-        })
-            .then(async res => {
-                if (res.ok) fetchGroups();
-                else {
-                    const data = await res.json();
-                    alert(data.message || 'Failed to delete group');
-                }
-            });
+        router.delete(route('account-groups.destroy', group.id), {
+            onError: (errors) => {
+                const firstError = Object.values(errors)[0];
+                alert(firstError || 'Failed to delete group');
+            }
+        });
     }
+
+    const groups = initialGroups;
 
     return (
         <div className="flex flex-col gap-4">
@@ -151,9 +118,7 @@ export default function GroupsTab() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {isLoadingGroups ? (
-                            <TableRow><TableCell colSpan={5} className="text-center p-4">Loading...</TableCell></TableRow>
-                        ) : groups.length === 0 ? (
+                        {groups.length === 0 ? (
                             <TableRow><TableCell colSpan={5} className="text-center p-4 text-muted-foreground">No groups found.</TableCell></TableRow>
                         ) : (
                             groups.map(group => (
@@ -254,20 +219,17 @@ export default function GroupsTab() {
                                             <>
                                                 <SelectItem value="Current Liabilities">Current Liabilities</SelectItem>
                                                 <SelectItem value="Non-Current Liabilities">Non-Current Liabilities</SelectItem>
-                                                <SelectItem value="Contingent Liabilities">Contingent Liabilities</SelectItem>
                                             </>
                                         )}
                                         {groupForm.account_type === 'Equity' && (
                                             <>
                                                 <SelectItem value="Capital">Capital</SelectItem>
                                                 <SelectItem value="Retained Earnings">Retained Earnings</SelectItem>
-                                                <SelectItem value="Contra Equity">Contra Equity</SelectItem>
                                             </>
                                         )}
                                         {groupForm.account_type === 'Revenue' && (
                                             <>
                                                 <SelectItem value="Operating Revenue">Operating Revenue</SelectItem>
-                                                <SelectItem value="Non-Operating Revenue">Non-Operating Revenue</SelectItem>
                                                 <SelectItem value="Contra Revenue">Contra Revenue</SelectItem>
                                             </>
                                         )}
@@ -275,8 +237,6 @@ export default function GroupsTab() {
                                             <>
                                                 <SelectItem value="Operating Expenses">Operating Expenses</SelectItem>
                                                 <SelectItem value="Non-Operating Expenses">Non-Operating Expenses</SelectItem>
-                                                <SelectItem value="Cost of Goods Sold">Cost of Goods Sold</SelectItem>
-                                                <SelectItem value="Contra Expenses">Contra Expenses</SelectItem>
                                             </>
                                         )}
                                     </SelectContent>

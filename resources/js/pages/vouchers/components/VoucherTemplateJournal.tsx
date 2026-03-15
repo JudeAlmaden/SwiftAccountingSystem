@@ -141,23 +141,23 @@ export function VoucherTemplateJournal({ journal, sheetSize = 'full' }: VoucherT
                 </div>
 
                 {/* Explanation */}
-                <div style={{ padding: '8px', minHeight: '80px', fontSize: '10px', marginBottom: '16px', borderBottom: '2px solid black' }}>
-                    <div style={{ lineHeight: '1.4', display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
-                        <span style={{ fontWeight: 'bold', marginTop: '6px' }}>EXPLANATION:</span>
-                        <span style={{ marginTop: '6px' }}>{journal.description}</span>
+                <div style={{ padding: '2px 8px', minHeight: '40px', fontSize: '10px', marginBottom: '4px', borderBottom: '2px solid black' }}>
+                    <div style={{ lineHeight: '1.3', display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+                        <span style={{ fontWeight: 'bold', marginTop: '1px' }}>EXPLANATION:</span>
+                        <span style={{ marginTop: '1px' }}>{journal.description}</span>
                     </div>
                 </div>
 
                 {/* Footer Signature Lines — no Paid/Received By */}
-                <div style={{ fontSize: '11px', marginTop: '20px' }}>
+                <div style={{ fontSize: sheetSize === 'half' ? '10px' : '11px', marginTop: '4px' }}>
                     {signatureRows.map((row, i) => (
                         <div
                             key={i}
                             style={{
                                 display: 'grid',
                                 gridTemplateColumns: '1fr 1fr',
-                                gap: '40px',
-                                marginBottom: '16px',
+                                gap: sheetSize === 'half' ? '30px' : '40px',
+                                marginBottom: sheetSize === 'half' ? '12px' : '16px',
                             }}
                         >
                             {row.map(({ label, step }) => {
@@ -166,12 +166,12 @@ export function VoucherTemplateJournal({ journal, sheetSize = 'full' }: VoucherT
 
                                 return (
                                     <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                            <p style={{ fontWeight: 'bold', color: '#1f2937', whiteSpace: 'nowrap', minWidth: '100px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: sheetSize === 'half' ? '6px' : '8px' }}>
+                                            <p style={{ fontWeight: 'bold', color: '#1f2937', whiteSpace: 'nowrap', minWidth: sheetSize === 'half' ? '90px' : '100px' }}>
                                                 {label}
                                             </p>
-                                            <div style={{ borderBottom: '1px dotted black', flex: 1, display: 'flex', justifyContent: 'center', paddingBottom: '4px', minHeight: '20px', alignItems: 'flex-end' }}>
-                                                <span style={{ fontWeight: 'bold', fontSize: '11px', textTransform: 'uppercase', paddingBottom: '2px' }}>
+                                            <div style={{ borderBottom: '1px dotted black', flex: 1, display: 'flex', justifyContent: 'center', paddingBottom: '4px', minHeight: sheetSize === 'half' ? '18px' : '20px', alignItems: 'flex-end' }}>
+                                                <span style={{ fontWeight: 'bold', fontSize: sheetSize === 'half' ? '10px' : '11px', textTransform: 'uppercase', paddingBottom: '2px' }}>
                                                     {actorName}
                                                 </span>
                                             </div>

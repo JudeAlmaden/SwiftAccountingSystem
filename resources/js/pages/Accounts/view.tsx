@@ -1,4 +1,4 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, usePage, router } from '@inertiajs/react';
 import { Search, ArrowLeft } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { route } from 'ziggy-js';
@@ -35,80 +35,49 @@ interface PaginatedJournals {
 }
 
 interface Props {
-    id: string;
+    account: Account & { journal_items_count: number };
+    journals: PaginatedJournals;
+    filters: { search?: string };
 }
 
-export default function AccountView({ id }: Props) {
-    const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
-    const token = meta?.content || '';
-
-    const [account, setAccount] = useState<Account | null>(null);
-    const [journals, setJournals] = useState<Journal[]>([]);
-    const [pagination, setPagination] = useState({
-        current_page: 1,
-        last_page: 1,
-        next_page_url: null as string | null,
-        prev_page_url: null as string | null,
-        total: 0,
-        from: 0,
-        to: 0,
-    });
-    const [isLoading, setIsLoading] = useState(true);
-    const [search, setSearch] = useState('');
-    const [searchQuery, setSearchQuery] = useState('');
+export default function AccountView({ account, journals, filters }: Props) {
+    const [search, setSearch] = useState(filters.search || '');
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: route('dashboard') },
-        { title: 'Chart of Accounts', href: route('accounts') },
+        { title: 'Chart of Accounts', href: route('accounts.index') },
         { title: account?.account_name || 'Account Details', href: '#' },
     ];
 
-    const fetchData = (url?: string | null) => {
-        setIsLoading(true);
-        const targetUrl = new URL(url || route('accounts.show', { id }));
-        if (searchQuery) {
-            targetUrl.searchParams.set('search', searchQuery);
-        }
+    const handleFilterChange = (newFilters: any) => {
+        const params = {
+            search,
+            ...newFilters
+        };
 
-        fetch(targetUrl.toString(), {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': token,
-            },
-        })
-            .then(res => res.json())
-            .then(data => {
-                setAccount(data.account);
-                setJournals(data.journals.data);
-                setPagination({
-                    current_page: data.journals.current_page,
-                    last_page: data.journals.last_page,
-                    next_page_url: data.journals.next_page_url,
-                    prev_page_url: data.journals.prev_page_url,
-                    total: data.journals.total,
-                    from: data.journals.from,
-                    to: data.journals.to,
-                });
-                setIsLoading(false);
-            })
-            .catch(err => {
-                console.error('Failed to fetch account', err);
-                setIsLoading(false);
-            });
+        // Remove empty filters
+        Object.keys(params).forEach(key => {
+            if (!params[key]) {
+                delete params[key];
+            }
+        });
+
+        router.get(route('accounts.show', { id: account.id }), params, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true
+        });
     };
 
+    // Debounce search
     useEffect(() => {
         const timeoutId = setTimeout(() => {
-            setSearchQuery(search);
+            if (search !== (filters.search || '')) {
+                handleFilterChange({ search });
+            }
         }, 500);
         return () => clearTimeout(timeoutId);
     }, [search]);
-
-    useEffect(() => {
-        fetchData();
-    }, [searchQuery]);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-PH', {
@@ -131,7 +100,7 @@ export default function AccountView({ id }: Props) {
             <div className="flex flex-col gap-6">
                 {/* Header */}
                 <div className="flex items-center gap-4">
-                    <Link href={route('accounts')}>
+                    <Link href={route('accounts.index')}>
                         <Button variant="outline" size="icon">
                             <ArrowLeft className="h-4 w-4" />
                         </Button>
@@ -205,24 +174,20 @@ export default function AccountView({ id }: Props) {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {isLoading ? (
-                                    <TableRow>
-                                        <TableCell colSpan={6} className="text-center h-24">Loading...</TableCell>
-                                    </TableRow>
-                                ) : journals.length === 0 ? (
+                                {journals.data.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
                                             No journals found.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    journals.map((journal) => {
+                                    journals.data.map((journal: any) => {
                                         const accountItem = journal.items?.[0];
                                         return (
                                             <TableRow key={journal.id} className="h-16">
                                                 <TableCell className="font-medium px-4">
                                                     <Link
-                                                        href={route('vouchers.view', { id: journal.id })}
+                                                        href={route('vouchers.show', { id: journal.id })}
                                                         className="text-primary hover:underline"
                                                     >
                                                         {journal.control_number}
@@ -264,24 +229,36 @@ export default function AccountView({ id }: Props) {
                     {/* Pagination */}
                     <div className="flex items-center justify-between">
                         <div className="text-sm text-muted-foreground">
-                            Showing {pagination.from} to {pagination.to} of {pagination.total} entries
+                            Showing {journals.from} to {journals.to} of {journals.total} entries
                         </div>
                         <div className="space-x-2">
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => fetchData(pagination.prev_page_url)}
-                                disabled={!pagination.prev_page_url}
+                                asChild
+                                disabled={!journals.prev_page_url}
                             >
-                                Previous
+                                <Link
+                                    href={journals.prev_page_url || '#'}
+                                    preserveState
+                                    preserveScroll
+                                >
+                                    Previous
+                                </Link>
                             </Button>
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => fetchData(pagination.next_page_url)}
-                                disabled={!pagination.next_page_url}
+                                asChild
+                                disabled={!journals.next_page_url}
                             >
-                                Next
+                                <Link
+                                    href={journals.next_page_url || '#'}
+                                    preserveState
+                                    preserveScroll
+                                >
+                                    Next
+                                </Link>
                             </Button>
                         </div>
                     </div>

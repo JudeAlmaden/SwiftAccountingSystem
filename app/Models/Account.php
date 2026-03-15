@@ -24,10 +24,10 @@ class Account extends Model
     {
         $subTypes = [
             'Assets' => ['Current Assets', 'Non-Current Assets', 'Contra Assets'],
-            'Liabilities' => ['Current Liabilities', 'Non-Current Liabilities', 'Contingent Liabilities'],
-            'Equity' => ['Capital', 'Retained Earnings', 'Contra Equity'],
-            'Revenue' => ['Operating Revenue', 'Non-Operating Revenue', 'Contra Revenue'],
-            'Expenses' => ['Operating Expenses', 'Non-Operating Expenses', 'Cost of Goods Sold', 'Contra Expenses'],
+            'Liabilities' => ['Current Liabilities', 'Non-Current Liabilities'],
+            'Equity' => ['Capital', 'Retained Earnings'],
+            'Revenue' => ['Operating Revenue', 'Contra Revenue'],
+            'Expenses' => ['Operating Expenses', 'Non-Operating Expenses'],
         ];
 
         return $subTypes[$accountType] ?? [];
@@ -40,10 +40,10 @@ class Account extends Model
     {
         return [
             'Assets' => ['Current Assets', 'Non-Current Assets', 'Contra Assets'],
-            'Liabilities' => ['Current Liabilities', 'Non-Current Liabilities', 'Contingent Liabilities'],
-            'Equity' => ['Capital', 'Retained Earnings', 'Contra Equity'],
-            'Revenue' => ['Operating Revenue', 'Non-Operating Revenue', 'Contra Revenue'],
-            'Expenses' => ['Operating Expenses', 'Non-Operating Expenses', 'Cost of Goods Sold', 'Contra Expenses'],
+            'Liabilities' => ['Current Liabilities', 'Non-Current Liabilities'],
+            'Equity' => ['Capital', 'Retained Earnings'],
+            'Revenue' => ['Operating Revenue', 'Contra Revenue'],
+            'Expenses' => ['Operating Expenses', 'Non-Operating Expenses'],
         ];
     }
 

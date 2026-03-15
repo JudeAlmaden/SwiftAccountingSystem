@@ -7,6 +7,16 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AuditTrailController;
 use App\Http\Controllers\FileController;
+use App\Http\Controllers\JournalController;
+use App\Http\Controllers\AccountsController;
+use App\Http\Controllers\AccountGroupController;
+use App\Http\Controllers\AccountReportController;
+use App\Http\Controllers\BalanceSheetController;
+use App\Http\Controllers\IncomeEntryController;
+use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\ControlNumberPrefixController;
+use App\Http\Controllers\JournalReportController;
+use App\Http\Controllers\TrialBalanceController;
 
 // Login view for unauthenticated users
 Route::get('/', function () {
@@ -19,83 +29,78 @@ Route::get('/', function () {
 // Authenticated Routes
 Route::middleware(['auth', 'verified'])->group(function () {
     
-    // Dashboard
+    // Dashboard & Core
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::inertia('dashboard/inbox', 'inbox')->name('inbox');
 
-    // Inbox
-    Route::get('dashboard/inbox', function(){
-        return Inertia::render('inbox');
-    })->name('inbox');
-
-    // Create Voucher (Requires create journals permission)
-    Route::middleware(['can:create journals'])->group(function () {
-        Route::get('dashboard/vouchers/generate', function(){
-            return Inertia::render('vouchers/generate');
-        })->name('vouchers.generate');
+    // Reports & Statistics
+    Route::middleware(['role:accounting head|accounting assistant|auditor|SVP'])->group(function () {
+        Route::get('dashboard/vouchers/statistics', [JournalReportController::class, 'index'])->name('vouchers.statistics');
+        Route::get('dashboard/chart-of-accounts/reports', [AccountReportController::class, 'index'])->name('accounts.reports');
     });
 
-    // Control number prefixes (accounting head or permission)
-    Route::middleware(['role_or_permission:accounting head|manage control number prefixes'])->group(function () {
-        Route::get('/dashboard/control-number-prefixes', function () {
-            return Inertia::render('control-number-prefixes/index');
-        })->name('control-number-prefixes.index');
+    Route::middleware(['role:accounting head|auditor'])->group(function () {
+        Route::get('dashboard/financial-statements/trial-balance', [TrialBalanceController::class, 'index'])->name('trial-balance.index');
     });
 
-    // View Vouchers (Requires view journals permission)
-    Route::middleware(['can:view journals'])->group(function () {
-        Route::get('/dashboard/vouchers', function(){
-            return Inertia::render('vouchers/index');
-        })->name('vouchers');
-
-        Route::get('dashboard/vouchers/{id}', function($id){
-            return Inertia::render('vouchers/view', ['id' => $id]);
-        })->name('vouchers.view');
-
-        Route::get('/dashboard/reports/journals', function () {
-            return Inertia::render('reports/journal');
-        })->name('reports.journals');
+    // Vouchers (Journals)
+    Route::middleware(['role:accounting head|accounting assistant'])->group(function () {
+        Route::inertia('dashboard/vouchers/create', 'vouchers/generate')->name('vouchers.create');
+        Route::post('dashboard/vouchers', [JournalController::class, 'store'])->name('journals.store');
+        Route::delete('dashboard/vouchers/{id}', [JournalController::class, 'destroy'])->name('journals.destroy');
     });
 
-    // Account Reports (Requires view accounts permission)
-    Route::middleware(['can:view accounts'])->group(function () {
-        Route::get('/dashboard/reports/accounts', function () {
-            return Inertia::render('reports/accounts');
-        })->name('reports.accounts');
+    Route::middleware(['role:accounting head|accounting assistant|auditor|SVP'])->group(function () {
+        Route::get('dashboard/vouchers', [JournalController::class, 'index'])->name('vouchers.index');
+        Route::get('dashboard/vouchers/{id}', [JournalController::class, 'show'])->name('vouchers.show')->whereNumber('id');
     });
 
-
-    // Create/Edit/View Users (Requires view users permission at least, page handles nuances?)
-    // Based on sidebar, this is "Users and Accounts"
-    Route::middleware(['can:view users'])->group(function () {
-        Route::get('/dashboard/accounts', [UserController::class, 'indexPage'])->name('users');
+    // Accounts & Management
+    Route::middleware(['role:accounting head|accounting assistant|auditor|SVP'])->group(function () {
+        Route::get('dashboard/chart-of-accounts', [AccountsController::class, 'index'])->name('accounts.index');
+        Route::get('dashboard/chart-of-accounts/{id}', [AccountsController::class, 'show'])->name('accounts.show')->whereNumber('id');
     });
 
-    // Chart of Accounts (Requires view accounts permission)
-    Route::middleware(['can:view accounts'])->group(function () {
-        Route::get('/dashboard/chart-of-accounts',function(){
-            return Inertia::render('Accounts/accounts');
-        })->name('accounts');
+    Route::middleware(['role:accounting head'])->group(function () {
+        Route::post('dashboard/chart-of-accounts', [AccountsController::class, 'store'])->name('accounts.store');
+        Route::delete('dashboard/chart-of-accounts/{account}', [AccountsController::class, 'destroy'])->name('accounts.destroy');
+        Route::post('dashboard/chart-of-accounts/{id}/toggle-status', [AccountsController::class, 'toggleStatus'])->name('accounts.toggleStatus');
         
-        Route::get('/dashboard/chart-of-accounts/{id}', function($id){
-            return Inertia::render('Accounts/view', ['id' => $id]);
-        })->name('accounts.view');
+        Route::post('dashboard/account-groups', [AccountGroupController::class, 'store'])->name('account-groups.store');
+        Route::put('dashboard/account-groups/{id}', [AccountGroupController::class, 'update'])->name('account-groups.update');
+        Route::delete('dashboard/account-groups/{id}', [AccountGroupController::class, 'destroy'])->name('account-groups.destroy');
     });
 
-
-    // Audit Trails (auditor / admin)
-    Route::middleware(['can:view audit trails'])->group(function () {
-        Route::get('/dashboard/audit-trails', [AuditTrailController::class, 'indexPage'])->name('audit-trails.index');
+    // Accounting Entries & Statements
+    Route::middleware(['role:accounting head|auditor'])->group(function () {
+        Route::get('dashboard/income-entry', [IncomeEntryController::class, 'index'])->name('income-entry.index');
+        Route::get('dashboard/balance-sheet', [BalanceSheetController::class, 'index'])->name('balance-sheet.index');
     });
 
-    // Attachments
-    Route::get('/attachments/download/{id}', [FileController::class, 'download'])->name('attachments.download');
-
-    // Trial Balance (Requires create trial balance permission)
-    Route::middleware(['can:create trial balance'])->group(function () {
-        Route::get('/dashboard/reports/trial-balance', function(){
-            return Inertia::render('reports/TrialBalance');
-        })->name('trial-balance.index');
+    // Administration
+    Route::middleware(['role:admin'])->group(function () {
+        Route::get('dashboard/accounts', [UserController::class, 'index'])->name('users.index');
     });
+
+    Route::middleware(['role:accounting head'])->group(function () {
+        Route::get('dashboard/control-number-prefixes', [ControlNumberPrefixController::class, 'index'])->name('control-number-prefixes.index');
+        Route::post('dashboard/control-number-prefixes', [ControlNumberPrefixController::class, 'store'])->name('api.control-number-prefixes.store');
+        Route::put('dashboard/control-number-prefixes/{controlNumberPrefix}', [ControlNumberPrefixController::class, 'update'])->name('api.control-number-prefixes.update');
+        Route::delete('dashboard/control-number-prefixes/{controlNumberPrefix}', [ControlNumberPrefixController::class, 'destroy'])->name('api.control-number-prefixes.destroy');
+    });
+
+    // Audit & System
+    Route::middleware(['role:admin|auditor'])->group(function () {
+        Route::get('dashboard/audit-trails', [AuditTrailController::class, 'index'])->name('audit-trails.index');
+    });
+
+    Route::get('attachments/download/{id}', [FileController::class, 'download'])->name('attachments.download');
+
+    // Hidden inventory module
+    Route::get('dashboard/inventory', [InventoryController::class, 'index'])->name('inventory.index');
+    Route::post('dashboard/inventory', [InventoryController::class, 'store'])->name('inventory.store');
+    Route::put('dashboard/inventory/{inventoryItem}', [InventoryController::class, 'update'])->name('inventory.update');
+    Route::post('dashboard/inventory/{inventoryItem}/adjustments', [InventoryController::class, 'storeAdjustment'])->name('inventory.adjustments.store');
 });
 
 require __DIR__.'/settings.php';

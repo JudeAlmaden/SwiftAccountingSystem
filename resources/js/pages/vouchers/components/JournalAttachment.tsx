@@ -39,7 +39,7 @@ export function JournalAttachment({ onFilesChange, attachments = [], mode = 'gen
         formData.append('file', file);
 
         try {
-            const response = await fetch('/attachments/upload-temp', {
+            const response = await fetch('/api/attachments/upload-temp', {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': token,
@@ -137,7 +137,7 @@ export function JournalAttachment({ onFilesChange, attachments = [], mode = 'gen
         // If it was already uploaded, notify server to revert
         if (target.status === 'completed' && target.tempId) {
             try {
-                await fetch('/attachments/revert-temp', {
+                await fetch('/api/attachments/revert-temp', {
                     method: 'DELETE',
                     headers: {
                         'X-CSRF-TOKEN': token,

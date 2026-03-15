@@ -1,0 +1,27 @@
+name,grp_code,account_type,sub_account_type
+CASH AND CASH EQUIVALENTS,1010,Assets,Current Assets
+TRADE & OTHER RECEIVABLES,1020,Assets,Current Assets
+ALLOW. FOR DOUBTFUL ACCOUNTS,1030,Assets,Contra Assets
+ADVANCES TO,1040,Assets,Current Assets
+PREPAYMENTS & OTHER CURRENT ASSETS,1050,Assets,Current Assets
+PREPAYMENTS & OTHER CURRENT ASSETS,1060,Assets,Current Assets
+INVENTORIES,1070,Assets,Current Assets
+DEPRECIABLE - PPE,1100,Assets,Non-Current Assets
+ACCUMULATED DEPRECIATION,1110,Assets,Contra Assets
+TAXES PAYABLE,2000,Liabilities,Current Liabilities
+OTHER PAYABLE,2010,Liabilities,Current Liabilities
+ACCTS PAYABLE TO AFFILIATES (AGC),2020,Liabilities,Current Liabilities
+ACCRUED EXPENSES,2030,Liabilities,Current Liabilities
+OTHER NON-CURRENT LIABILITIES,2040,Liabilities,Non-Current Liabilities
+CAPITAL STOCK,3000,Equity,Capital
+OPERATING INCOME,4000,Revenue,Operating Revenue
+DISCOUNT,4100,Revenue,Contra Revenue
+SALARIES & EMPLOYEE BENEFITS,5000,Expenses,Operating Expenses
+DEPRECIATION & AMORTIZATION,5010,Expenses,Operating Expenses
+REPAIRS & MAINTENANCE,5020,Expenses,Operating Expenses
+UTILITIES EXPENSE,5030,Expenses,Operating Expenses
+PROFESSIONAL FEES,5040,Expenses,Operating Expenses
+TAXES & LICENSES,5050,Expenses,Operating Expenses
+MARKETING EXPENSE,5060,Expenses,Operating Expenses
+FINANCE CHARGES,5070,Expenses,Non-Operating Expenses
+MISCELLANEOUS EXPENSE,6040,Expenses,Non-Operating Expenses

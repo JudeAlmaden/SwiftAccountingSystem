@@ -85,11 +85,12 @@ class RolesSeeder extends Seeder
             'view audit trails',
         ]);
 
-        // Accounting Assistant: Create/View Journals, View Accounts
+        // Accounting Assistant: Create/View Journals, View Accounts, Approve (for final step)
         $accountingAssistant->givePermissionTo([
             'view accounts',
             'view journals',
             'create journals',
+            'approve journals',
             'release journals'
         ]);
 

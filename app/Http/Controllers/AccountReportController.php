@@ -15,7 +15,7 @@ class AccountReportController extends Controller
      * Optional period and date range to scope usage and amounts.
      * Requires "view accounts" permission.
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request)
     {
         $validated = $request->validate([
             'period'    => 'nullable|string|in:daily,monthly,yearly',
@@ -76,7 +76,7 @@ class AccountReportController extends Controller
                 ];
             });
 
-        return response()->json([
+        $responseData = [
             'period'    => $period,
             'date_from' => $dateFrom,
             'date_to'   => $dateTo,
@@ -87,6 +87,16 @@ class AccountReportController extends Controller
                 'by_type'  => $byType,
             ],
             'accounts_with_usage' => $accountsWithUsage,
+        ];
+
+        if ($request->wantsJson()) {
+            return response()->json($responseData);
+        }
+
+        return \Inertia\Inertia::render('reports/accounts', [
+            'data' => $responseData,
+            'filters' => $request->only(['period', 'date_from', 'date_to'])
         ]);
+
     }
 }

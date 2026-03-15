@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Notification;
+use App\Models\Journal;
 use Illuminate\Support\Facades\Auth;
 
 class NotificationController extends Controller
@@ -16,8 +17,21 @@ class NotificationController extends Controller
             
         return response()->json([
             'notifications' => $notifications,
-            'unread_count' => Notification::where('user_id', Auth::id())->where('is_read', false)->count()
+            ...self::getSidebarCounts(Auth::user())
         ]);
+    }
+
+    /**
+     * Get all sidebar notification counts for a user.
+     */
+    public static function getSidebarCounts($user): array
+    {
+        if (!$user) return [];
+        
+        return [
+            'unread_notifications_count' => Notification::where('user_id', $user->id)->where('is_read', false)->count(),
+            'pending_vouchers_count' => Journal::pendingForUser($user)->count(),
+        ];
     }
 
     public function markAsRead($id)

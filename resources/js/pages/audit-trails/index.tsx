@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { Search, ClipboardList } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { route } from 'ziggy-js';
@@ -11,6 +11,7 @@ import {
     Select,
     SelectContent,
     SelectItem,
+
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
@@ -48,82 +49,93 @@ interface AuditTrailRecord {
     user?: AuditTrailUser | null;
 }
 
-export default function AuditTrailsIndex() {
-    const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
-    const token = meta?.content || '';
+interface PaginatedAuditTrails {
+    data: AuditTrailRecord[];
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    from: number;
+    to: number;
+    next_page_url: string | null;
+    prev_page_url: string | null;
+}
 
-    const [records, setRecords] = useState<AuditTrailRecord[]>([]);
-    const [pagination, setPagination] = useState({
-        current_page: 1,
-        last_page: 1,
-        per_page: 15,
-        total: 0,
-        from: 0,
-        to: 0,
-        next_page_url: null as string | null,
-        prev_page_url: null as string | null,
-    });
-    const [isLoading, setIsLoading] = useState(true);
-    const [eventTypes, setEventTypes] = useState<string[]>([]);
-    const [users, setUsers] = useState<AuditTrailUser[]>([]);
+interface Props {
+    trails: PaginatedAuditTrails;
+    filtersOptions: {
+        event_types: string[];
+        users: AuditTrailUser[];
+    };
+    filters: {
+        search?: string;
+        event_type?: string;
+        user_id?: string;
+        date_from?: string;
+        date_to?: string;
+    };
+}
 
-    const [search, setSearch] = useState('');
-    const [searchQuery, setSearchQuery] = useState('');
-    const [eventTypeFilter, setEventTypeFilter] = useState<string>('all');
-    const [userIdFilter, setUserIdFilter] = useState<string>('all');
-    const [dateFrom, setDateFrom] = useState('');
-    const [dateTo, setDateTo] = useState('');
+export default function AuditTrailsIndex({ trails, filtersOptions, filters }: Props) {
+    const { event_types: eventTypes, users } = filtersOptions;
 
-    const fetchFilters = () => {
-        fetch(route('audit-trails.filters'), {
-            headers: { Accept: 'application/json', 'X-CSRF-TOKEN': token },
-        })
-            .then(res => res.json())
-            .then(data => {
-                setEventTypes(data.event_types || []);
-                setUsers(data.users || []);
-            })
-            .catch(() => {});
+
+    const [search, setSearch] = useState(filters.search || '');
+    const [eventTypeFilter, setEventTypeFilter] = useState<string>(filters.event_type || 'all');
+    const [userIdFilter, setUserIdFilter] = useState<string>(filters.user_id || 'all');
+    const [dateFrom, setDateFrom] = useState(filters.date_from || '');
+    const [dateTo, setDateTo] = useState(filters.date_to || '');
+
+    const handleFilterChange = (newFilters: any) => {
+        const params: Record<string, string> = {
+            search,
+            event_type: eventTypeFilter,
+            user_id: userIdFilter,
+            date_from: dateFrom,
+            date_to: dateTo,
+            ...newFilters
+        };
+
+        // Clean up empty params & 'all' defaults
+        Object.keys(params).forEach(key => {
+            if (!params[key] || params[key] === 'all') {
+                delete params[key];
+            }
+        });
+
+        router.get(route('audit-trails.index'), params, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true
+        });
     };
 
-    const fetchData = (url?: string | null) => {
-        setIsLoading(true);
-        const targetUrl = new URL(url || route('audit-trails.data'));
-        if (searchQuery) targetUrl.searchParams.set('search', searchQuery);
-        if (eventTypeFilter && eventTypeFilter !== 'all') targetUrl.searchParams.set('event_type', eventTypeFilter);
-        if (userIdFilter && userIdFilter !== 'all') targetUrl.searchParams.set('user_id', userIdFilter);
-        if (dateFrom) targetUrl.searchParams.set('date_from', dateFrom);
-        if (dateTo) targetUrl.searchParams.set('date_to', dateTo);
-
-        fetch(targetUrl.toString(), {
-            headers: { Accept: 'application/json', 'X-CSRF-TOKEN': token },
-        })
-            .then(res => res.json())
-            .then(data => {
-                setRecords(data.data || []);
-                setPagination({
-                    current_page: data.current_page,
-                    last_page: data.last_page,
-                    per_page: data.per_page,
-                    total: data.total,
-                    from: data.from,
-                    to: data.to,
-                    next_page_url: data.next_page_url,
-                    prev_page_url: data.prev_page_url,
-                });
-            })
-            .catch(() => setRecords([]))
-            .finally(() => setIsLoading(false));
-    };
-
-    useEffect(() => { fetchFilters(); }, []);
+    // Debounce search
     useEffect(() => {
-        const t = setTimeout(() => setSearchQuery(search), 400);
-        return () => clearTimeout(t);
+        const timeoutId = setTimeout(() => {
+            if (search !== (filters.search || '')) {
+                handleFilterChange({ search });
+            }
+        }, 500);
+        return () => clearTimeout(timeoutId);
     }, [search]);
+
+    // Handle other filters immediately
     useEffect(() => {
-        fetchData();
-    }, [searchQuery, eventTypeFilter, userIdFilter, dateFrom, dateTo]);
+        if (
+            eventTypeFilter !== (filters.event_type || 'all') ||
+            userIdFilter !== (filters.user_id || 'all') ||
+            dateFrom !== (filters.date_from || '') ||
+            dateTo !== (filters.date_to || '')
+        ) {
+            handleFilterChange({
+                event_type: eventTypeFilter,
+                user_id: userIdFilter,
+                date_from: dateFrom,
+                date_to: dateTo
+            });
+        }
+    }, [eventTypeFilter, userIdFilter, dateFrom, dateTo]);
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleString('en-US', {
@@ -220,13 +232,11 @@ export default function AuditTrailsIndex() {
                     <CardHeader className="pb-3">
                         <CardTitle className="text-base">Events</CardTitle>
                         <CardDescription>
-                            {pagination.total} event(s) — showing {pagination.from || 0} to {pagination.to || 0}
+                            {trails.total} event(s) — showing {trails.from || 0} to {trails.to || 0}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {isLoading ? (
-                            <div className="py-12 text-center text-muted-foreground">Loading...</div>
-                        ) : records.length === 0 ? (
+                        {trails.data.length === 0 ? (
                             <div className="py-12 text-center text-muted-foreground">No audit events found.</div>
                         ) : (
                             <div className="rounded-md border overflow-x-auto">
@@ -240,7 +250,7 @@ export default function AuditTrailsIndex() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {records.map(row => (
+                                        {trails.data.map(row => (
                                             <TableRow key={row.id}>
                                                 <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
                                                     {formatDate(row.created_at)}
@@ -260,25 +270,33 @@ export default function AuditTrailsIndex() {
                                 </Table>
                             </div>
                         )}
-                        {pagination.last_page > 1 && (
+                        {trails.last_page > 1 && (
                             <div className="flex items-center justify-between mt-4">
                                 <p className="text-sm text-muted-foreground">
-                                    Page {pagination.current_page} of {pagination.last_page}
+                                    Page {trails.current_page} of {trails.last_page}
                                 </p>
                                 <div className="flex gap-2">
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        disabled={!pagination.prev_page_url || isLoading}
-                                        onClick={() => fetchData(pagination.prev_page_url)}
+                                        disabled={!trails.prev_page_url}
+                                        onClick={() => {
+                                            if (trails.prev_page_url) {
+                                                router.get(trails.prev_page_url, {}, { preserveScroll: true, preserveState: true });
+                                            }
+                                        }}
                                     >
                                         Previous
                                     </Button>
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        disabled={!pagination.next_page_url || isLoading}
-                                        onClick={() => fetchData(pagination.next_page_url)}
+                                        disabled={!trails.next_page_url}
+                                        onClick={() => {
+                                            if (trails.next_page_url) {
+                                                router.get(trails.next_page_url, {}, { preserveScroll: true, preserveState: true });
+                                            }
+                                        }}
                                     >
                                         Next
                                     </Button>

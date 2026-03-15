@@ -1,4 +1,4 @@
-import { Head, usePage } from '@inertiajs/react';
+import { Head, usePage, router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { route } from 'ziggy-js';
 import { StatusIndicator } from '@/components/status-indicator';
@@ -9,14 +9,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
-import type { User, Role, Permission } from '@/types/database';
+import type { User, Role } from '@/types/database';
 
 interface SharedData {
     auth: {
         user: User;
     };
     roles: Role[];
-    permissions: Permission[];
+    filters?: {
+        search?: string;
+        role?: string;
+        email?: string;
+        status?: string;
+    };
+    stats: any;
+    specialUsers: any;
+    initialUsers: any;
     [key: string]: any;
 }
 import { Shield, Briefcase, FileText, Search } from 'lucide-react';
@@ -37,51 +45,28 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 export default function Users() {
 
-    const { user: currentUser, roles, permissions, stats: initialStats, specialUsers: initialSpecialUsers, initialUsers } = usePage<SharedData>().props;
+    const { user: currentUser, roles, stats, specialUsers, initialUsers: paginatedUsers, filters = {} } = usePage<SharedData>().props;
 
     const userRoles = currentUser?.roles || [];
-    const userPermissions = currentUser?.permissions || [];
-    
     const isAdmin = userRoles.includes('admin');
-    const canCreateUsers = isAdmin || userPermissions.includes('create users');
-    const canEditUsers = isAdmin || userPermissions.includes('edit users');
+    const canCreateUsers = isAdmin;
+    const canEditUsers = isAdmin;
 
-   
-    const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
-    const token = meta?.content || '';
+    const users: User[] = paginatedUsers?.data || [];
+    const pagination = {
+        current_page: paginatedUsers?.current_page || 1,
+        last_page: paginatedUsers?.last_page || 1,
+        next_page_url: paginatedUsers?.next_page_url || null,
+        prev_page_url: paginatedUsers?.prev_page_url || null,
+        total: paginatedUsers?.total || 0,
+        from: paginatedUsers?.from || 0,
+        to: paginatedUsers?.to || 0,
+    };
 
-    const [users, setUsers] = useState<User[]>(initialUsers?.data || []);
-    const [pagination, setPagination] = useState({
-        current_page: initialUsers?.current_page || 1,
-        last_page: initialUsers?.last_page || 1,
-        next_page_url: initialUsers?.next_page_url || null,
-        prev_page_url: initialUsers?.prev_page_url || null,
-        total: initialUsers?.total || 0,
-        from: initialUsers?.from || 0,
-        to: initialUsers?.to || 0,
-    });
-    const [stats, setStats] = useState({
-        total_users: initialStats?.total_users ?? 0,
-        active_users: initialStats?.active_users ?? 0,
-        inactive_users: initialStats?.inactive_users ?? 0,
-        admin_users: initialStats?.admin_users ?? 0,
-    });
+    const [search, setSearch] = useState(filters.search || '');
+    const [isLoading, setIsLoading] = useState(false);
 
-    const [specialUsers, setSpecialUsers] = useState<{
-        accounting_head: User[];
-        svp: User[];
-        auditor: User[];
-    }>({
-        accounting_head: initialSpecialUsers?.accounting_head ?? [],
-        svp: initialSpecialUsers?.svp ?? [],
-        auditor: initialSpecialUsers?.auditor ?? [],
-    });
-
-    const [search, setSearch] = useState('');
-    const [searchQuery, setSearchQuery] = useState('');
-    const [isLoading, setIsLoading] = useState(true);
-
-    const [isAppModalOpen, setAppModalOpen] = useState(false); 
+    const [isAppModalOpen, setAppModalOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [currentUserId, setCurrentUserId] = useState<number | null>(null);
@@ -95,71 +80,24 @@ export default function Users() {
         status: 'active',
         password: '',
         password_confirmation: '',
-        permissions: [] as string[],
     });
     const [formErrors, setFormErrors] = useState<any>({});
-
-    const fetchUsers = (url?: string | null) => {
-        setIsLoading(true);
-        const headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': token,
-        };
-
-        const targetUrl = new URL(url || route('users.index'));
-        if (searchQuery) {
-            targetUrl.searchParams.set('search', searchQuery);
-        }
-
-        Promise.all([
-            fetch(targetUrl.toString(), { headers }).then(res => res.json()),
-            fetch(route('users.stats'), { headers }).then(res => res.json())
-        ]).then(([usersData, statsData]) => {
-            // Handle Paginated Response
-            setUsers(usersData.data || []);
-            setPagination({
-                current_page: usersData.current_page,
-                last_page: usersData.last_page,
-                next_page_url: usersData.next_page_url,
-                prev_page_url: usersData.prev_page_url,
-                total: usersData.total,
-                from: usersData.from,
-                to: usersData.to,
-            });
-
-            // Handle Stats & Special Users
-            setStats(statsData);
-            setSpecialUsers({
-                accounting_head: statsData.special_users.accounting_head || [],
-                svp: statsData.special_users.svp || [],
-                auditor: statsData.special_users.auditor || [],
-            });
-            setIsLoading(false);
-        }).catch(error => {
-            console.error('Failed to fetch data:', error);
-            setIsLoading(false);
-        });
-    };
 
     // Debounce Search
     useEffect(() => {
         const timeoutId = setTimeout(() => {
-            setSearchQuery(search);
+            if (search !== (filters.search || '')) {
+                setIsLoading(true);
+                router.get(route('users.index'), { ...filters, search }, {
+                    preserveState: true,
+                    preserveScroll: true,
+                    replace: true,
+                    onFinish: () => setIsLoading(false)
+                });
+            }
         }, 500);
         return () => clearTimeout(timeoutId);
     }, [search]);
-
-    // Fetch on Search or initial load
-    useEffect(() => {
-        // Only fetch if there's a search query, otherwise use initial data
-        if (searchQuery) {
-            fetchUsers();
-        } else {
-            // Use initial load, just set loading to false
-            setIsLoading(false);
-        }
-    }, [searchQuery]);
 
 
     const openCreateModal = () => {
@@ -174,7 +112,6 @@ export default function Users() {
             status: 'active',
             password: '',
             password_confirmation: '',
-            permissions: [],
         });
         setFormErrors({});
         setAppModalOpen(true);
@@ -184,7 +121,6 @@ export default function Users() {
         setIsEditing(true);
         setCurrentUserId(user.id);
         const userRole = user.roles && user.roles.length > 0 ? user.roles[0].name : '';
-        const userPermissions = user.permissions ? user.permissions.map(p => p.name) : [];
 
         setUserForm({
             id: user.id,
@@ -195,7 +131,6 @@ export default function Users() {
             status: user.status,
             password: '',
             password_confirmation: '',
-            permissions: userPermissions,
         });
         setFormErrors({});
         setAppModalOpen(true);
@@ -206,43 +141,22 @@ export default function Users() {
         setIsSaving(true);
         setFormErrors({});
 
-        //Url changes for update and store
         const url = isEditing && currentUserId
             ? route('users.update', currentUserId)
             : route('users.store');
 
-        //Method changes for update and store
-        const method = isEditing ? 'PUT' : 'POST';
+        const method = isEditing ? 'put' : 'post';
 
-        //Fetch for update and store
-        fetch(url, {
-            method: method,
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': token,
-            },
-            body: JSON.stringify(userForm),
-        })
-            .then(async res => {
-                const data = await res.json();
-                if (!res.ok) {
-                    if (res.status === 422) {
-                        setFormErrors(data.errors || {});
-                    } else {
-                        alert(data.message || 'An error occurred.');
-                    }
-                    throw new Error('Validation failed');
-                }
-                console.log(data);
-                return data;
-            })
-            .then(() => {
+        router[method](url, userForm, {
+            preserveScroll: true,
+            onSuccess: () => {
                 setAppModalOpen(false);
-                fetchUsers();
-            })
-            .catch(err => console.error(err))
-            .finally(() => setIsSaving(false));
+            },
+            onError: (errors) => {
+                setFormErrors(errors);
+            },
+            onFinish: () => setIsSaving(false),
+        });
     };
 
 
@@ -331,14 +245,14 @@ export default function Users() {
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        users.map((user) => (
+                                        users.map((user: User) => (
                                             <TableRow key={user.id}>
                                                 <TableCell className="font-medium px-4">{user.name}</TableCell>
                                                 <TableCell className="px-4 whitespace-nowrap">{user.account_number}</TableCell>
                                                 <TableCell className="px-4">{user.email || <span className="text-muted-foreground italic">None</span>}</TableCell>
                                                 <TableCell className="px-4">
                                                     <span className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700">
-                                                        {user.roles?.map((role) => role.name).join(', ') || 'No role'}
+                                                        {user.roles?.map((role: Role) => role.name).join(', ') || 'No role'}
                                                     </span>
                                                 </TableCell>
                                                 <TableCell className="px-4">
@@ -368,7 +282,11 @@ export default function Users() {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => fetchUsers(pagination.prev_page_url)}
+                                onClick={() => {
+                                    if (pagination.prev_page_url) {
+                                        router.get(pagination.prev_page_url, {}, { preserveScroll: true, preserveState: true });
+                                    }
+                                }}
                                 disabled={!pagination.prev_page_url}
                             >
                                 Previous
@@ -376,7 +294,11 @@ export default function Users() {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => fetchUsers(pagination.next_page_url)}
+                                onClick={() => {
+                                    if (pagination.next_page_url) {
+                                        router.get(pagination.next_page_url, {}, { preserveScroll: true, preserveState: true });
+                                    }
+                                }}
                                 disabled={!pagination.next_page_url}
                             >
                                 Next
@@ -398,7 +320,6 @@ export default function Users() {
                     onSubmit={handleSaveUser}
                     onFormChange={(field, value) => setUserForm({ ...userForm, [field]: value })}
                     availableRoles={roles || []}
-                    availablePermissions={permissions || []}
                 />
 
             </div>
