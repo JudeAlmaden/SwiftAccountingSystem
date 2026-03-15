@@ -94,28 +94,3 @@ export interface Permission {
     name: string;
     guard_name: string;
 }
-
-export interface InventoryItem {
-    id: number;
-    sku: string;
-    name: string;
-    description?: string | null;
-    unit?: string | null;
-    quantity_on_hand: number;
-    low_stock_threshold: number;
-    status: 'active' | 'inactive';
-    created_at?: string;
-    updated_at?: string;
-}
-
-export interface InventoryMovement {
-    id: number;
-    inventory_item_id: number;
-    user_id: number;
-    type: 'increase' | 'decrease';
-    quantity: number;
-    reason: string;
-    created_at?: string;
-    item?: InventoryItem;
-    user?: Pick<User, 'id' | 'name'>;
-}

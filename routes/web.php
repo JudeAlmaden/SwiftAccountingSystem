@@ -13,7 +13,6 @@ use App\Http\Controllers\AccountGroupController;
 use App\Http\Controllers\AccountReportController;
 use App\Http\Controllers\BalanceSheetController;
 use App\Http\Controllers\IncomeEntryController;
-use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ControlNumberPrefixController;
 use App\Http\Controllers\JournalReportController;
 use App\Http\Controllers\TrialBalanceController;
@@ -95,12 +94,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::get('attachments/download/{id}', [FileController::class, 'download'])->name('attachments.download');
-
-    // Hidden inventory module
-    Route::get('dashboard/inventory', [InventoryController::class, 'index'])->name('inventory.index');
-    Route::post('dashboard/inventory', [InventoryController::class, 'store'])->name('inventory.store');
-    Route::put('dashboard/inventory/{inventoryItem}', [InventoryController::class, 'update'])->name('inventory.update');
-    Route::post('dashboard/inventory/{inventoryItem}/adjustments', [InventoryController::class, 'storeAdjustment'])->name('inventory.adjustments.store');
 });
 
 require __DIR__.'/settings.php';
