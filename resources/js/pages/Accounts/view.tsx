@@ -5,6 +5,7 @@ import { route } from 'ziggy-js';
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem, SharedData } from '@/types';
 import type { Account } from '@/types/database';
@@ -37,11 +38,12 @@ interface PaginatedJournals {
 interface Props {
     account: Account & { journal_items_count: number };
     journals: PaginatedJournals;
-    filters: { search?: string };
+    filters: { search?: string, status?: string };
 }
 
 export default function AccountView({ account, journals, filters }: Props) {
     const [search, setSearch] = useState(filters.search || '');
+    const [status, setStatus] = useState(filters.status || 'all');
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: route('dashboard') },
@@ -67,6 +69,11 @@ export default function AccountView({ account, journals, filters }: Props) {
             preserveScroll: true,
             replace: true
         });
+    };
+
+    const handleStatusChange = (value: string) => {
+        setStatus(value);
+        handleFilterChange({ status: value === 'all' ? null : value, search });
     };
 
     // Debounce search
@@ -149,15 +156,32 @@ export default function AccountView({ account, journals, filters }: Props) {
                 <div className="flex flex-col gap-4">
                     <h3 className="text-2xl font-semibold">Journal History</h3>
 
-                    {/* Search */}
-                    <div className="relative max-w-lg">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                        <Input
-                            placeholder="Search journals..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="pl-9 border-gray-300 border-[1.7px] rounded-sm"
-                        />
+                    {/* Filters */}
+                    <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                        <div className="relative w-full sm:max-w-xs">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                            <Input
+                                placeholder="Search journals..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="pl-9 border-gray-300 border-[1.7px] rounded-sm h-9"
+                            />
+                        </div>
+
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                            <span className="text-sm text-muted-foreground whitespace-nowrap">Status:</span>
+                            <Select value={status} onValueChange={handleStatusChange}>
+                                <SelectTrigger className="w-full sm:w-[140px] h-9 border-gray-300 border-[1.7px] rounded-sm bg-white">
+                                    <SelectValue placeholder="All Status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Status</SelectItem>
+                                    <SelectItem value="approved">Approved</SelectItem>
+                                    <SelectItem value="pending">Pending</SelectItem>
+                                    <SelectItem value="rejected">Rejected</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
 
                     {/* Table */}
@@ -167,16 +191,17 @@ export default function AccountView({ account, journals, filters }: Props) {
                                 <TableRow className="bg-table-head hover:bg-table-head border-0">
                                     <TableHead className="px-4 py-5 text-white text-base font-extrabold">Control Number</TableHead>
                                     <TableHead className="px-4 py-5 text-white text-base font-extrabold">Title</TableHead>
-                                    <TableHead className="px-4 py-5 text-white text-base font-extrabold">Amount</TableHead>
-                                    <TableHead className="px-4 py-5 text-white text-base font-extrabold">Entry Type</TableHead>
-                                    <TableHead className="px-4 py-5 text-white text-base font-extrabold">Date</TableHead>
-                                    <TableHead className="px-4 py-5 text-white text-base font-extrabold">Status</TableHead>
+                                    <TableHead className="px-4 py-5 text-white text-base font-extrabold text-center">Amount</TableHead>
+                                    <TableHead className="px-4 py-5 text-white text-base font-extrabold text-center">Entry Type</TableHead>
+                                    <TableHead className="px-4 py-5 text-white text-base font-extrabold text-center">Side</TableHead>
+                                    <TableHead className="px-4 py-5 text-white text-base font-extrabold text-center">Date</TableHead>
+                                    <TableHead className="px-4 py-5 text-white text-base font-extrabold text-center">Status</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {journals.data.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
+                                        <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
                                             No journals found.
                                         </TableCell>
                                     </TableRow>
@@ -194,22 +219,32 @@ export default function AccountView({ account, journals, filters }: Props) {
                                                     </Link>
                                                 </TableCell>
                                                 <TableCell className="px-4">{journal.title}</TableCell>
-                                                <TableCell className="px-4">
+                                                <TableCell className="px-4 text-right font-mono">
                                                     {accountItem ? formatCurrency(accountItem.amount) : '-'}
                                                 </TableCell>
-                                                <TableCell className="px-4">
-                                                    <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${accountItem?.type === 'debit'
-                                                        ? 'bg-blue-100 text-blue-700'
-                                                        : 'bg-green-100 text-green-700'
+                                                <TableCell className="px-4 text-center">
+                                                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${journal.type === 'Manual Income Entry'
+                                                        ? 'bg-purple-100 text-purple-700'
+                                                        : journal.type === 'journal'
+                                                            ? 'bg-blue-100 text-blue-700'
+                                                            : 'bg-emerald-100 text-emerald-700'
+                                                        }`}>
+                                                        {journal.type === 'Manual Income Entry' ? 'Manual Entry' : journal.type || '-'}
+                                                    </span>
+                                                </TableCell>
+                                                <TableCell className="px-4 text-center">
+                                                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${accountItem?.type === 'debit'
+                                                        ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                                                        : 'bg-green-50 text-green-600 border border-green-200'
                                                         }`}>
                                                         {accountItem?.type || '-'}
                                                     </span>
                                                 </TableCell>
-                                                <TableCell className="px-4 text-sm text-muted-foreground">
+                                                <TableCell className="px-4 text-center text-sm text-muted-foreground whitespace-nowrap">
                                                     {formatDate(journal.created_at)}
                                                 </TableCell>
-                                                <TableCell className="px-4">
-                                                    <span className={`px-2 py-1 rounded text-xs font-medium capitalize ${journal.status === 'approved'
+                                                <TableCell className="px-4 text-center">
+                                                    <span className={`px-2 py-1 rounded text-[10px] font-medium capitalize ${journal.status === 'approved'
                                                         ? 'bg-green-100 text-green-700'
                                                         : journal.status === 'rejected'
                                                             ? 'bg-red-100 text-red-700'

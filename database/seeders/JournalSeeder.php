@@ -80,8 +80,8 @@ class JournalSeeder extends Seeder
             $creditAccount = rand(0, 1) ? $this->cashAccount : $this->bankAccount;
 
             if (rand(0, 1)) {
-                $split1 = $amount * 0.6;
-                $split2 = $amount - $split1;
+                $split1 = round($amount * 0.6, 2);
+                $split2 = round($amount - $split1, 2);
                 JournalItem::create(['journal_id' => $journal->id, 'account_id' => $debitAccount->id,      'type' => 'debit',  'amount' => $split1, 'order_number' => 1]);
                 JournalItem::create(['journal_id' => $journal->id, 'account_id' => $this->rentExpense->id, 'type' => 'debit',  'amount' => $split2, 'order_number' => 2]);
                 JournalItem::create(['journal_id' => $journal->id, 'account_id' => $creditAccount->id,     'type' => 'credit', 'amount' => $amount, 'order_number' => 3]);
@@ -196,8 +196,8 @@ class JournalSeeder extends Seeder
             $creditAccount = rand(0, 1) ? $this->cashAccount : $this->bankAccount;
 
             if (rand(0, 1)) {
-                $split1 = $amount * 0.5;
-                $split2 = $amount - $split1;
+                $split1 = round($amount * 0.5, 2);
+                $split2 = round($amount - $split1, 2);
                 JournalItem::create(['journal_id' => $journal->id, 'account_id' => $debitAccount->id,      'type' => 'debit',  'amount' => $split1, 'order_number' => 1]);
                 JournalItem::create(['journal_id' => $journal->id, 'account_id' => $this->rentExpense->id, 'type' => 'debit',  'amount' => $split2, 'order_number' => 2]);
                 JournalItem::create(['journal_id' => $journal->id, 'account_id' => $creditAccount->id,     'type' => 'credit', 'amount' => $amount, 'order_number' => 3]);

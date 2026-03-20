@@ -16,6 +16,7 @@ export default ({ children, breadcrumbs, ...props }: AppLayoutProps) => {
                 <meta name="csrf-token" content={csrf_token} />
             </Head>
             {children}
+            <br></br>
         </AppLayoutTemplate>
     );
 };

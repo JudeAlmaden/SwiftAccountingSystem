@@ -96,6 +96,7 @@ class AccountsController extends Controller
     {
         $validated = $request->validate([
             'search' => 'nullable|string',
+            'status' => 'nullable|string|in:pending,approved,rejected',
             'page' => 'nullable|integer|min:1',
         ]);
 
@@ -120,12 +121,17 @@ class AccountsController extends Controller
             });
         }
 
+        // Status filtering
+        if (!empty($validated['status'])) {
+            $query->where('status', $validated['status']);
+        }
+
         $journals = $query->orderBy('created_at', 'desc')->paginate(10);
 
         return \Inertia\Inertia::render('Accounts/view', [
             'account'  => $account,
             'journals' => $journals,
-            'filters'  => $request->only(['search'])
+            'filters'  => $request->only(['search', 'status'])
         ]);
     }
 

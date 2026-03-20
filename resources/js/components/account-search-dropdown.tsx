@@ -92,7 +92,7 @@ export default function AccountSearchDropdown({
     return (
         <div
             ref={dropdownRef}
-            className="absolute top-full left-0 z-[10] mt-2 w-full max-w-sm rounded-lg border border-border bg-card shadow-xl"
+            className="absolute top-full left-0 z-[50] mt-2 w-[350px] min-w-[300px] rounded-lg border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200"
         >
             <div className="border-b border-border p-3">
                 <div className="flex items-center gap-2 rounded-lg bg-secondary/30 px-3 py-2">
@@ -108,7 +108,7 @@ export default function AccountSearchDropdown({
                 </div>
             </div>
 
-            <div className="max-h-48 overflow-y-auto scroll-hide">
+            <div className="max-h-[380px] overflow-y-auto scroll-hide">
                 <style>{`
                     .scroll-hide::-webkit-scrollbar {
                         display: none;
@@ -123,7 +123,7 @@ export default function AccountSearchDropdown({
                         Loading accounts...
                     </div>
                 ) : filteredAccounts.length > 0 ? (
-                    filteredAccounts.slice(0, 3).map((account) => (
+                    filteredAccounts.slice(0, 7).map((account) => (
                         <button
                             key={account.id}
                             onClick={() => onSelect(account)}
@@ -143,8 +143,8 @@ export default function AccountSearchDropdown({
                 )}
             </div>
 
-            {!isLoading && filteredAccounts.length > 0 && filteredAccounts.length <= 3 && (
-                <div className="border-t border-border/50 bg-secondary/20 px-3 py-2 text-center text-xs text-muted-foreground">
+            {!isLoading && filteredAccounts.length > 0 && filteredAccounts.length <= 7 && (
+                <div className="border-t border-border/50 bg-secondary/20 px-3 py-2 text-center text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
                     {filteredAccounts.length} account{filteredAccounts.length !== 1 ? 's' : ''} found
                 </div>
             )}

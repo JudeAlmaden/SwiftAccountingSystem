@@ -141,11 +141,11 @@ export default function AccountingEntryTable({
     }, [preparedData, onDataChange]);
 
     return (
-        <Card className="border-border p-0 overflow-visible">
-            <div className="overflow-x-auto">
+        <Card className="border-border p-0 overflow-visible relative">
+            <div className="w-full relative">
                 <table className="w-full border-collapse relative table-fixed">
                     <thead>
-                        <tr className="border-b border-border bg-table-head overflow-hidden rounded-t-md">
+                        <tr className="border-b border-border bg-table-head rounded-t-md">
                             <th className="px-6 py-5 text-left text-xs font-bold text-white uppercase tracking-wider w-auto first:rounded-tl-lg">
                                 Account
                             </th>
@@ -225,6 +225,7 @@ export default function AccountingEntryTable({
                                                     updateRow(row.id, { debit: value, credit: null });
                                                 }}
                                                 onFocus={(e) => e.target.select()}
+                                                onClick={(e) => (e.target as HTMLInputElement).select()}
                                                 disabled={!row.account}
                                                 className="w-24 bg-transparent text-center text-sm font-semibold text-foreground outline-none disabled:opacity-50 disabled:cursor-not-allowed [&::-webkit-outer-spin-button]:hidden [&::-webkit-inner-spin-button]:hidden"
                                             />
@@ -242,6 +243,7 @@ export default function AccountingEntryTable({
                                                     updateRow(row.id, { credit: value, debit: null });
                                                 }}
                                                 onFocus={(e) => e.target.select()}
+                                                onClick={(e) => (e.target as HTMLInputElement).select()}
                                                 disabled={!row.account}
                                                 className="w-24 bg-transparent text-center text-sm font-semibold text-foreground outline-none disabled:opacity-50 disabled:cursor-not-allowed [&::-webkit-outer-spin-button]:hidden [&::-webkit-inner-spin-button]:hidden"
                                             />
