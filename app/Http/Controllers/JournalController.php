@@ -32,7 +32,8 @@ class JournalController extends Controller
         ]);
 
         // Build the query
-        $query = Journal::query()->withCount('items');
+        $query = Journal::query()->withCount('items')
+            ->where('type', '!=', 'Manual Income Entry');
 
         // Search functionality (control_number, title, description)
         if (!empty($validated['search'])) {
@@ -224,7 +225,7 @@ class JournalController extends Controller
         $stepFlow    = $journal->step_flow ?? Journal::defaultStepFlow();
 
         $stepConfig       = $stepFlow[$currentStep - 1] ?? [];
-        $requiredRole     = $currentStep === 1 ? 'accounting assistant' : ($stepConfig['role'] ?? null);
+        $requiredRole     = $stepConfig['role'] ?? ($currentStep === 1 ? 'accounting assistant' : null);
         $restrictedToUserId = isset($stepConfig['user_id']) ? (int) $stepConfig['user_id'] : null;
 
         if (!in_array('admin', $roles)) {
@@ -239,12 +240,12 @@ class JournalController extends Controller
         $totalSteps = count($stepFlow);
 
         // Final step: check_id required only for disbursement vouchers. Checkque id is only for disbursement vouchers.
-        if ($currentStep === $totalSteps && $journal->type !== 'journal') {
+        if ($currentStep === $totalSteps && $journal->type !== 'journal' && $journal->type !== 'Manual Income Entry') {
             $request->validate(['check_id' => 'required|string|max:255']);
         }
 
         // Tracking Role
-        $trackingRole = $currentStep === 1 ? 'accounting assistant' : ($stepConfig['role'] ?? 'admin');
+        $trackingRole = $stepConfig['role'] ?? ($currentStep === 1 ? 'accounting assistant' : 'admin');
         $nextStep     = $currentStep + 1;
         $status       = $nextStep > $totalSteps ? 'approved' : $journal->status;
 
@@ -260,6 +261,44 @@ class JournalController extends Controller
         }
 
         $journal->update($updateData);
+
+        // Apply proposed changes for Manual Income Entry edit requests upon final approval
+        if ($journal->type === 'Manual Income Entry' && $status === 'approved' && !empty($journal->proposed_data)) {
+            $proposed = $journal->proposed_data;
+
+            DB::transaction(function () use ($journal, $proposed) {
+                $journal->update([
+                    'title'       => $proposed['title'],
+                    'description' => $proposed['description'],
+                    'proposed_data' => null, // Clear the proposed changes after applying
+                ]);
+
+                // Re-sync journal items
+                $journal->items()->delete();
+                foreach ($proposed['accounts'] as $index => $item) {
+                    $journal->items()->create([
+                        'account_id'   => $item['account_id'],
+                        'type'         => $item['type'],
+                        'amount'       => $item['amount'],
+                        'order_number' => $index + 1,
+                    ]);
+                }
+            });
+
+            AuditTrail::log('income_entry_edit_applied', "Historical edit for income entry approved and applied: {$journal->control_number}", Auth::id(), Journal::class, $journal->id);
+
+            // Notify the Accounting Head who requested the edit
+            $initiator = $journal->tracking()->where('action', 'edit_request')->latest()->first();
+            if ($initiator && $initiator->handled_by && $initiator->handled_by !== Auth::id()) {
+                Notification::create([
+                    'user_id' => $initiator->handled_by,
+                    'title'   => 'Edit Approved',
+                    'message' => "Your historical edit request for {$journal->control_number} has been approved.",
+                    'link'    => route('income-entry.index') . "?date=" . $journal->created_at->format('Y-m-d')
+                ]);
+            }
+        }
+
 
         JournalTracking::create([
             'handled_by' => $user->id,
@@ -286,9 +325,10 @@ class JournalController extends Controller
                 $this->notifyUsersWithRole($nextRole, 'Review Required', "Journal {$journal->control_number} needs your approval.", route('vouchers.show', ['id' => $journal->id]));
             }
         } else {
-            // Final Approval — notify everyone involved
+            // Final Approval — notify everyone involved except the current user
             $involvedUserIds = JournalTracking::where('journal_id', $journal->id)
                 ->whereNotNull('handled_by')
+                ->where('handled_by', '!=', Auth::id())
                 ->pluck('handled_by')
                 ->unique();
 
@@ -302,13 +342,7 @@ class JournalController extends Controller
             }
         }
 
-        $fresh = $journal->fresh(['items.account', 'tracking.handler', 'attachments']);
-        $data  = $fresh->toArray();
-        $data['step_flow'] = $fresh->step_flow_for_api;
-        return response()->json([
-            'message' => 'Journal approved successfully.',
-            'journal' => $data,
-        ]);
+        return back()->with('success', 'Journal approved successfully.');
     }
 
     public function decline(Request $request, $id)
@@ -320,7 +354,7 @@ class JournalController extends Controller
         $stepFlow    = $journal->step_flow ?? Journal::defaultStepFlow();
 
         $stepConfig       = $stepFlow[$currentStep - 1] ?? [];
-        $requiredRole     = $currentStep === 1 ? 'accounting assistant' : ($stepConfig['role'] ?? null);
+        $requiredRole     = $stepConfig['role'] ?? ($currentStep === 1 ? 'accounting assistant' : null);
         $restrictedToUserId = isset($stepConfig['user_id']) ? (int) $stepConfig['user_id'] : null;
 
         if (!in_array('admin', $roles)) {
@@ -332,7 +366,7 @@ class JournalController extends Controller
             }
         }
 
-        $trackingRole = $currentStep === 1 ? 'accounting assistant' : ($stepConfig['role'] ?? 'admin');
+        $trackingRole = $stepConfig['role'] ?? ($currentStep === 1 ? 'accounting assistant' : 'admin');
 
         $journal->update(['status' => 'rejected']);
 
@@ -355,24 +389,25 @@ class JournalController extends Controller
             'acted_at'   => now(),
         ]);
 
-        $initiator = $journal->tracking()->where('step', 1)->first();
-        if ($initiator && $initiator->handled_by) {
+        $initiator = $journal->tracking()->where(function($q) {
+            $q->where('step', 1)->orWhere('action', 'edit_request');
+        })->latest()->first();
+
+        if ($initiator && $initiator->handled_by && $initiator->handled_by !== Auth::id()) {
             $reason = $request->remarks ?? 'No reason provided.';
+            $link = $journal->type === 'Manual Income Entry' 
+                ? route('income-entry.index') . "?date=" . $journal->created_at->format('Y-m-d')
+                : route('vouchers.view', ['id' => $journal->id]);
+
             Notification::create([
                 'user_id' => $initiator->handled_by,
                 'title'   => 'Journal Declined',
-                'message' => "Your journal ({$journal->control_number}) was declined. Reason: {$reason}",
-                'link'    => route('vouchers.view', ['id' => $journal->id])
+                'message' => "Your journal/edit request ({$journal->control_number}) was declined. Reason: {$reason}",
+                'link'    => $link
             ]);
         }
 
-        $fresh = $journal->fresh(['items.account', 'tracking.handler', 'attachments']);
-        $data  = $fresh->toArray();
-        $data['step_flow'] = $fresh->step_flow_for_api;
-        return response()->json([
-            'message' => 'Journal declined successfully.',
-            'journal' => $data,
-        ]);
+        return back()->with('success', 'Journal declined successfully.');
     }
 
     /**
@@ -380,7 +415,7 @@ class JournalController extends Controller
      */
     private function notifyUsersWithRole($role, $title, $message, $link)
     {
-        $users = User::role($role)->get();
+        $users = User::role($role)->where('id', '!=', Auth::id())->get();
         foreach ($users as $user) {
             Notification::create([
                 'user_id' => $user->id,

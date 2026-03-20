@@ -30,7 +30,8 @@ class NotificationController extends Controller
         
         return [
             'unread_notifications_count' => Notification::where('user_id', $user->id)->where('is_read', false)->count(),
-            'pending_vouchers_count' => Journal::pendingForUser($user)->count(),
+            'pending_vouchers_count' => Journal::pendingForUser($user)->where('type', '!=', 'Manual Income Entry')->count(),
+            'pending_income_entries_count' => Journal::pendingForUser($user)->where('type', 'Manual Income Entry')->count(),
         ];
     }
 

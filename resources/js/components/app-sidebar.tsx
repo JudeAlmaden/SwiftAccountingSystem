@@ -47,6 +47,9 @@ export function AppSidebar() {
     if (navItemDetails.vouchers) {
         navItemDetails.vouchers.count = user?.pending_vouchers_count as number;
     }
+    if (navItemDetails.incomeEntry) {
+        navItemDetails.incomeEntry.count = user?.pending_income_entries_count as number;
+    }
 
     // Filter items based on role
     const navItems = Object.values(navItemDetails).filter((item) => {

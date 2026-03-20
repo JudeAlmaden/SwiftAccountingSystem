@@ -355,11 +355,14 @@ export default function Journals() {
                                             <span
                                                 className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-semibold ${journal.type === 'journal'
                                                     ? 'bg-teal-100 text-teal-700 border-teal-200'
-                                                    : 'bg-orange-100 text-orange-700 border-orange-200'
+                                                    : journal.type === 'Manual Income Entry'
+                                                        ? 'bg-blue-100 text-blue-700 border-blue-200'
+                                                        : 'bg-orange-100 text-orange-700 border-orange-200'
                                                     }`}
                                             >
-                                                {journal.type === 'journal' ? 'Journal' : 'Disbursement'}
+                                                {journal.type === 'journal' ? 'Journal' : (journal.type === 'Manual Income Entry' ? 'Manual Entry' : 'Disbursement')}
                                             </span>
+
                                         </TableCell>
                                         <TableCell className="text-muted-foreground px-4 truncate text-xs" title={journal.description}>
                                             {journal.description}

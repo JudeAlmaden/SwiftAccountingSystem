@@ -25,6 +25,7 @@ return new class extends Migration
             $table->unsignedTinyInteger('current_step')->default(1);
             $table->string('check_id')->nullable();
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->json('proposed_data')->nullable();
             $table->timestamps();
         });
 
@@ -45,7 +46,7 @@ return new class extends Migration
             $table->foreignId('handled_by')->nullable()->constrained('users')->cascadeOnDelete();
             $table->integer('step');
             $table->enum('role', ['accounting assistant', 'accounting head', 'auditor', 'svp']);
-            $table->enum('action', ['approved', 'rejected'])->nullable()->default(null);
+            $table->enum('action', ['approved', 'rejected', 'edit_request', 'edit_applied'])->nullable()->default(null);
             $table->text('remarks')->nullable();
             $table->timestamp('acted_at')->nullable();
             $table->timestamps();

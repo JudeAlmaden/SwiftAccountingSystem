@@ -8,7 +8,10 @@ export type User = {
     created_at: string;
     updated_at: string;
     roles: string[];
-    permissions: string[]
+    permissions: string[];
+    unread_notifications_count?: number;
+    pending_vouchers_count?: number;
+    pending_income_entries_count?: number;
     [key: string]: unknown;
 };
 

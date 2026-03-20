@@ -16,6 +16,8 @@ class JournalSeeder extends Seeder
     private ?Account $bankAccount = null;
     private ?Account $rentExpense = null;
     private ?Account $accountsPayable = null;
+    private ?Account $tuitionFeeIncome = null;
+    private ?\App\Models\ControlNumberPrefix $miePrefix = null;
     private ?User $assistant = null;
     private ?User $head = null;
     private ?User $admin = null;
@@ -66,7 +68,7 @@ class JournalSeeder extends Seeder
                 'type'           => 'disbursement',
                 'title'          => $title,
                 'description'    => $faker->sentence,
-                'step_flow'      => Journal::defaultStepFlow(),
+                'step_flow'      => \App\Models\Journal::defaultStepFlow(),
                 'current_step'   => $targetStep,
                 'status'         => $targetStatus,
                 'check_id'       => ($targetStep >= 6) ? 'CHK-' . rand(10000, 99999) : null,
@@ -183,7 +185,7 @@ class JournalSeeder extends Seeder
                 'type'           => 'journal',
                 'title'          => $title,
                 'description'    => $faker->sentence,
-                'step_flow'      => Journal::journalStepFlow(),
+                'step_flow'      => \App\Models\Journal::journalStepFlow(),
                 'current_step'   => $targetStep,
                 'status'         => $targetStatus,
                 'created_at'     => Carbon::now()->subDays(rand(1, 60)),
@@ -256,18 +258,89 @@ class JournalSeeder extends Seeder
                 ]);
             }
         }
+
+        // --- Manual Income Entries (One per day maximum) ---
+        $incomeTitles = ['Daily Sales Collection', 'Service Revenue', 'Tuition Fees', 'Miscellaneous Income', 'Consultation Fees'];
+        
+        // Ensure entries for current day + 5 previous days
+        $specificDates = [];
+        for ($i = 0; $i < 6; $i++) {
+            $specificDates[] = Carbon::now()->subDays($i)->format('Y-m-d');
+        }
+
+        // Add 10 more random dates from the last 30 days (excluding the specific ones)
+        $usedDates = [...$specificDates];
+        $allDates = [...$specificDates];
+        
+        for ($i = 0; $i < 10; $i++) {
+            do {
+                $randomDate = Carbon::now()->subDays(rand(6, 30))->format('Y-m-d');
+            } while (in_array($randomDate, $usedDates));
+            $usedDates[] = $randomDate;
+            $allDates[] = $randomDate;
+        }
+
+        foreach ($allDates as $index => $targetDate) {
+            $controlNumber = 'MIE-2026-' . str_pad($index + 1, 3, '0', STR_PAD_LEFT);
+            $date = Carbon::parse($targetDate);
+            $journal = Journal::create([
+                'title' => 'Daily Tuition Income - ' . $date->format('M d, Y'),
+                'description' => 'Summary of tuition fees and miscellaneous income for ' . $date->format('F d, Y'),
+                'type' => 'Manual Income Entry',
+                'status' => 'approved',
+                'current_step' => 2, // Accounting Head step passed
+                'step_flow' => \App\Models\Journal::manualIncomeStepFlow(),
+                'control_number' => \App\Models\Journal::generateControlNumber($this->miePrefix->id), // Assuming miePrefix is resolved
+                'created_at' => $date,
+                'updated_at' => $date,
+            ]);
+
+            // Add balanced items
+            $amount = rand(15000, 35000) + (rand(0, 99) / 100);
+            
+            // Debit: Cash in Bank (1010-004)
+            $journal->items()->create([
+                'account_id' => $this->bankAccount->id, // Cash in Bank - AUB
+                'type' => 'debit',
+                'amount' => $amount,
+                'order_number' => 1,
+            ]);
+
+            // Credit: Tuition Fee Income (4000-001)
+            $journal->items()->create([
+                'account_id' => $this->tuitionFeeIncome->id, // Tuition Fee Income - BED
+                'type' => 'credit',
+                'amount' => $amount,
+                'order_number' => 2,
+            ]);
+
+            // Add Tracking using lowercase role
+            JournalTracking::create([
+                'handled_by' => $this->head->id, // Assuming $accountingHead is $this->head
+                'journal_id' => $journal->id,
+                'step' => 1,
+                'role' => 'accounting head',
+                'action' => 'approved',
+                'remarks' => 'Daily income recorded and finalized.',
+                'acted_at' => $date->copy()->setTime(13, 0, 0),
+            ]);
+        }
     }
+
+
 
     private function resolveDependencies(): void
     {
-        // Using codes from accounts.csv
-        $this->cashAccount     = Account::where('account_code', '1010-000')->first(); // CASH ON HAND
-        $this->bankAccount     = Account::where('account_code', '1010-004')->first(); // CASH IN BANK - AUB
-        $this->rentExpense     = Account::where('account_code', '5000-013')->first(); // SALARIES & WAGES (used as dummy expense)
-        $this->accountsPayable = Account::where('account_code', '2020-009')->first(); // ACCOUNTS PAYABLE - SUPPLIER
+        $this->cashAccount     = Account::where('account_code', '1010-000')->first();
+        $this->bankAccount     = Account::where('account_code', '1010-004')->first();
+        $this->rentExpense     = Account::where('account_code', '5000-013')->first();
+        $this->accountsPayable = Account::where('account_code', '2020-009')->first();
+        $this->tuitionFeeIncome = Account::where('account_code', '4000-001')->first();
+        $this->miePrefix       = \App\Models\ControlNumberPrefix::where('code', 'MIE')->first();
         
-        $this->assistant      = User::where('email', 'assistant@example.com')->first();
-        $this->head           = User::where('email', 'head@example.com')->first();
-        $this->admin          = User::where('email', 'admin@example.com')->first();
+        $this->assistant = User::where('email', 'assistant@sacli.edu.ph')->first() ?: User::where('email', 'assistant@example.com')->first();
+        $this->head      = User::where('email', 'head@sacli.edu.ph')->first() ?: User::where('email', 'head@example.com')->first();
+        $this->admin     = User::where('email', 'admin@sacli.edu.ph')->first() ?: User::where('email', 'admin@example.com')->first();
     }
 }
+

@@ -36,6 +36,7 @@ interface AccountingEntryTableProps {
     onDataChange?: (data: any) => void;
     isLoading?: boolean;
     errors?: Record<string, string[]>;
+    initialRows?: AccountingRow[];
 }
 
 export default function AccountingEntryTable({
@@ -52,12 +53,14 @@ export default function AccountingEntryTable({
     onDataChange,
     isLoading = false,
     errors = {},
+    initialRows,
 }: AccountingEntryTableProps) {
-    const [rows, setRows] = useState<AccountingRow[]>([
+    const [rows, setRows] = useState<AccountingRow[]>(initialRows || [
         { id: '1', account: null, ref: '', debit: 0, credit: null },
         { id: '2', account: null, ref: '', debit: 0, credit: null },
         { id: '3', account: null, ref: '', debit: 0, credit: null },
     ]);
+
     const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
     const [allAccounts, setAllAccounts] = useState<Account[]>([]);
     const [isAccountsLoading, setIsAccountsLoading] = useState(false);

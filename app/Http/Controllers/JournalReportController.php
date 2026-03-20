@@ -61,7 +61,8 @@ class JournalReportController extends Controller
 
         $journalQuery = Journal::query()
             ->whereDate('created_at', '>=', $dateFrom)
-            ->whereDate('created_at', '<=', $dateTo);
+            ->whereDate('created_at', '<=', $dateTo)
+            ->whereIn('type', ['journal', 'disbursement']);
 
         if ($type !== 'all') {
             $journalQuery->where('type', $type);
@@ -71,6 +72,7 @@ class JournalReportController extends Controller
             ->join('journals', 'journal_items.journal_id', '=', 'journals.id')
             ->whereDate('journals.created_at', '>=', $dateFrom)
             ->whereDate('journals.created_at', '<=', $dateTo)
+            ->whereIn('journals.type', ['journal', 'disbursement'])
             ->select('journal_items.*', 'journals.created_at as journal_created_at', 'journals.status as journal_status');
 
         if ($type !== 'all') {
@@ -82,6 +84,7 @@ class JournalReportController extends Controller
             ->join('journals', 'journal_items.journal_id', '=', 'journals.id')
             ->whereDate('journals.created_at', '>=', $dateFrom)
             ->whereDate('journals.created_at', '<=', $dateTo)
+            ->whereIn('journals.type', ['journal', 'disbursement'])
             ->where('journal_items.type', 'credit');
 
         if ($type !== 'all') {
@@ -185,6 +188,7 @@ class JournalReportController extends Controller
             ->join('journals', 'journal_items.journal_id', '=', 'journals.id')
             ->whereDate('journals.created_at', '>=', $prevFrom->toDateString())
             ->whereDate('journals.created_at', '<=', $prevTo->toDateString())
+            ->whereIn('journals.type', ['journal', 'disbursement'])
             ->where('journal_items.type', 'credit')
             ->where('journals.status', 'approved');
 

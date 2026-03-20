@@ -43,7 +43,7 @@ function Calendar({
         ...formatters,
       }}
       classNames={{
-        root: cn("w-fit", defaultClassNames.root),
+        root: cn("w-full h-full pb-2", defaultClassNames.root),
         months: cn(
           "flex gap-4 flex-col md:flex-row relative",
           defaultClassNames.months
@@ -206,12 +206,37 @@ function CalendarDayButton({
       data-range-end={modifiers.range_end}
       data-range-middle={modifiers.range_middle}
       className={cn(
-        "data-[selected-single=true]:bg-green-600 data-[selected-single=true]:text-white data-[selected-single=true]:rounded-md data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground data-[range-start=true]:bg-green-600 data-[range-start=true]:text-white data-[range-end=true]:bg-green-600 data-[range-end=true]:text-white group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-ring/50 dark:hover:text-accent-foreground flex size-auto w-full min-w-(--cell-size) flex-col gap-1 leading-none font-normal group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-[3px] data-[range-end=true]:rounded-md data-[range-end=true]:rounded-r-md data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-md data-[range-start=true]:rounded-l-md [&>span]:text-xs [&>span]:opacity-70 text-foreground/70 px-0.5 py-1 hover:bg-accent hover:rounded-md border-0",
+        "group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-ring/50 dark:hover:text-accent-foreground flex w-full aspect-square flex-col gap-1 leading-none font-normal group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-[3px] [&>span]:text-xs [&>span]:opacity-70 text-foreground/70 px-0.5 py-1 hover:bg-accent hover:rounded-md border-0 h-full",
+        // Custom Indicators: Background tints (More vibrant)
+        modifiers.hasEntry && "bg-green-100 text-green-800 font-bold border-b-2 border-b-green-500/50",
+        modifiers.pendingEdit && "bg-amber-200 text-amber-900 font-black border-b-2 border-b-amber-500/50 shadow-sm",
+        // Selected / Range styles (Priority)
+        "data-[selected-single=true]:bg-green-600 data-[selected-single=true]:text-white data-[selected-single=true]:rounded-md data-[selected-single=true]:border-0 data-[selected-single=true]:font-bold",
+
+        "data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground data-[range-start=true]:bg-green-600 data-[range-start=true]:text-white data-[range-start=true]:rounded-md data-[range-end=true]:bg-green-600 data-[range-end=true]:text-white data-[range-end=true]:rounded-md",
         defaultClassNames.day,
         className
       )}
+
       {...props}
-    />
+    >
+      <div className="relative flex items-center justify-center w-full h-full min-h-(--cell-size)">
+        {day.date.getDate()}
+
+        {/* Floating Notification Badge for Pending Edits */}
+        {modifiers.pendingEdit && (
+          <div className="absolute top-0 right-0 pointer-events-none z-30 translate-x-[20%] -translate-y-[20%]">
+            <div className="size-3.5 flex items-center justify-center bg-amber-500 rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.5)] border-2 border-white">
+              <span className="text-[9px] leading-none text-white font-black select-none">!</span>
+            </div>
+          </div>
+        )}
+      </div>
+    </Button>
+
+
+
+
   )
 }
 

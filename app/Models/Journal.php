@@ -21,12 +21,15 @@ class Journal extends Model
         'current_step',
         'status',
         'check_id',
+        'proposed_data',
     ];
 
     protected $casts = [
         'step_flow' => 'array',
         'current_step' => 'integer',
+        'proposed_data' => 'array',
     ];
+
 
     /**
      * Default approval flow: Type Disbursement
@@ -72,6 +75,26 @@ class Journal extends Model
     /**
      * Step flow with user_name added for API display when user_id is set (the designated user for that step).
      */
+    public static function manualIncomeStepFlow()
+    {
+        return [
+            ['step' => 1, 'role' => 'accounting head'],
+        ];
+    }
+
+
+    //==================================================================================
+    /**
+     * Generate a new control number based on the prefix.
+     */
+    public static function generateControlNumber($prefixId): string
+    {
+        $prefix = ControlNumberPrefix::findOrFail($prefixId);
+        $count = self::where('control_number', 'like', $prefix->code . '-' . date('Y') . '-%')->count();
+        return $prefix->code . '-' . date('Y') . '-' . str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+    }
+
+
     public function getStepFlowForApiAttribute(): array
     {
         $flow = $this->step_flow ?? self::defaultStepFlow();

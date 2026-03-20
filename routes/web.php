@@ -27,6 +27,10 @@ Route::get('/', function () {
 
 // Authenticated Routes
 Route::middleware(['auth', 'verified'])->group(function () {
+    // Administration
+    Route::middleware(['role:admin'])->group(function () {
+        Route::get('dashboard/accounts', [UserController::class, 'index'])->name('users.index');
+    });
     
     // Dashboard & Core
     Route::get('dashboard', DashboardController::class)->name('dashboard');
@@ -52,6 +56,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(['role:accounting head|accounting assistant|auditor|SVP'])->group(function () {
         Route::get('dashboard/vouchers', [JournalController::class, 'index'])->name('vouchers.index');
         Route::get('dashboard/vouchers/{id}', [JournalController::class, 'show'])->name('vouchers.show')->whereNumber('id');
+        Route::post('dashboard/vouchers/{id}/approve', [JournalController::class, 'approve'])->name('vouchers.approve');
+        Route::post('dashboard/vouchers/{id}/decline', [JournalController::class, 'decline'])->name('vouchers.decline');
     });
 
     // Accounts & Management
@@ -76,10 +82,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('dashboard/balance-sheet', [BalanceSheetController::class, 'index'])->name('balance-sheet.index');
     });
 
-    // Administration
-    Route::middleware(['role:admin'])->group(function () {
-        Route::get('dashboard/accounts', [UserController::class, 'index'])->name('users.index');
+    Route::middleware(['role:accounting head'])->group(function () {
+        Route::post('dashboard/income-entry', [IncomeEntryController::class, 'store'])->name('income-entry.store');
+        Route::put('dashboard/income-entry/{id}', [IncomeEntryController::class, 'update'])->name('income-entry.update');
     });
+
+
+
+
+
 
     Route::middleware(['role:accounting head'])->group(function () {
         Route::get('dashboard/control-number-prefixes', [ControlNumberPrefixController::class, 'index'])->name('control-number-prefixes.index');

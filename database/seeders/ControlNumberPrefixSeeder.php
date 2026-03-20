@@ -9,13 +9,23 @@ class ControlNumberPrefixSeeder extends Seeder
 {
     public function run(): void
     {
-        if (ControlNumberPrefix::exists()) {
-            return;
-        }
+        $prefixes = [
+            ['code' => 'DV', 'label' => 'Disbursement Voucher (Default)'],
+            ['code' => 'JV', 'label' => 'Journal Voucher'],
+            ['code' => 'MIE', 'label' => 'Manual Income Entry'],
+        ];
 
-        ControlNumberPrefix::insert([
-            ['code' => 'DV', 'label' => 'Disbursement Voucher (Default)', 'sort_order' => 0, 'created_at' => now(), 'updated_at' => now()],
-            ['code' => 'JV', 'label' => 'Journal Voucher', 'sort_order' => 0, 'created_at' => now(), 'updated_at' => now()],
-        ]);
+        foreach ($prefixes as $index => $prefix) {
+            ControlNumberPrefix::updateOrCreate(
+                ['code' => $prefix['code']],
+                [
+                    'label' => $prefix['label'],
+                    'sort_order' => $index,
+                    'updated_at' => now(),
+                    'created_at' => now(),
+                ]
+            );
+        }
     }
+
 }
