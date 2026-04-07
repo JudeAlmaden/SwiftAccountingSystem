@@ -6,8 +6,13 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
     server: {
-        host: 'localhost',
+        // Listen on all interfaces so Vite works inside Docker; browser still uses localhost:5173 from the host.
+        host: '0.0.0.0',
         port: 5173,
+        strictPort: true,
+        hmr: {
+            host: 'localhost',
+        },
     },
     plugins: [
         laravel({

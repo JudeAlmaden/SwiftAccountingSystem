@@ -12,8 +12,9 @@ This document explains how AI agents should work on this project: how to run it,
 ### Docker environment
 
 - **Services**:
-  - **app**: PHP CLI container running `php artisan serve` on port `8000`.
-  - **mysql**: MySQL 8 container, internal hostname `mysql`.
+  - **app**: PHP CLI container; on startup runs `composer install` if `vendor/` is missing, then `php artisan migrate --force`, then `php artisan serve` on port `8000`.
+  - **vite**: Vite dev server (`npm run dev`) on port `5173` with hot reload; installs npm deps into a Linux `node_modules` volume when needed.
+  - **mysql**: MySQL 8 container, internal hostname `mysql` (with a healthcheck so migrations run after the DB accepts connections).
 - **Database defaults** (from `docker-compose.yml` / `.env`):
   - **DB host**: `mysql`
   - **DB name**: `Accounting_System`
@@ -29,19 +30,22 @@ docker compose build
 docker compose up -d
 ```
 
+Migrations run automatically when **app** starts (see `docker/entrypoint-app.sh`). Frontend dev dependencies and the Vite dev server are handled by the **vite** service (no `npm run build` required for local development).
+
 #### Install and build dependencies (inside Docker)
 
-Use the `app` service as the execution environment:
+- **First-time / missing `vendor/`**: handled automatically by the **app** entrypoint (`composer install`).
+- **Node (development)**: handled by the **vite** service (`npm ci` when needed, then `npm run dev`).
+- **Production asset build** (optional, not used for daily dev):
 
 ```bash
-docker compose run --rm app composer install
-docker compose run --rm app npm install
-docker compose run --rm app npm run build
+docker compose run --rm vite sh -c "npm ci --include=dev && npm run build"
 ```
 
 #### Database migrations and seeders
 
-- To create and seed the schema from scratch:
+- **Migrations** run on each **app** container start (`php artisan migrate --force`). If nothing is pending, this is a no-op.
+- To **seed** data (not run automatically; avoids duplicating seed data on every restart):
 
 ```bash
 docker compose run --rm app php artisan migrate --seed
@@ -53,7 +57,7 @@ docker compose run --rm app php artisan migrate --seed
 docker compose run --rm app php artisan db:seed
 ```
 
-Agents should **prefer `migrate --seed`** when setting up a new environment, and **use `db:seed`** when only data needs refreshing.
+Agents should **prefer `migrate --seed`** when setting up a brand-new database with demo data, and **use `db:seed`** when only data needs refreshing.
 
 ### Application conventions
 

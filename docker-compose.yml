@@ -1,4 +1,5 @@
 services:
+  # PHP only — no production Vite build here. Frontend assets come from the `vite` service (dev HMR).
   app:
     build:
       context: .
@@ -11,8 +12,28 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - mysql
-    command: sh -c "php artisan serve --host=0.0.0.0 --port=8000"
+      mysql:
+        condition: service_healthy
+    command: sh /var/www/html/docker/entrypoint-app.sh
+
+  # Vite dev server — hot reload; Laravel reads `public/hot` and serves assets from here in local dev.
+  vite:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: swift-accounting-vite
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+      - app-node-modules:/var/www/html/node_modules
+    ports:
+      - "5173:5173"
+    command: >
+      sh -c "
+      if [ ! -x node_modules/.bin/vite ]; then npm ci --include=dev; fi &&
+      npm run dev -- --host 0.0.0.0 --port 5173
+      "
 
   mysql:
     image: mysql:8.0
@@ -26,7 +47,14 @@ services:
     volumes:
       - db-data:/var/lib/mysql
     command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
 
 volumes:
   db-data:
+  app-node-modules:
 
