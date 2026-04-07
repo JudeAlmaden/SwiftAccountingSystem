@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { LayoutGrid, User, FileText, WalletCards, BookOpen, Bell, BarChart3, PieChart, Tag, ClipboardList } from 'lucide-react';
+import { LayoutGrid, User, FileText, WalletCards, BookOpen, Bell, BarChart3, PieChart, Tag, ClipboardList, Package } from 'lucide-react';
 import { route } from 'ziggy-js';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -25,6 +25,7 @@ export function AppSidebar() {
     ====================== */
     const navItemDetails: Record<string, NavItem & { role?: string | string[] }> = {
         dashboard: { title: 'Dashboard', href: route('dashboard'), icon: LayoutGrid },
+        inventory: { title: 'Inventory', href: route('inventory.index'), icon: Package, exact: false },
         users: { title: 'Users and Accounts', href: route('users.index'), icon: User, role: 'admin', exact: false },
         vouchers: { title: 'Vouchers', href: route('vouchers.index'), icon: WalletCards, role: ['accounting head', 'accounting assistant', 'auditor', 'SVP'], exact: false },
         vouchersReports: { title: 'Voucher Statistics', href: route('vouchers.statistics'), icon: BarChart3, role: ['accounting head', 'accounting assistant', 'auditor', 'SVP'] },
