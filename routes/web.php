@@ -16,6 +16,7 @@ use App\Http\Controllers\IncomeEntryController;
 use App\Http\Controllers\ControlNumberPrefixController;
 use App\Http\Controllers\JournalReportController;
 use App\Http\Controllers\TrialBalanceController;
+use App\Http\Controllers\InventoryController;
 
 // Login view for unauthenticated users
 Route::get('/', function () {
@@ -35,6 +36,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Dashboard & Core
     Route::get('dashboard', DashboardController::class)->name('dashboard');
     Route::inertia('dashboard/inbox', 'inbox')->name('inbox');
+
+    // Inventory (all authenticated users; verify is auditor-only)
+    Route::get('dashboard/inventory/reports/monthly', [InventoryController::class, 'monthlyReport'])->name('inventory.reports.monthly');
+    Route::get('dashboard/inventory/reports/year', [InventoryController::class, 'yearReport'])->name('inventory.reports.year');
+    Route::get('dashboard/inventory', [InventoryController::class, 'index'])->name('inventory.index');
+    Route::get('dashboard/inventory/create', [InventoryController::class, 'create'])->name('inventory.create');
+    Route::post('dashboard/inventory', [InventoryController::class, 'store'])->name('inventory.store');
+    Route::get('dashboard/inventory/{inventoryItem}/edit', [InventoryController::class, 'edit'])->name('inventory.edit')->whereNumber('inventoryItem');
+    Route::put('dashboard/inventory/{inventoryItem}', [InventoryController::class, 'update'])->name('inventory.update')->whereNumber('inventoryItem');
+    Route::middleware(['role:auditor'])->group(function () {
+        Route::post('dashboard/inventory/{inventoryItem}/verify', [InventoryController::class, 'verify'])->name('inventory.verify')->whereNumber('inventoryItem');
+    });
 
     // Reports & Statistics
     Route::middleware(['role:accounting head|accounting assistant|auditor|SVP'])->group(function () {
