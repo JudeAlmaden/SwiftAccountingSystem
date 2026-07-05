@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\DB;
 
 class Journal extends Model
 {
-
     use HasFactory;
 
     protected $fillable = [
@@ -30,7 +29,6 @@ class Journal extends Model
         'proposed_data' => 'array',
     ];
 
-
     /**
      * Default approval flow: Type Disbursement
      * Step 1 = accounting assistant generates voucher
@@ -38,7 +36,7 @@ class Journal extends Model
      * Step 3 = auditor approval
      * Step 4 = svp approval
      * Step 5 = back to accounting assistant for final approval
-     * 
+     *
      * user_id: optional. When null, any user with that role can approve/decline. When set, only that
      * user (or admin) can act at this step — for when a step is restricted to a specific person.
      * Who actually acted is stored in journal_tracking (handled_by), not in step_flow.
@@ -82,25 +80,24 @@ class Journal extends Model
         ];
     }
 
-
-    //==================================================================================
+    // ==================================================================================
     /**
      * Generate a new control number based on the prefix.
      */
     public static function generateControlNumber($prefixId): string
     {
         $prefix = ControlNumberPrefix::findOrFail($prefixId);
-        $count = self::where('control_number', 'like', $prefix->code . '-' . date('Y') . '-%')->count();
-        return $prefix->code . '-' . date('Y') . '-' . str_pad($count + 1, 3, '0', STR_PAD_LEFT);
-    }
+        $count = self::where('control_number', 'like', $prefix->code.'-'.date('Y').'-%')->count();
 
+        return $prefix->code.'-'.date('Y').'-'.str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+    }
 
     public function getStepFlowForApiAttribute(): array
     {
         $flow = $this->step_flow ?? self::defaultStepFlow();
         $userIds = array_filter(array_column($flow, 'user_id'));
         $users = [];
-        if (!empty($userIds)) {
+        if (! empty($userIds)) {
             $users = User::whereIn('id', $userIds)->get()->keyBy('id');
         }
         $result = [];
@@ -110,6 +107,7 @@ class Journal extends Model
             $step['user_name'] = $id && isset($users[$id]) ? $users[$id]->name : null;
             $result[] = $step;
         }
+
         return $result;
     }
 

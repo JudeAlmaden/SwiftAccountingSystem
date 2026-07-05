@@ -10,6 +10,7 @@ class NotificationRead
     use Dispatchable, SerializesModels;
 
     public $userId;
+
     public $unreadCount;
 
     public function __construct($userId, $unreadCount)

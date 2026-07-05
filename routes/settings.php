@@ -6,7 +6,7 @@ use App\Http\Controllers\Settings\TwoFactorAuthenticationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-//I have no idea how these work but they are mostly just for login and auth, lets not mess with these
+// I have no idea how these work but they are mostly just for login and auth, lets not mess with these
 Route::middleware(['auth'])->group(function () {
     Route::redirect('settings', '/settings/profile');
 
@@ -15,7 +15,7 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    
+
     Route::delete('settings/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::get('settings/password', [PasswordController::class, 'edit'])->name('user-password.edit');

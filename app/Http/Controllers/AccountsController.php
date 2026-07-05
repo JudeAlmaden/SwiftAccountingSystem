@@ -2,21 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Account;
+use Illuminate\Http\Request;
 
 class AccountsController extends Controller
 {
     /**
-    * List all chart of accounts
-    **/
-    function index(Request $request){
+     * List all chart of accounts
+     **/
+    public function index(Request $request)
+    {
         $validated = $request->validate([
             'search' => 'nullable|string',
-            'page'   => 'nullable|integer|min:1',
-            'limit'  => 'nullable|integer|min:1|max:1000',
-            'all'    => 'nullable',
-            'account_group_id' => 'nullable|exists:account_groups,id'
+            'page' => 'nullable|integer|min:1',
+            'limit' => 'nullable|integer|min:1|max:1000',
+            'all' => 'nullable',
+            'account_group_id' => 'nullable|exists:account_groups,id',
         ]);
         $query = Account::query()->withCount('journalItems')->with('group');
 
@@ -24,34 +25,36 @@ class AccountsController extends Controller
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
                 $q->where('account_name', 'like', "%{$search}%")
-                  ->orWhere('account_code', 'like', "%{$search}%");
+                    ->orWhere('account_code', 'like', "%{$search}%");
             });
         }
-        
-        if (!empty($validated['account_group_id'])) {
+
+        if (! empty($validated['account_group_id'])) {
             $query->where('account_group_id', $validated['account_group_id']);
         }
 
         if ($request->boolean('all')) {
             // For optimized dropdowns, we usually only want active accounts
             $accounts = $query->where('status', 'active')->get();
+
             return response()->json(['data' => $accounts]);
         }
 
         $accounts = $query->paginate($validated['limit'] ?? 15);
         $groups = \App\Models\AccountGroup::withCount('accounts')->orderBy('name')->get();
-        
+
         return \Inertia\Inertia::render('Accounts/accounts', [
             'accounts' => $accounts,
-            'groups'   => $groups,
-            'filters'  => $request->only(['search', 'account_group_id'])
+            'groups' => $groups,
+            'filters' => $request->only(['search', 'account_group_id']),
         ]);
     }
 
     /**
-    * Create a new chart of account
-    **/
-    function store(Request $request){
+     * Create a new chart of account
+     **/
+    public function store(Request $request)
+    {
         $validated = $request->validate([
             'account_name' => 'required|string|max:255|unique:accounts,account_name',
             'account_description' => 'nullable|string',
@@ -63,36 +66,36 @@ class AccountsController extends Controller
         ]);
 
         // Validate sub_account_type against account_type
-        if (!empty($validated['sub_account_type'])) {
+        if (! empty($validated['sub_account_type'])) {
             $validSubTypes = Account::getSubAccountTypes($validated['account_type']);
             if (empty($validSubTypes)) {
                 return response()->json([
                     'message' => 'Invalid account type.',
-                    'errors' => ['account_type' => ['The selected account type is invalid.']]
+                    'errors' => ['account_type' => ['The selected account type is invalid.']],
                 ], 422);
             }
-            if (!in_array($validated['sub_account_type'], $validSubTypes)) {
+            if (! in_array($validated['sub_account_type'], $validSubTypes)) {
                 return response()->json([
                     'message' => 'Invalid sub-account type for the selected account type.',
-                    'errors' => ['sub_account_type' => ['The selected sub-account type is invalid for this account type.']]
+                    'errors' => ['sub_account_type' => ['The selected sub-account type is invalid for this account type.']],
                 ], 422);
             }
         }
 
         $account = Account::create($validated);
-        
+
         if ($request->wantsJson()) {
             return response()->json($account);
         }
 
         return redirect()->route('accounts.index', ['tab' => 'accounts'])
-                         ->with('message', 'Account created successfully.');
+            ->with('message', 'Account created successfully.');
     }
 
     /**
      * View a specific account with its journal history
      */
-    function show(Request $request, $id)
+    public function show(Request $request, $id)
     {
         $validated = $request->validate([
             'search' => 'nullable|string',
@@ -104,45 +107,46 @@ class AccountsController extends Controller
 
         // Get journals that reference this account
         $query = \App\Models\Journal::query()
-            ->whereHas('items', function($q) use ($id) {
+            ->whereHas('items', function ($q) use ($id) {
                 $q->where('account_id', $id);
             })
-            ->with(['items' => function($q) use ($id) {
+            ->with(['items' => function ($q) use ($id) {
                 $q->where('account_id', $id)->with('account');
             }]);
 
         // Search functionality
-        if (!empty($validated['search'])) {
+        if (! empty($validated['search'])) {
             $search = $validated['search'];
             $query->where(function ($q) use ($search) {
                 $q->where('control_number', 'like', "%{$search}%")
-                  ->orWhere('title', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                    ->orWhere('title', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
             });
         }
 
         // Status filtering
-        if (!empty($validated['status'])) {
+        if (! empty($validated['status'])) {
             $query->where('status', $validated['status']);
         }
 
         $journals = $query->orderBy('created_at', 'desc')->paginate(10);
 
         return \Inertia\Inertia::render('Accounts/view', [
-            'account'  => $account,
+            'account' => $account,
             'journals' => $journals,
-            'filters'  => $request->only(['search', 'status'])
+            'filters' => $request->only(['search', 'status']),
         ]);
     }
 
-    /** 
-    * Delete a chart an account from the chart, 
-    * WE WILL ONLY DO THIS IF THE ACCOUNT IS NOT ASSIGNED TO ANY TRANSACTION
-    **/
-    function destroy($id){
+    /**
+     * Delete a chart an account from the chart,
+     * WE WILL ONLY DO THIS IF THE ACCOUNT IS NOT ASSIGNED TO ANY TRANSACTION
+     **/
+    public function destroy($id)
+    {
         $account = Account::withCount('journalItems')->find($id);
 
-        if (!$account) {
+        if (! $account) {
             return response()->json([
                 'message' => 'Account not found',
             ], 404);
@@ -154,11 +158,12 @@ class AccountsController extends Controller
                     'message' => 'Cannot delete account as it has associated journal items.',
                 ], 422);
             }
+
             return back()->withErrors(['message' => 'Cannot delete account as it has associated journal items.']);
         }
 
         $account->delete();
-        
+
         if (request()->wantsJson()) {
             return response()->json([
                 'message' => 'Account deleted successfully',
@@ -171,10 +176,10 @@ class AccountsController extends Controller
     /**
      * Toggle the status of an account
      */
-    function toggleStatus($id)
+    public function toggleStatus($id)
     {
         $account = Account::find($id);
-        if (!$account) {
+        if (! $account) {
             return response()->json(['message' => 'Account not found'], 404);
         }
 

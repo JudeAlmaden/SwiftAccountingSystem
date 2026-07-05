@@ -52,14 +52,14 @@ class AuditTrail extends Model
         ?array $properties = null
     ): self {
         return self::create([
-            'user_id'      => $userId ?? auth()->id(),
-            'event_type'   => $eventType,
-            'description'  => $description,
+            'user_id' => $userId ?? auth()->id(),
+            'event_type' => $eventType,
+            'description' => $description,
             'subject_type' => $subjectType,
-            'subject_id'   => $subjectId,
-            'properties'   => $properties,
-            'ip_address'   => request()?->ip(),
-            'user_agent'   => request()?->userAgent(),
+            'subject_id' => $subjectId,
+            'properties' => $properties,
+            'ip_address' => request()?->ip(),
+            'user_agent' => request()?->userAgent(),
         ]);
     }
 }

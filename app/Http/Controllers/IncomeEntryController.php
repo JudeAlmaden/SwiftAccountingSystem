@@ -2,25 +2,24 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Inertia\Inertia;
+use App\Models\AuditTrail;
+use App\Models\ControlNumberPrefix;
 use App\Models\Journal;
+use App\Models\JournalTracking;
 use App\Models\Notification;
 use App\Models\User;
-use App\Models\JournalTracking;
-use App\Models\ControlNumberPrefix;
-use App\Models\AuditTrail;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
-use Carbon\Carbon;
+use Inertia\Inertia;
 
 class IncomeEntryController extends Controller
 {
     public function index(Request $request)
     {
         $date = $request->query('date', now()->format('Y-m-d'));
-        
+
         $entries = Journal::with(['items.account'])
             ->where('type', 'Manual Income Entry')
             ->whereDate('created_at', $date)
@@ -33,14 +32,15 @@ class IncomeEntryController extends Controller
 
         $dayStatuses = $allEntries->mapWithKeys(function ($entry) {
             $day = Carbon::parse($entry->created_at)->format('Y-m-d');
+
             return [$day => [
                 'has_entry' => true,
-                'pending_edit' => $entry->status === 'pending' && !empty($entry->proposed_data),
+                'pending_edit' => $entry->status === 'pending' && ! empty($entry->proposed_data),
             ]];
         });
 
         $prefixes = ControlNumberPrefix::orderBy('sort_order')->get();
-        
+
         return Inertia::render('Income Entry/index', [
             'entries' => $entries,
             'prefixes' => $prefixes,
@@ -50,7 +50,6 @@ class IncomeEntryController extends Controller
         ]);
     }
 
-
     public function store(Request $request)
     {
         // Handle JSON accounts if sent as a string (common with FormData)
@@ -59,14 +58,14 @@ class IncomeEntryController extends Controller
         }
 
         $validated = $request->validate([
-            'title'                    => 'required|string|max:255',
-            'description'              => 'required|string',
-            'date'                     => 'required|date',
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
+            'date' => 'required|date',
             'control_number_prefix_id' => 'required|exists:control_number_prefixes,id',
-            'accounts'                 => 'required|array|min:1',
-            'accounts.*.account_id'    => 'required|exists:accounts,id',
-            'accounts.*.type'          => 'required|in:debit,credit',
-            'accounts.*.amount'        => 'required|numeric',
+            'accounts' => 'required|array|min:1',
+            'accounts.*.account_id' => 'required|exists:accounts,id',
+            'accounts.*.type' => 'required|in:debit,credit',
+            'accounts.*.amount' => 'required|numeric',
         ]);
 
         // Constraint: Only one manual income entry per day
@@ -81,7 +80,7 @@ class IncomeEntryController extends Controller
         $isToday = Carbon::parse($validated['date'])->isToday();
 
         DB::transaction(function () use ($validated, $isToday) {
-            $stepFlow = $isToday 
+            $stepFlow = $isToday
                 ? Journal::manualIncomeStepFlow()
                 : [
                     ['step' => 1, 'role' => 'accounting head'],
@@ -120,15 +119,15 @@ class IncomeEntryController extends Controller
 
             AuditTrail::log('income_entry_recorded', "Manual Income Entry recorded: {$journal->control_number}", Auth::id(), Journal::class, $journal->id);
 
-            if (!$isToday) {
+            if (! $isToday) {
                 // Notify Auditors
                 $auditors = User::role('auditor')->get();
                 foreach ($auditors as $auditor) {
                     Notification::create([
                         'user_id' => $auditor->id,
-                        'title'   => 'New Income Entry',
+                        'title' => 'New Income Entry',
                         'message' => "Accounting Head has recorded a historical income entry ({$journal->control_number}).",
-                        'link'    => route('income-entry.index') . "?date=" . $journal->created_at->format('Y-m-d'),
+                        'link' => route('income-entry.index').'?date='.$journal->created_at->format('Y-m-d'),
                     ]);
                 }
             }
@@ -136,7 +135,6 @@ class IncomeEntryController extends Controller
 
         return back()->with('success', 'Income entry recorded successfully.');
     }
-
 
     public function update(Request $request, $id)
     {
@@ -202,11 +200,11 @@ class IncomeEntryController extends Controller
             JournalTracking::create([
                 'journal_id' => $journal->id,
                 'handled_by' => Auth::id(),
-                'step'       => 1,
-                'role'       => 'accounting head',
-                'action'     => 'edit_request',
-                'remarks'    => 'Requested historical edit. Pending Auditor approval.',
-                'acted_at'   => now(),
+                'step' => 1,
+                'role' => 'accounting head',
+                'action' => 'edit_request',
+                'remarks' => 'Requested historical edit. Pending Auditor approval.',
+                'acted_at' => now(),
             ]);
 
             AuditTrail::log('income_entry_edit_requested', "Manual Income Entry edit request sent: {$journal->control_number}", Auth::id(), Journal::class, $journal->id);
@@ -216,9 +214,9 @@ class IncomeEntryController extends Controller
             foreach ($auditors as $auditor) {
                 Notification::create([
                     'user_id' => $auditor->id,
-                    'title'   => 'New Edit Request',
+                    'title' => 'New Edit Request',
                     'message' => "Accounting Head has requested to edit a previous income entry for ({$journal->created_at->format('Y-m-d')}).",
-                    'link'    => route('income-entry.index') . "?date=" . $journal->created_at->format('Y-m-d'),
+                    'link' => route('income-entry.index').'?date='.$journal->created_at->format('Y-m-d'),
                 ]);
             }
 

@@ -2,9 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
 use App\Models\User;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 class UsersSeeder extends Seeder
@@ -14,7 +13,7 @@ class UsersSeeder extends Seeder
      */
     public function run(): void
     {
-        //We make a admin role, this is how we will make accounts in the future <3
+        // We make a admin role, this is how we will make accounts in the future <3
         User::factory()->create([
             'name' => 'admin',
             'account_number' => '000-0001',
@@ -22,20 +21,20 @@ class UsersSeeder extends Seeder
             'password' => Hash::make('password'),
         ])->assignRole('admin');
 
-        //Most of these are just for testing
+        // Most of these are just for testing
         User::factory()->create([
             'name' => 'accounting head',
             'account_number' => '000-0003',
             'email' => 'head@example.com',
             'password' => Hash::make('password'),
-        ])->assignRole('accounting head');   
+        ])->assignRole('accounting head');
 
         User::factory()->create([
             'name' => 'accounting assistant',
             'account_number' => '000-0002',
             'email' => 'assistant@example.com',
             'password' => Hash::make('password'),
-        ])->assignRole('accounting assistant');  
+        ])->assignRole('accounting assistant');
 
         User::factory()->create([
             'name' => 'auditor',

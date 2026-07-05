@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\AuditTrail;
+use App\Models\ControlNumberPrefix;
 use App\Models\Journal;
 use App\Models\JournalTracking;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
-use App\Models\User;
 use App\Models\Notification;
-use App\Models\ControlNumberPrefix;
-use App\Models\AuditTrail;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class JournalController extends Controller
 {
@@ -20,15 +20,15 @@ class JournalController extends Controller
     {
         // Validate incoming request parameters
         $validated = $request->validate([
-            'search'       => 'nullable|string|max:255',
-            'date_from'    => 'nullable|date',
-            'date_to'      => 'nullable|date|after_or_equal:date_from',
-            'status'       => 'nullable|string|in:pending,approved,rejected',
-            'type'         => 'nullable|string|max:100',
+            'search' => 'nullable|string|max:255',
+            'date_from' => 'nullable|date',
+            'date_to' => 'nullable|date|after_or_equal:date_from',
+            'status' => 'nullable|string|in:pending,approved,rejected',
+            'type' => 'nullable|string|max:100',
             'current_step' => 'nullable|integer|in:1,2,3,4',
-            'sort_by'      => 'nullable|string|in:created_at,control_number,title,status,current_step',
-            'sort_order'   => 'nullable|string|in:asc,desc',
-            'handling'     => 'nullable|string|in:me,others',
+            'sort_by' => 'nullable|string|in:created_at,control_number,title,status,current_step',
+            'sort_order' => 'nullable|string|in:asc,desc',
+            'handling' => 'nullable|string|in:me,others',
         ]);
 
         // Build the query
@@ -36,41 +36,41 @@ class JournalController extends Controller
             ->where('type', '!=', 'Manual Income Entry');
 
         // Search functionality (control_number, title, description)
-        if (!empty($validated['search'])) {
+        if (! empty($validated['search'])) {
             $searchTerm = $validated['search'];
             $query->where(function ($q) use ($searchTerm) {
-                $q->where('control_number', 'like', '%' . $searchTerm . '%')
-                    ->orWhere('title', 'like', '%' . $searchTerm . '%')
-                    ->orWhere('description', 'like', '%' . $searchTerm . '%');
+                $q->where('control_number', 'like', '%'.$searchTerm.'%')
+                    ->orWhere('title', 'like', '%'.$searchTerm.'%')
+                    ->orWhere('description', 'like', '%'.$searchTerm.'%');
             });
         }
 
         // Date range filtering
-        if (!empty($validated['date_from'])) {
+        if (! empty($validated['date_from'])) {
             $query->whereDate('created_at', '>=', $validated['date_from']);
         }
 
-        if (!empty($validated['date_to'])) {
+        if (! empty($validated['date_to'])) {
             $query->whereDate('created_at', '<=', $validated['date_to']);
         }
 
         // Status filtering
-        if (!empty($validated['status'])) {
+        if (! empty($validated['status'])) {
             $query->where('status', $validated['status']);
         }
 
         // Type filtering
-        if (!empty($validated['type'])) {
+        if (! empty($validated['type'])) {
             $query->where('type', $validated['type']);
         }
 
         // Filter by current step (workflow position)
-        if (!empty($validated['current_step'])) {
+        if (! empty($validated['current_step'])) {
             $query->where('current_step', $validated['current_step']);
         }
 
         // Filter by Handling (Me vs Others)
-        if (!empty($validated['handling'])) {
+        if (! empty($validated['handling'])) {
             $user = Auth::user();
             if ($validated['handling'] === 'me') {
                 $query->pendingForUser($user);
@@ -80,7 +80,7 @@ class JournalController extends Controller
         }
 
         // Sorting
-        $sortBy    = $validated['sort_by']    ?? 'created_at';
+        $sortBy = $validated['sort_by'] ?? 'created_at';
         $sortOrder = $validated['sort_order'] ?? 'desc';
         $query->orderBy($sortBy, $sortOrder);
 
@@ -90,19 +90,19 @@ class JournalController extends Controller
         return \Inertia\Inertia::render('vouchers/index', [
             'journals' => $journals,
             'pending_count' => Journal::pendingForUser(Auth::user())->count(),
-            'filters' => $request->only(['search', 'date_from', 'date_to', 'status', 'type', 'sort_by', 'sort_order', 'handling'])
+            'filters' => $request->only(['search', 'date_from', 'date_to', 'status', 'type', 'sort_by', 'sort_order', 'handling']),
         ]);
     }
 
     public function show(Request $request, $id)
     {
         $journal = Journal::with(['items.account', 'tracking.handler', 'attachments'])->findOrFail($id);
-        
+
         $data = $journal->toArray();
         $data['step_flow'] = $journal->step_flow_for_api;
 
         return \Inertia\Inertia::render('vouchers/view', [
-            'journal' => $data
+            'journal' => $data,
         ]);
     }
 
@@ -114,20 +114,20 @@ class JournalController extends Controller
         }
 
         $validated = $request->validate([
-            'title'                    => 'required|string|max:255',
-            'description'              => 'nullable|string',
-            'type'                     => 'nullable|string|max:100',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'type' => 'nullable|string|max:100',
             'control_number_prefix_id' => 'required|exists:control_number_prefixes,id',
-            'accounts'                 => 'required|array|min:1',
-            'accounts.*.account_id'    => 'required|exists:accounts,id',
-            'accounts.*.type'          => 'required|in:debit,credit',
-            'accounts.*.amount'        => 'required|numeric',
-            'accounts.*.order_number'  => 'required|integer',
-            'attachments'              => 'nullable|array',
-            'attachments.*'            => 'string', // These are temp folder IDs/UUIDs
+            'accounts' => 'required|array|min:1',
+            'accounts.*.account_id' => 'required|exists:accounts,id',
+            'accounts.*.type' => 'required|in:debit,credit',
+            'accounts.*.amount' => 'required|numeric',
+            'accounts.*.order_number' => 'required|integer',
+            'attachments' => 'nullable|array',
+            'attachments.*' => 'string', // These are temp folder IDs/UUIDs
         ]);
 
-        $prefix     = ControlNumberPrefix::findOrFail($validated['control_number_prefix_id']);
+        $prefix = ControlNumberPrefix::findOrFail($validated['control_number_prefix_id']);
         $prefixCode = Str::upper($prefix->code);
 
         // Get the latest journal with this prefix to determine the next number
@@ -137,61 +137,61 @@ class JournalController extends Controller
 
         $nextNumber = 1;
         if ($latestJournal) {
-            $parts    = explode('-', $latestJournal->control_number);
+            $parts = explode('-', $latestJournal->control_number);
             $lastPart = end($parts);
             if (is_numeric($lastPart)) {
                 $nextNumber = intval($lastPart) + 1;
             }
         }
 
-        $paddedNumber  = str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+        $paddedNumber = str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
         $controlNumber = "{$prefixCode}-{$paddedNumber}";
 
-        $type     = $validated['type'] ?? 'disbursement';
+        $type = $validated['type'] ?? 'disbursement';
         $stepFlow = $type === 'journal'
             ? Journal::journalStepFlow()
             : Journal::defaultStepFlow();
 
-        $journal  = Journal::create([
+        $journal = Journal::create([
             'control_number' => $controlNumber,
-            'type'           => $type,
-            'title'          => $validated['title'],
-            'description'    => $validated['description'] ?? '',
-            'step_flow'      => $stepFlow,
-            'current_step'   => 2, // Next: Accounting Head
-            'status'         => 'pending',
+            'type' => $type,
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? '',
+            'step_flow' => $stepFlow,
+            'current_step' => 2, // Next: Accounting Head
+            'status' => 'pending',
         ]);
 
         // Save items
         foreach ($validated['accounts'] as $account) {
             $journal->items()->create([
-                'account_id'   => $account['account_id'],
-                'type'         => $account['type'],
-                'amount'       => $account['amount'],
+                'account_id' => $account['account_id'],
+                'type' => $account['type'],
+                'amount' => $account['amount'],
                 'order_number' => $account['order_number'],
             ]);
         }
 
         // Handle Asynchronous Attachments
-        if (!empty($validated['attachments'])) {
+        if (! empty($validated['attachments'])) {
             foreach ($validated['attachments'] as $tempId) {
                 $temporaryUpload = \App\Models\TemporaryUpload::where('folder', $tempId)->first();
 
                 if ($temporaryUpload) {
-                    $oldPath   = 'attachments/tmp/' . $tempId . '/' . $temporaryUpload->filename;
-                    $newFolder = 'attachments/' . date('Y/m/d');
-                    $newPath   = $newFolder . '/' . $temporaryUpload->filename;
+                    $oldPath = 'attachments/tmp/'.$tempId.'/'.$temporaryUpload->filename;
+                    $newFolder = 'attachments/'.date('Y/m/d');
+                    $newPath = $newFolder.'/'.$temporaryUpload->filename;
 
                     if (Storage::disk('public')->exists($oldPath)) {
                         Storage::disk('public')->move($oldPath, $newPath);
 
                         $journal->attachments()->create([
-                            'file_path'  => $newPath,
-                            'file_name'  => $temporaryUpload->filename,
-                            'file_type'  => Storage::disk('public')->mimeType($newPath),
+                            'file_path' => $newPath,
+                            'file_name' => $temporaryUpload->filename,
+                            'file_type' => Storage::disk('public')->mimeType($newPath),
                         ]);
 
-                        Storage::disk('public')->deleteDirectory('attachments/tmp/' . $tempId);
+                        Storage::disk('public')->deleteDirectory('attachments/tmp/'.$tempId);
                         $temporaryUpload->delete();
                     }
                 }
@@ -201,13 +201,13 @@ class JournalController extends Controller
         // Tracking — step 1 auto-approved by creating assistant
         $handledBy = Auth::user()->id;
         JournalTracking::create([
-            'handled_by'  => $handledBy,
-            'journal_id'  => $journal->id,
-            'step'        => 1,
-            'role'        => 'accounting assistant',
-            'action'      => 'approved',
-            'remarks'     => 'Voucher generated and approved by assistant.',
-            'acted_at'    => now(),
+            'handled_by' => $handledBy,
+            'journal_id' => $journal->id,
+            'step' => 1,
+            'role' => 'accounting assistant',
+            'action' => 'approved',
+            'remarks' => 'Voucher generated and approved by assistant.',
+            'acted_at' => now(),
         ]);
 
         // Notify Accounting Head(s) — Step 2
@@ -218,21 +218,21 @@ class JournalController extends Controller
 
     public function approve(Request $request, $id)
     {
-        $journal     = Journal::findOrFail($id);
-        $user        = Auth::user();
-        $roles       = array_map('strtolower', $user->getRoleNames()->toArray());
+        $journal = Journal::findOrFail($id);
+        $user = Auth::user();
+        $roles = array_map('strtolower', $user->getRoleNames()->toArray());
         $currentStep = (int) $journal->current_step;
-        $stepFlow    = $journal->step_flow ?? Journal::defaultStepFlow();
+        $stepFlow = $journal->step_flow ?? Journal::defaultStepFlow();
 
-        $stepConfig       = $stepFlow[$currentStep - 1] ?? [];
-        $requiredRole     = $stepConfig['role'] ?? ($currentStep === 1 ? 'accounting assistant' : null);
+        $stepConfig = $stepFlow[$currentStep - 1] ?? [];
+        $requiredRole = $stepConfig['role'] ?? ($currentStep === 1 ? 'accounting assistant' : null);
         $restrictedToUserId = isset($stepConfig['user_id']) ? (int) $stepConfig['user_id'] : null;
 
-        if (!in_array('admin', $roles)) {
+        if (! in_array('admin', $roles)) {
             if ($restrictedToUserId !== null && $restrictedToUserId !== (int) $user->id) {
                 return response()->json(['message' => 'Unauthorized for this step.'], 403);
             }
-            if ($requiredRole === null || !in_array(strtolower($requiredRole), $roles)) {
+            if ($requiredRole === null || ! in_array(strtolower($requiredRole), $roles)) {
                 return response()->json(['message' => 'Unauthorized for this step.'], 403);
             }
         }
@@ -246,13 +246,13 @@ class JournalController extends Controller
 
         // Tracking Role
         $trackingRole = $stepConfig['role'] ?? ($currentStep === 1 ? 'accounting assistant' : 'admin');
-        $nextStep     = $currentStep + 1;
-        $status       = $nextStep > $totalSteps ? 'approved' : $journal->status;
+        $nextStep = $currentStep + 1;
+        $status = $nextStep > $totalSteps ? 'approved' : $journal->status;
 
         // Update Data
         $updateData = [
             'current_step' => min($nextStep, $totalSteps + 1),
-            'status'       => $status,
+            'status' => $status,
         ];
 
         // Check id
@@ -263,12 +263,12 @@ class JournalController extends Controller
         $journal->update($updateData);
 
         // Apply proposed changes for Manual Income Entry edit requests upon final approval
-        if ($journal->type === 'Manual Income Entry' && $status === 'approved' && !empty($journal->proposed_data)) {
+        if ($journal->type === 'Manual Income Entry' && $status === 'approved' && ! empty($journal->proposed_data)) {
             $proposed = $journal->proposed_data;
 
             DB::transaction(function () use ($journal, $proposed) {
                 $journal->update([
-                    'title'       => $proposed['title'],
+                    'title' => $proposed['title'],
                     'description' => $proposed['description'],
                     'proposed_data' => null, // Clear the proposed changes after applying
                 ]);
@@ -277,9 +277,9 @@ class JournalController extends Controller
                 $journal->items()->delete();
                 foreach ($proposed['accounts'] as $index => $item) {
                     $journal->items()->create([
-                        'account_id'   => $item['account_id'],
-                        'type'         => $item['type'],
-                        'amount'       => $item['amount'],
+                        'account_id' => $item['account_id'],
+                        'type' => $item['type'],
+                        'amount' => $item['amount'],
                         'order_number' => $index + 1,
                     ]);
                 }
@@ -292,22 +292,21 @@ class JournalController extends Controller
             if ($initiator && $initiator->handled_by && $initiator->handled_by !== Auth::id()) {
                 Notification::create([
                     'user_id' => $initiator->handled_by,
-                    'title'   => 'Edit Approved',
+                    'title' => 'Edit Approved',
                     'message' => "Your historical edit request for {$journal->control_number} has been approved.",
-                    'link'    => route('income-entry.index') . "?date=" . $journal->created_at->format('Y-m-d')
+                    'link' => route('income-entry.index').'?date='.$journal->created_at->format('Y-m-d'),
                 ]);
             }
         }
 
-
         JournalTracking::create([
             'handled_by' => $user->id,
             'journal_id' => $journal->id,
-            'step'       => $currentStep,
-            'role'       => $trackingRole,
-            'action'     => 'approved',
-            'remarks'    => $request->remarks ?? 'Approved.',
-            'acted_at'   => now(),
+            'step' => $currentStep,
+            'role' => $trackingRole,
+            'action' => 'approved',
+            'remarks' => $request->remarks ?? 'Approved.',
+            'acted_at' => now(),
         ]);
 
         AuditTrail::log(
@@ -335,9 +334,9 @@ class JournalController extends Controller
             foreach ($involvedUserIds as $involvedUserId) {
                 Notification::create([
                     'user_id' => $involvedUserId,
-                    'title'   => 'Journal Approved',
+                    'title' => 'Journal Approved',
                     'message' => "Journal ({$journal->control_number}) has been fully approved.",
-                    'link'    => route('vouchers.show', ['id' => $journal->id])
+                    'link' => route('vouchers.show', ['id' => $journal->id]),
                 ]);
             }
         }
@@ -347,21 +346,21 @@ class JournalController extends Controller
 
     public function decline(Request $request, $id)
     {
-        $journal     = Journal::findOrFail($id);
-        $user        = Auth::user();
-        $roles       = array_map('strtolower', $user->getRoleNames()->toArray());
+        $journal = Journal::findOrFail($id);
+        $user = Auth::user();
+        $roles = array_map('strtolower', $user->getRoleNames()->toArray());
         $currentStep = (int) $journal->current_step;
-        $stepFlow    = $journal->step_flow ?? Journal::defaultStepFlow();
+        $stepFlow = $journal->step_flow ?? Journal::defaultStepFlow();
 
-        $stepConfig       = $stepFlow[$currentStep - 1] ?? [];
-        $requiredRole     = $stepConfig['role'] ?? ($currentStep === 1 ? 'accounting assistant' : null);
+        $stepConfig = $stepFlow[$currentStep - 1] ?? [];
+        $requiredRole = $stepConfig['role'] ?? ($currentStep === 1 ? 'accounting assistant' : null);
         $restrictedToUserId = isset($stepConfig['user_id']) ? (int) $stepConfig['user_id'] : null;
 
-        if (!in_array('admin', $roles)) {
+        if (! in_array('admin', $roles)) {
             if ($restrictedToUserId !== null && $restrictedToUserId !== (int) $user->id) {
                 return response()->json(['message' => 'Unauthorized for this step.'], 403);
             }
-            if ($requiredRole === null || !in_array(strtolower($requiredRole), $roles)) {
+            if ($requiredRole === null || ! in_array(strtolower($requiredRole), $roles)) {
                 return response()->json(['message' => 'Unauthorized for this step.'], 403);
             }
         }
@@ -382,28 +381,28 @@ class JournalController extends Controller
         JournalTracking::create([
             'handled_by' => $user->id,
             'journal_id' => $journal->id,
-            'step'       => $currentStep,
-            'role'       => $trackingRole,
-            'action'     => 'rejected',
-            'remarks'    => $request->remarks ?? 'Declined.',
-            'acted_at'   => now(),
+            'step' => $currentStep,
+            'role' => $trackingRole,
+            'action' => 'rejected',
+            'remarks' => $request->remarks ?? 'Declined.',
+            'acted_at' => now(),
         ]);
 
-        $initiator = $journal->tracking()->where(function($q) {
+        $initiator = $journal->tracking()->where(function ($q) {
             $q->where('step', 1)->orWhere('action', 'edit_request');
         })->latest()->first();
 
         if ($initiator && $initiator->handled_by && $initiator->handled_by !== Auth::id()) {
             $reason = $request->remarks ?? 'No reason provided.';
-            $link = $journal->type === 'Manual Income Entry' 
-                ? route('income-entry.index') . "?date=" . $journal->created_at->format('Y-m-d')
+            $link = $journal->type === 'Manual Income Entry'
+                ? route('income-entry.index').'?date='.$journal->created_at->format('Y-m-d')
                 : route('vouchers.view', ['id' => $journal->id]);
 
             Notification::create([
                 'user_id' => $initiator->handled_by,
-                'title'   => 'Journal Declined',
+                'title' => 'Journal Declined',
                 'message' => "Your journal/edit request ({$journal->control_number}) was declined. Reason: {$reason}",
-                'link'    => $link
+                'link' => $link,
             ]);
         }
 
@@ -419,9 +418,9 @@ class JournalController extends Controller
         foreach ($users as $user) {
             Notification::create([
                 'user_id' => $user->id,
-                'title'   => $title,
+                'title' => $title,
                 'message' => $message,
-                'link'    => $link
+                'link' => $link,
             ]);
         }
     }

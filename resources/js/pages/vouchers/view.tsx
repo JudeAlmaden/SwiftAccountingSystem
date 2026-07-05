@@ -213,7 +213,7 @@ export default function View() {
                     doc.head.appendChild(style);
                 }
             },
-            jsPDF: { unit: 'mm', format: pdfFormat, orientation: 'portrait' }
+            jsPDF: { unit: 'mm', format: pdfFormat, orientation: sheetSize === 'half' ? 'landscape' : 'portrait' }
         };
 
         html2pdf().from(element).set(opt as any).save().catch((err: any) => {
@@ -300,7 +300,7 @@ export default function View() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="full">Full (A4)</SelectItem>
-                                    <SelectItem value="half">Half (A5)</SelectItem>
+                                    <SelectItem value="half">Half (A4)</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

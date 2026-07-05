@@ -2,24 +2,32 @@
 
 namespace Database\Seeders;
 
-use Carbon\Carbon;
-use Illuminate\Database\Seeder;
+use App\Models\Account;
 use App\Models\Journal;
 use App\Models\JournalItem;
 use App\Models\JournalTracking;
-use App\Models\Account;
 use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Database\Seeder;
 
 class JournalSeeder extends Seeder
 {
     private ?Account $cashAccount = null;
+
     private ?Account $bankAccount = null;
+
     private ?Account $rentExpense = null;
+
     private ?Account $accountsPayable = null;
+
     private ?Account $tuitionFeeIncome = null;
+
     private ?\App\Models\ControlNumberPrefix $miePrefix = null;
+
     private ?User $assistant = null;
+
     private ?User $head = null;
+
     private ?User $admin = null;
 
     public function run(): void
@@ -32,51 +40,51 @@ class JournalSeeder extends Seeder
         \Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
         $this->resolveDependencies();
-        
-        if (!$this->assistant || !$this->head || !$this->admin || !$this->cashAccount) {
-             return;
+
+        if (! $this->assistant || ! $this->head || ! $this->admin || ! $this->cashAccount) {
+            return;
         }
 
         $faker = \Faker\Factory::create();
 
         // --- Disbursement vouchers (with check step flow) ---
         for ($i = 1; $i <= 20; $i++) {
-            $controlNumber = 'DV-2026-' . str_pad($i, 3, '0', STR_PAD_LEFT);
+            $controlNumber = 'DV-2026-'.str_pad($i, 3, '0', STR_PAD_LEFT);
             $titles = ['Office Supplies', 'Rent Payment', 'Utilities', 'Equipment Purchase', 'Consultancy Fee', 'Repair Services', 'Travel Expenses', 'Software Subscription'];
-            $title  = $titles[array_rand($titles)] . ' - ' . $faker->monthName;
+            $title = $titles[array_rand($titles)].' - '.$faker->monthName;
 
             $amount = $faker->randomFloat(2, 1000, 50000);
 
             // 30% Approved, 20% Rejected, 50% Pending
-            $rand         = rand(1, 100);
+            $rand = rand(1, 100);
             $targetStatus = 'pending';
-            $targetStep   = 2;
+            $targetStep = 2;
 
             if ($rand <= 30) {
                 $targetStatus = 'approved';
-                $targetStep   = 6;
+                $targetStep = 6;
             } elseif ($rand <= 50) {
                 $targetStatus = 'rejected';
-                $targetStep   = rand(2, 4);
+                $targetStep = rand(2, 4);
             } else {
                 $targetStatus = 'pending';
-                $targetStep   = rand(2, 5);
+                $targetStep = rand(2, 5);
             }
 
             $journal = Journal::create([
                 'control_number' => $controlNumber,
-                'type'           => 'disbursement',
-                'title'          => $title,
-                'description'    => $faker->sentence,
-                'step_flow'      => \App\Models\Journal::defaultStepFlow(),
-                'current_step'   => $targetStep,
-                'status'         => $targetStatus,
-                'check_id'       => ($targetStep >= 6) ? 'CHK-' . rand(10000, 99999) : null,
-                'created_at'     => Carbon::now()->subDays(rand(1, 60)),
+                'type' => 'disbursement',
+                'title' => $title,
+                'description' => $faker->sentence,
+                'step_flow' => \App\Models\Journal::defaultStepFlow(),
+                'current_step' => $targetStep,
+                'status' => $targetStatus,
+                'check_id' => ($targetStep >= 6) ? 'CHK-'.rand(10000, 99999) : null,
+                'created_at' => Carbon::now()->subDays(rand(1, 60)),
             ]);
 
             // Create Items (Balanced)
-            $debitAccount  = rand(0, 1) ? $this->rentExpense : $this->accountsPayable;
+            $debitAccount = rand(0, 1) ? $this->rentExpense : $this->accountsPayable;
             $creditAccount = rand(0, 1) ? $this->cashAccount : $this->bankAccount;
 
             if (rand(0, 1)) {
@@ -95,24 +103,24 @@ class JournalSeeder extends Seeder
 
             JournalTracking::create([
                 'journal_id' => $journal->id,
-                'step'       => 1,
-                'role'       => 'accounting assistant',
-                'action'     => 'approved',
-                'remarks'    => 'Generated and verified.',
+                'step' => 1,
+                'role' => 'accounting assistant',
+                'action' => 'approved',
+                'remarks' => 'Generated and verified.',
                 'handled_by' => $this->assistant->id,
-                'acted_at'   => $createdTime->copy()->addHours(1),
+                'acted_at' => $createdTime->copy()->addHours(1),
             ]);
 
             if ($targetStep > 2 || ($targetStep == 2 && $targetStatus == 'rejected')) {
                 $action = ($targetStep == 2 && $targetStatus == 'rejected') ? 'rejected' : 'approved';
                 JournalTracking::create([
                     'journal_id' => $journal->id,
-                    'step'       => 2,
-                    'role'       => 'accounting head',
-                    'action'     => $action,
-                    'remarks'    => $action == 'rejected' ? 'Budget constraints.' : 'Approved.',
+                    'step' => 2,
+                    'role' => 'accounting head',
+                    'action' => $action,
+                    'remarks' => $action == 'rejected' ? 'Budget constraints.' : 'Approved.',
                     'handled_by' => $this->head->id,
-                    'acted_at'   => $createdTime->copy()->addHours(5),
+                    'acted_at' => $createdTime->copy()->addHours(5),
                 ]);
             }
 
@@ -120,12 +128,12 @@ class JournalSeeder extends Seeder
                 $action = ($targetStep == 3 && $targetStatus == 'rejected') ? 'rejected' : 'approved';
                 JournalTracking::create([
                     'journal_id' => $journal->id,
-                    'step'       => 3,
-                    'role'       => 'auditor',
-                    'action'     => $action,
-                    'remarks'    => $action == 'rejected' ? 'Missing docs.' : 'Audited.',
+                    'step' => 3,
+                    'role' => 'auditor',
+                    'action' => $action,
+                    'remarks' => $action == 'rejected' ? 'Missing docs.' : 'Audited.',
                     'handled_by' => $this->admin->id,
-                    'acted_at'   => $createdTime->copy()->addDay(),
+                    'acted_at' => $createdTime->copy()->addDay(),
                 ]);
             }
 
@@ -133,12 +141,12 @@ class JournalSeeder extends Seeder
                 $action = ($targetStep == 4 && $targetStatus == 'rejected') ? 'rejected' : 'approved';
                 JournalTracking::create([
                     'journal_id' => $journal->id,
-                    'step'       => 4,
-                    'role'       => 'svp',
-                    'action'     => $action,
-                    'remarks'    => $action == 'rejected' ? 'Declined by SVP.' : 'SVP Approved.',
+                    'step' => 4,
+                    'role' => 'svp',
+                    'action' => $action,
+                    'remarks' => $action == 'rejected' ? 'Declined by SVP.' : 'SVP Approved.',
                     'handled_by' => $this->admin->id,
-                    'acted_at'   => $createdTime->copy()->addDays(2),
+                    'acted_at' => $createdTime->copy()->addDays(2),
                 ]);
             }
 
@@ -146,53 +154,53 @@ class JournalSeeder extends Seeder
                 $action = ($targetStep == 5 && $targetStatus == 'rejected') ? 'rejected' : 'approved';
                 JournalTracking::create([
                     'journal_id' => $journal->id,
-                    'step'       => 5,
-                    'role'       => 'accounting assistant',
-                    'action'     => $action,
-                    'remarks'    => $action == 'rejected' ? 'Check issue failure.' : 'Check released.',
+                    'step' => 5,
+                    'role' => 'accounting assistant',
+                    'action' => $action,
+                    'remarks' => $action == 'rejected' ? 'Check issue failure.' : 'Check released.',
                     'handled_by' => $this->assistant->id,
-                    'acted_at'   => $createdTime->copy()->addDays(3),
+                    'acted_at' => $createdTime->copy()->addDays(3),
                 ]);
             }
         }
 
         // --- Journal vouchers (no check step; uses journalStepFlow) ---
         for ($i = 1; $i <= 15; $i++) {
-            $controlNumber = 'JV-2026-' . str_pad($i, 3, '0', STR_PAD_LEFT);
+            $controlNumber = 'JV-2026-'.str_pad($i, 3, '0', STR_PAD_LEFT);
             $titles = ['Accrual Entry', 'Adjusting Entry', 'Reclassification', 'Provision Entry', 'Depreciation Entry'];
-            $title  = $titles[array_rand($titles)] . ' - ' . $faker->monthName;
+            $title = $titles[array_rand($titles)].' - '.$faker->monthName;
 
             $amount = $faker->randomFloat(2, 500, 25000);
 
             // 50% Approved, 20% Rejected, 30% Pending
-            $rand         = rand(1, 100);
+            $rand = rand(1, 100);
             $targetStatus = 'pending';
-            $targetStep   = 2;
+            $targetStep = 2;
 
             if ($rand <= 50) {
                 $targetStatus = 'approved';
-                $targetStep   = 4; // final step (svp) for journal vouchers
+                $targetStep = 4; // final step (svp) for journal vouchers
             } elseif ($rand <= 70) {
                 $targetStatus = 'rejected';
-                $targetStep   = rand(2, 4);
+                $targetStep = rand(2, 4);
             } else {
                 $targetStatus = 'pending';
-                $targetStep   = rand(2, 4);
+                $targetStep = rand(2, 4);
             }
 
             $journal = Journal::create([
                 'control_number' => $controlNumber,
-                'type'           => 'journal',
-                'title'          => $title,
-                'description'    => $faker->sentence,
-                'step_flow'      => \App\Models\Journal::journalStepFlow(),
-                'current_step'   => $targetStep,
-                'status'         => $targetStatus,
-                'created_at'     => Carbon::now()->subDays(rand(1, 60)),
+                'type' => 'journal',
+                'title' => $title,
+                'description' => $faker->sentence,
+                'step_flow' => \App\Models\Journal::journalStepFlow(),
+                'current_step' => $targetStep,
+                'status' => $targetStatus,
+                'created_at' => Carbon::now()->subDays(rand(1, 60)),
             ]);
 
             // Create Items (Balanced)
-            $debitAccount  = rand(0, 1) ? $this->rentExpense : $this->accountsPayable;
+            $debitAccount = rand(0, 1) ? $this->rentExpense : $this->accountsPayable;
             $creditAccount = rand(0, 1) ? $this->cashAccount : $this->bankAccount;
 
             if (rand(0, 1)) {
@@ -211,24 +219,24 @@ class JournalSeeder extends Seeder
             // Step 1: generated by accounting assistant (auto-approved on creation)
             JournalTracking::create([
                 'journal_id' => $journal->id,
-                'step'       => 1,
-                'role'       => 'accounting assistant',
-                'action'     => 'approved',
-                'remarks'    => 'Journal voucher generated and recorded.',
+                'step' => 1,
+                'role' => 'accounting assistant',
+                'action' => 'approved',
+                'remarks' => 'Journal voucher generated and recorded.',
                 'handled_by' => $this->assistant->id,
-                'acted_at'   => $createdTime->copy()->addHours(1),
+                'acted_at' => $createdTime->copy()->addHours(1),
             ]);
 
             if ($targetStep > 2 || ($targetStep == 2 && $targetStatus == 'rejected')) {
                 $action = ($targetStep == 2 && $targetStatus == 'rejected') ? 'rejected' : 'approved';
                 JournalTracking::create([
                     'journal_id' => $journal->id,
-                    'step'       => 2,
-                    'role'       => 'accounting head',
-                    'action'     => $action,
-                    'remarks'    => $action == 'rejected' ? 'Budget / coding issue.' : 'Reviewed by accounting head.',
+                    'step' => 2,
+                    'role' => 'accounting head',
+                    'action' => $action,
+                    'remarks' => $action == 'rejected' ? 'Budget / coding issue.' : 'Reviewed by accounting head.',
                     'handled_by' => $this->head->id,
-                    'acted_at'   => $createdTime->copy()->addHours(6),
+                    'acted_at' => $createdTime->copy()->addHours(6),
                 ]);
             }
 
@@ -236,12 +244,12 @@ class JournalSeeder extends Seeder
                 $action = ($targetStep == 3 && $targetStatus == 'rejected') ? 'rejected' : 'approved';
                 JournalTracking::create([
                     'journal_id' => $journal->id,
-                    'step'       => 3,
-                    'role'       => 'auditor',
-                    'action'     => $action,
-                    'remarks'    => $action == 'rejected' ? 'Supporting docs insufficient.' : 'Audit trail checked.',
+                    'step' => 3,
+                    'role' => 'auditor',
+                    'action' => $action,
+                    'remarks' => $action == 'rejected' ? 'Supporting docs insufficient.' : 'Audit trail checked.',
                     'handled_by' => $this->admin->id,
-                    'acted_at'   => $createdTime->copy()->addDay(),
+                    'acted_at' => $createdTime->copy()->addDay(),
                 ]);
             }
 
@@ -249,19 +257,19 @@ class JournalSeeder extends Seeder
                 $action = ($targetStep == 4 && $targetStatus == 'rejected') ? 'rejected' : 'approved';
                 JournalTracking::create([
                     'journal_id' => $journal->id,
-                    'step'       => 4,
-                    'role'       => 'svp',
-                    'action'     => $action,
-                    'remarks'    => $action == 'rejected' ? 'Declined by SVP.' : 'Final approval for journal voucher.',
+                    'step' => 4,
+                    'role' => 'svp',
+                    'action' => $action,
+                    'remarks' => $action == 'rejected' ? 'Declined by SVP.' : 'Final approval for journal voucher.',
                     'handled_by' => $this->admin->id,
-                    'acted_at'   => $createdTime->copy()->addDays(2),
+                    'acted_at' => $createdTime->copy()->addDays(2),
                 ]);
             }
         }
 
         // --- Manual Income Entries (One per day maximum) ---
         $incomeTitles = ['Daily Sales Collection', 'Service Revenue', 'Tuition Fees', 'Miscellaneous Income', 'Consultation Fees'];
-        
+
         // Ensure entries for current day + 5 previous days
         $specificDates = [];
         for ($i = 0; $i < 6; $i++) {
@@ -271,7 +279,7 @@ class JournalSeeder extends Seeder
         // Add 10 more random dates from the last 30 days (excluding the specific ones)
         $usedDates = [...$specificDates];
         $allDates = [...$specificDates];
-        
+
         for ($i = 0; $i < 10; $i++) {
             do {
                 $randomDate = Carbon::now()->subDays(rand(6, 30))->format('Y-m-d');
@@ -281,11 +289,11 @@ class JournalSeeder extends Seeder
         }
 
         foreach ($allDates as $index => $targetDate) {
-            $controlNumber = 'MIE-2026-' . str_pad($index + 1, 3, '0', STR_PAD_LEFT);
+            $controlNumber = 'MIE-2026-'.str_pad($index + 1, 3, '0', STR_PAD_LEFT);
             $date = Carbon::parse($targetDate);
             $journal = Journal::create([
-                'title' => 'Daily Tuition Income - ' . $date->format('M d, Y'),
-                'description' => 'Summary of tuition fees and miscellaneous income for ' . $date->format('F d, Y'),
+                'title' => 'Daily Tuition Income - '.$date->format('M d, Y'),
+                'description' => 'Summary of tuition fees and miscellaneous income for '.$date->format('F d, Y'),
                 'type' => 'Manual Income Entry',
                 'status' => 'approved',
                 'current_step' => 2, // Accounting Head step passed
@@ -297,7 +305,7 @@ class JournalSeeder extends Seeder
 
             // Add balanced items
             $amount = rand(15000, 35000) + (rand(0, 99) / 100);
-            
+
             // Debit: Cash in Bank (1010-004)
             $journal->items()->create([
                 'account_id' => $this->bankAccount->id, // Cash in Bank - AUB
@@ -327,20 +335,17 @@ class JournalSeeder extends Seeder
         }
     }
 
-
-
     private function resolveDependencies(): void
     {
-        $this->cashAccount     = Account::where('account_code', '1010-000')->first();
-        $this->bankAccount     = Account::where('account_code', '1010-004')->first();
-        $this->rentExpense     = Account::where('account_code', '5000-013')->first();
+        $this->cashAccount = Account::where('account_code', '1010-000')->first();
+        $this->bankAccount = Account::where('account_code', '1010-004')->first();
+        $this->rentExpense = Account::where('account_code', '5000-013')->first();
         $this->accountsPayable = Account::where('account_code', '2020-009')->first();
         $this->tuitionFeeIncome = Account::where('account_code', '4000-001')->first();
-        $this->miePrefix       = \App\Models\ControlNumberPrefix::where('code', 'MIE')->first();
-        
+        $this->miePrefix = \App\Models\ControlNumberPrefix::where('code', 'MIE')->first();
+
         $this->assistant = User::where('email', 'assistant@sacli.edu.ph')->first() ?: User::where('email', 'assistant@example.com')->first();
-        $this->head      = User::where('email', 'head@sacli.edu.ph')->first() ?: User::where('email', 'head@example.com')->first();
-        $this->admin     = User::where('email', 'admin@sacli.edu.ph')->first() ?: User::where('email', 'admin@example.com')->first();
+        $this->head = User::where('email', 'head@sacli.edu.ph')->first() ?: User::where('email', 'head@example.com')->first();
+        $this->admin = User::where('email', 'admin@sacli.edu.ph')->first() ?: User::where('email', 'admin@example.com')->first();
     }
 }
-

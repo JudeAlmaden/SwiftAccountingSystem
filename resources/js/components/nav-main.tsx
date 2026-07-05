@@ -62,25 +62,60 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
     return (
         <>
             <DottedSeparator />
-            {notificationItem && (
-                <SidebarGroup className="px-2">
-                    <SidebarMenu className="gap-3">
-                        <SidebarMenuItem>
-                            <Link
-                                href={notificationItem.href}
-                                prefetch
-                                className={`relative flex items-center gap-2 rounded-sm px-0.5 py-0.5 transition-colors group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:justify-center ${activeItem?.title === notificationItem.title ? 'bg-[#16c42d]' : 'bg-[#d5e6d7] hover:bg-[#c5d6c7]'}`}
-                            >
-                                <div className="flex items-center justify-center w-10 h-10 bg-[#16c42d] rounded-sm shrink-0">
-                                    {notificationItem.icon && <notificationItem.icon className="w-5 h-5 text-white" />}
-                                </div>
-                                <span className={`text-sm font-medium group-data-[collapsible=icon]:hidden ${activeItem?.title === notificationItem.title ? 'text-white' : 'text-[#02310b]'}`}>{notificationItem.title}</span>
-                                <Badge count={notificationItem.count} isDot />
-                            </Link>
-                        </SidebarMenuItem>
-                    </SidebarMenu>
-                </SidebarGroup>
-            )}
+            {notificationItem && (() => {
+                const hasNotifications = (notificationItem.count ?? 0) > 0;
+                const isActive = activeItem?.title === notificationItem.title;
+                
+                return (
+                    <SidebarGroup className="px-2">
+                        <SidebarMenu className="gap-3">
+                            <SidebarMenuItem>
+                                <Link
+                                    href={notificationItem.href}
+                                    prefetch
+                                    className={`relative flex items-center gap-2 rounded-sm px-0.5 py-0.5 transition-all duration-300 group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:justify-center ${
+                                        isActive
+                                            ? 'bg-[#16c42d]'
+                                            : hasNotifications
+                                                ? 'bg-red-50 border border-red-200/80 shadow-sm hover:bg-red-100/70 text-red-950'
+                                                : 'bg-[#d5e6d7] hover:bg-[#c5d6c7]'
+                                    }`}
+                                >
+                                    <div className={`flex items-center justify-center w-10 h-10 rounded-sm shrink-0 transition-all duration-300 ${
+                                        isActive
+                                            ? 'bg-[#16c42d]'
+                                            : hasNotifications
+                                                ? 'bg-red-500 animate-pulse text-white'
+                                                : 'bg-[#16c42d]'
+                                    }`}>
+                                        {notificationItem.icon && <notificationItem.icon className="w-5 h-5 text-white" />}
+                                    </div>
+                                    <span className={`text-sm group-data-[collapsible=icon]:hidden ${
+                                        isActive
+                                            ? 'text-white font-semibold'
+                                            : hasNotifications
+                                                ? 'text-red-900 font-bold'
+                                                : 'text-[#02310b] font-medium'
+                                    }`}>
+                                        {notificationItem.title}
+                                    </span>
+                                    {hasNotifications && (
+                                        <span className="ml-auto mr-2 flex h-5 w-auto min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 text-[10px] font-bold text-white shadow-sm group-data-[collapsible=icon]:hidden animate-bounce">
+                                            {notificationItem.count}
+                                        </span>
+                                    )}
+                                    {hasNotifications && (
+                                        <span className="absolute top-1 left-1 hidden group-data-[collapsible=icon]:flex h-2.5 w-2.5">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border-2 border-white shadow-sm"></span>
+                                        </span>
+                                    )}
+                                </Link>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
+                    </SidebarGroup>
+                );
+            })()}
             <DottedSeparator />
             <SidebarGroup className="px-2 py-0">
                 <SidebarGroupLabel>Platform</SidebarGroupLabel>

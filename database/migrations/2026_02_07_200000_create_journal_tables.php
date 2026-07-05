@@ -39,14 +39,14 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        //Tracks the actions done by these users
+        // Tracks the actions done by these users
         Schema::create('journal_tracking', function (Blueprint $table) {
             $table->id();
             $table->foreignId('journal_id')->constrained('journals')->cascadeOnDelete();
             $table->foreignId('handled_by')->nullable()->constrained('users')->cascadeOnDelete();
             $table->integer('step');
             $table->enum('role', ['accounting assistant', 'accounting head', 'auditor', 'svp']);
-            //Current actions include: prepared, approved, rejected, edit_request, edit_applied, edit_rejected
+            // Current actions include: prepared, approved, rejected, edit_request, edit_applied, edit_rejected
             $table->string('action')->nullable()->default(null);
             $table->text('remarks')->nullable();
             $table->timestamp('acted_at')->nullable();

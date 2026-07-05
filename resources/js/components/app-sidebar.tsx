@@ -23,23 +23,23 @@ export function AppSidebar() {
     /* ======================
     NAV CONFIG PER PERMISSION
     ====================== */
-    const navItemDetails: Record<string, NavItem & { role?: string | string[] }> = {
+    const navItemDetails: Record<string, NavItem & { permission?: string | string[] }> = {
         dashboard: { title: 'Dashboard', href: route('dashboard'), icon: LayoutGrid },
-        inventory: { title: 'Inventory', href: route('inventory.index'), icon: Package, exact: false },
-        users: { title: 'Users and Accounts', href: route('users.index'), icon: User, role: 'admin', exact: false },
-        vouchers: { title: 'Vouchers', href: route('vouchers.index'), icon: WalletCards, role: ['accounting head', 'accounting assistant', 'auditor', 'SVP'], exact: false },
-        vouchersReports: { title: 'Voucher Statistics', href: route('vouchers.statistics'), icon: BarChart3, role: ['accounting head', 'accounting assistant', 'auditor', 'SVP'] },
-        chartAccounts: { title: 'Chart of Accounts', href: route('accounts.index'), icon: BookOpen, role: ['accounting head', 'accounting assistant', 'auditor', 'SVP'], exact: false },
-        accountReports: { title: 'Account Reports', href: route('accounts.reports'), icon: PieChart, role: ['accounting head', 'accounting assistant', 'auditor', 'SVP'] },
-        controlPrefixes: { title: 'Control number prefixes', href: route('control-number-prefixes.index'), icon: Tag, role: 'accounting head' },
-        auditTrails: { title: 'Audit Trails', href: route('audit-trails.index'), icon: ClipboardList, role: ['admin', 'auditor'] },
-        trialBalance: { title: 'Trial Balance', href: route('trial-balance.index'), icon: PieChart, role: ['accounting head', 'auditor'] },
-        incomeEntry: { title: 'Income Entry', href: route('income-entry.index'), icon: FileText, role: ['accounting head', 'auditor'] },
-        balanceSheet: { title: 'Balance Sheet', href: route('balance-sheet.index'), icon: BarChart3, role: ['accounting head', 'auditor'] },
+        inventory: { title: 'Inventory', href: route('inventory.index'), icon: Package, exact: false, permission: 'view inventory' },
+        users: { title: 'Users and Accounts', href: route('users.index'), icon: User, permission: 'view users', exact: false },
+        vouchers: { title: 'Vouchers', href: route('vouchers.index'), icon: WalletCards, permission: 'view journals', exact: false },
+        vouchersReports: { title: 'Voucher Statistics', href: route('vouchers.statistics'), icon: BarChart3, permission: 'view journals' },
+        chartAccounts: { title: 'Chart of Accounts', href: route('accounts.index'), icon: BookOpen, permission: 'view accounts', exact: false },
+        accountReports: { title: 'Account Reports', href: route('accounts.reports'), icon: PieChart, permission: 'view accounts' },
+        controlPrefixes: { title: 'Control number prefixes', href: route('control-number-prefixes.index'), icon: Tag, permission: 'manage control number prefixes' },
+        auditTrails: { title: 'Audit Trails', href: route('audit-trails.index'), icon: ClipboardList, permission: 'view audit trails' },
+        trialBalance: { title: 'Trial Balance', href: route('trial-balance.index'), icon: PieChart, permission: 'create trial balance' },
+        incomeEntry: { title: 'Income Entry', href: route('income-entry.index'), icon: FileText, permission: 'create trial balance' },
+        balanceSheet: { title: 'Balance Sheet', href: route('balance-sheet.index'), icon: BarChart3, permission: 'create trial balance' },
         notifications: { title: 'Notifications', href: route('inbox'), icon: Bell },
     };
 
-    const userRoles = (user?.roles as string[] | undefined) || [];
+    const userPermissions = (user?.permissions as string[] | undefined) || [];
 
     // Map counts to items
     if (navItemDetails.notifications) {
@@ -52,11 +52,11 @@ export function AppSidebar() {
         navItemDetails.incomeEntry.count = user?.pending_income_entries_count as number;
     }
 
-    // Filter items based on role
+    // Filter items based on permission
     const navItems = Object.values(navItemDetails).filter((item) => {
-        if (!item.role) return true;
-        const roles = Array.isArray(item.role) ? item.role : [item.role];
-        return roles.some((r) => userRoles.includes(r));
+        if (!item.permission) return true;
+        const perms = Array.isArray(item.permission) ? item.permission : [item.permission];
+        return perms.some((p) => userPermissions.includes(p));
     });
 
     return (

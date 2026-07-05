@@ -34,7 +34,7 @@ class ControlNumberPrefixController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'code'  => 'required|string|max:20|unique:control_number_prefixes,code',
+            'code' => 'required|string|max:20|unique:control_number_prefixes,code',
             'label' => 'nullable|string|max:255',
         ]);
 
@@ -57,7 +57,7 @@ class ControlNumberPrefixController extends Controller
     public function update(Request $request, ControlNumberPrefix $controlNumberPrefix): JsonResponse
     {
         $validated = $request->validate([
-            'code'  => 'sometimes|string|max:20|unique:control_number_prefixes,code,' . $controlNumberPrefix->id,
+            'code' => 'sometimes|string|max:20|unique:control_number_prefixes,code,'.$controlNumberPrefix->id,
             'label' => 'nullable|string|max:255',
             'sort_order' => 'sometimes|integer|min:0',
         ]);

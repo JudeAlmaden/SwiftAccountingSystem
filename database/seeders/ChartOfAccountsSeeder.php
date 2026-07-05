@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\Account;
 use Illuminate\Database\Seeder;
-use App\Models\Account; 
 
 class ChartOfAccountsSeeder extends Seeder
 {
@@ -22,11 +22,13 @@ class ChartOfAccountsSeeder extends Seeder
         $groupsFile = database_path('seeders/account_groups.csv');
         $groupLookup = [];
 
-        if (($handle = fopen($groupsFile, "r")) !== FALSE) {
-            $header = fgetcsv($handle, 1000, ","); // Skip header
-            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
-                if (count($data) < 4) continue;
-                
+        if (($handle = fopen($groupsFile, 'r')) !== false) {
+            $header = fgetcsv($handle, 1000, ','); // Skip header
+            while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+                if (count($data) < 4) {
+                    continue;
+                }
+
                 $group = \App\Models\AccountGroup::create([
                     'name' => $data[0],
                     'grp_code' => $data[1],
@@ -43,10 +45,12 @@ class ChartOfAccountsSeeder extends Seeder
 
         // 2. Seed Accounts
         $accountsFile = database_path('seeders/accounts.csv');
-        if (($handle = fopen($accountsFile, "r")) !== FALSE) {
-            $header = fgetcsv($handle, 1000, ","); // Skip header
-            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
-                if (count($data) < 7) continue;
+        if (($handle = fopen($accountsFile, 'r')) !== false) {
+            $header = fgetcsv($handle, 1000, ','); // Skip header
+            while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+                if (count($data) < 7) {
+                    continue;
+                }
 
                 $grpCode = $data[6];
                 $groupId = $groupLookup[$grpCode] ?? null;

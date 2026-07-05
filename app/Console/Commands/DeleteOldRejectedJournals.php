@@ -2,10 +2,10 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\Journal;
-use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Storage;
 
 class DeleteOldRejectedJournals extends Command
 {
@@ -38,6 +38,7 @@ class DeleteOldRejectedJournals extends Command
 
         if ($oldRejectedJournals->isEmpty()) {
             $this->info('No rejected journals found that are older than 30 days.');
+
             return Command::SUCCESS;
         }
 

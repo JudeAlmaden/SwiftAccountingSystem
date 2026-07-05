@@ -2,36 +2,36 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Inertia\Inertia;
 use App\Models\AuditTrail;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Role;
+use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 use Spatie\Permission\Models\Permission;
-use Illuminate\Validation\Rule;                                                                      
+use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
-
     // For Stat Card
-    function stats()
+    public function stats()
     {
         $totalUsers = User::count();
         $activeUsers = User::where('status', 'active')->count();
         $inactiveUsers = User::where('status', 'inactive')->count();
         $adminUsers = User::role('admin')->count();
-        
-        //Fetch the single user with special roles
+
+        // Fetch the single user with special roles
         $accountingHead = User::role('accounting head')->where('status', 'active')->get();
         $svp = User::role('svp')->where('status', 'active')->get();
         $auditor = User::role('auditor')->where('status', 'active')->get();
-        
+
         $specialUsers = [
             'accounting_head' => $accountingHead,
             'svp' => $svp,
             'auditor' => $auditor,
         ];
+
         return response()->json([
             'total_users' => $totalUsers,
             'active_users' => $activeUsers,
@@ -41,33 +41,26 @@ class UserController extends Controller
         ]);
     }
 
-
     public function index(Request $request)
     {
         $validated = $request->validate([
             'search' => 'nullable|string',
-            'role'   => 'nullable|string',
-            'email'  => 'nullable|string',
+            'role' => 'nullable|string',
+            'email' => 'nullable|string',
             'status' => 'nullable|string|in:active,inactive',
         ]);
 
         $users = User::with('roles')
-            ->when($validated['search'] ?? null, fn ($q, $search) =>
-                $q->where(fn($sq) => 
-                    $sq->where('name', 'like', "%{$search}%")
-                       ->orWhere('account_number', 'like', "%{$search}%")
-                )
+            ->when($validated['search'] ?? null, fn ($q, $search) => $q->where(fn ($sq) => $sq->where('name', 'like', "%{$search}%")
+                ->orWhere('account_number', 'like', "%{$search}%")
             )
-            ->when($validated['role'] ?? null, fn ($q, $role) =>
-                $q->whereHas('roles', fn ($qr) =>
-                    $qr->where('name', $role)
-                )
             )
-            ->when($validated['email'] ?? null, fn ($q, $email) =>
-                $q->where('email', 'like', "%{$email}%")
+            ->when($validated['role'] ?? null, fn ($q, $role) => $q->whereHas('roles', fn ($qr) => $qr->where('name', $role)
             )
-            ->when($validated['status'] ?? null, fn ($q, $status) =>
-                $q->where('status', $status)
+            )
+            ->when($validated['email'] ?? null, fn ($q, $email) => $q->where('email', 'like', "%{$email}%")
+            )
+            ->when($validated['status'] ?? null, fn ($q, $status) => $q->where('status', $status)
             )
             ->paginate(10)->withQueryString();
 
@@ -79,15 +72,22 @@ class UserController extends Controller
         $activeUsers = User::where('status', 'active')->count();
         $inactiveUsers = User::where('status', 'inactive')->count();
         $adminUsers = User::role('admin')->count();
-        
+
         $specialUsers = [
-            'accounting_head' => tap(User::role('accounting head')->where('status', 'active')->get(), function($collection) { $collection->makeHidden(['roles']); }),
-            'svp' => tap(User::role('svp')->where('status', 'active')->get(), function($collection) { $collection->makeHidden(['roles']); }),
-            'auditor' => tap(User::role('auditor')->where('status', 'active')->get(), function($collection) { $collection->makeHidden(['roles']); }),
+            'accounting_head' => tap(User::role('accounting head')->where('status', 'active')->get(), function ($collection) {
+                $collection->makeHidden(['roles']);
+            }),
+            'svp' => tap(User::role('svp')->where('status', 'active')->get(), function ($collection) {
+                $collection->makeHidden(['roles']);
+            }),
+            'auditor' => tap(User::role('auditor')->where('status', 'active')->get(), function ($collection) {
+                $collection->makeHidden(['roles']);
+            }),
         ];
 
         return Inertia::render('admin/users', [
-            'roles' => Role::all(),
+            'roles' => Role::with('permissions')->get(),
+            'allPermissions' => Permission::orderBy('name')->get(),
             'stats' => [
                 'total_users' => $totalUsers,
                 'active_users' => $activeUsers,
@@ -96,7 +96,7 @@ class UserController extends Controller
             ],
             'specialUsers' => $specialUsers,
             'initialUsers' => clone $users,
-            'filters' => $request->only(['search', 'role', 'email', 'status'])
+            'filters' => $request->only(['search', 'role', 'email', 'status']),
         ]);
     }
 
@@ -104,122 +104,119 @@ class UserController extends Controller
      * Store a newly created account in the database.
      * Handles validation and persistence.
      */
-
-    function store(Request $request)
+    public function store(Request $request)
     {
-    $validated = $request->validate([
-        'name'           => 'required|string|max:255',
-        'account_number' => 'required|string|max:255|unique:users,account_number',
-        'email'          => 'nullable|string|email|max:255|unique:users,email',
-        'password'       => 'required|string|min:8|confirmed',
-        'role'           => [
-            'nullable', // Allow null role
-            'string',
-            Rule::exists('roles', 'name')
-                ->where(fn ($q) => $q->where('guard_name', 'web')),
-            function ($attribute, $value, $fail) {
-                if ($value === 'admin') {
-                    $fail('Cannot create new admin users.');
-                }
-            },
-        ],
-        'status'         => 'nullable|string|in:active,inactive',
-    ], [
-        'email.unique'          => 'This email is already registered.',
-        'account_number.unique' => 'This employee number is already registered.',
-        'password.confirmed'    => 'Password confirmation does not match.',
-    ]);
-
-    // Roles that must be UNIQUE among active users
-    $uniqueRoles = ['admin', 'accounting head', 'svp', 'auditor'];
-
-    if (
-        $validated['role'] && // Check if role is present
-        in_array($validated['role'], $uniqueRoles) &&
-        ($validated['status'] ?? 'active') === 'active'
-    ) {
-        $exists = User::where('status', 'active')
-            ->whereHas('roles', fn ($q) =>
-                $q->where('name', $validated['role'])
-            )
-            ->exists();
-
-        if ($exists) {
-            return response()->json([
-                'message' => "There can only be one active {$validated['role']}.",
-            ], 422);
-        }
-    }
-
-    // Create user AFTER validation checks
-    $user = User::create([
-        'name'           => $validated['name'],
-        'account_number' => $validated['account_number'],
-        'email'          => $validated['email'],
-        'status'         => $validated['status'] ?? 'active',
-        'password'       => Hash::make($validated['password']),
-    ]);
-
-    // Sync Role (if any)
-    if (!empty($validated['role'])) {
-        $user->syncRoles([$validated['role']]);
-    }
-
-
-    AuditTrail::log(
-        'user_created',
-        "User account created: {$user->name} (#{$user->account_number})",
-        auth()->id(),
-        \App\Models\User::class,
-        $user->id,
-        ['email' => $user->email, 'role' => $validated['role'] ?? null]
-    );
-
-    if ($request->wantsJson()) {
-        return response()->json([
-            'message' => 'User created successfully.',
-            'data'    => [
-                'id'             => $user->id,
-                'name'           => $user->name,
-                'account_number' => $user->account_number,
-                'email'          => $user->email,
-                'status'         => $user->status,
-                'role'           => $user->getRoleNames()->first(),
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'account_number' => 'required|string|max:255|unique:users,account_number',
+            'email' => 'nullable|string|email|max:255|unique:users,email',
+            'password' => 'required|string|min:8|confirmed',
+            'role' => [
+                'nullable', // Allow null role
+                'string',
+                Rule::exists('roles', 'name')
+                    ->where(fn ($q) => $q->where('guard_name', 'web')),
+                function ($attribute, $value, $fail) {
+                    if ($value === 'admin') {
+                        $fail('Cannot create new admin users.');
+                    }
+                },
             ],
-        ], 201);
-    }
+            'status' => 'nullable|string|in:active,inactive',
+        ], [
+        'email.unique' => 'This email is already registered.',
+        'account_number.unique' => 'This employee number is already registered.',
+        'password.confirmed' => 'Password confirmation does not match.',
+    ]);
 
-    return redirect()->route('users.index')
-        ->with('message', 'User created successfully.');
+        // Roles that must be UNIQUE among active users
+        $uniqueRoles = ['admin', 'accounting head', 'svp', 'auditor'];
+
+        if (
+            $validated['role'] && // Check if role is present
+            in_array($validated['role'], $uniqueRoles) &&
+            ($validated['status'] ?? 'active') === 'active'
+        ) {
+            $exists = User::where('status', 'active')
+                ->whereHas('roles', fn ($q) => $q->where('name', $validated['role'])
+                )
+                ->exists();
+
+            if ($exists) {
+                return response()->json([
+                    'message' => "There can only be one active {$validated['role']}.",
+                ], 422);
+            }
+        }
+
+        // Create user AFTER validation checks
+        $user = User::create([
+            'name' => $validated['name'],
+            'account_number' => $validated['account_number'],
+            'email' => $validated['email'],
+            'status' => $validated['status'] ?? 'active',
+            'password' => Hash::make($validated['password']),
+        ]);
+
+        // Sync Role (if any)
+        if (! empty($validated['role'])) {
+            $user->syncRoles([$validated['role']]);
+        }
+
+        AuditTrail::log(
+            'user_created',
+            "User account created: {$user->name} (#{$user->account_number})",
+            auth()->id(),
+            \App\Models\User::class,
+            $user->id,
+            ['email' => $user->email, 'role' => $validated['role'] ?? null]
+        );
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => 'User created successfully.',
+                'data' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'account_number' => $user->account_number,
+                    'email' => $user->email,
+                    'status' => $user->status,
+                    'role' => $user->getRoleNames()->first(),
+                ],
+            ], 201);
+        }
+
+        return redirect()->route('users.index')
+            ->with('message', 'User created successfully.');
     }
 
     /**
      * Display the specified account.
      */
-    function show(Request $request, $id){
+    public function show(Request $request, $id)
+    {
         $user = User::with('roles')->findOrFail($id);
-        
+
         if ($request->wantsJson()) {
             return response()->json($user);
         }
-        
+
         return redirect()->route('users.index');
     }
 
     /**
      * Update an existing account in the database.
      */
-
-    function update(Request $request, User $user)
+    public function update(Request $request, User $user)
     {
         $validated = $request->validate([
-            'id'             => 'required|exists:users,id',
-            'name'           => 'required|string|max:255',
-            'account_number' => 'required|string|max:255|unique:users,account_number,' . $request->id,
-            'email'          => 'nullable|string|email|max:255|unique:users,email,' . $request->id,
-            'password'       => 'nullable|string|min:8|confirmed',
-            'status'         => 'nullable|string|in:active,inactive',
-            'role'           => [
+            'id' => 'required|exists:users,id',
+            'name' => 'required|string|max:255',
+            'account_number' => 'required|string|max:255|unique:users,account_number,'.$request->id,
+            'email' => 'nullable|string|email|max:255|unique:users,email,'.$request->id,
+            'password' => 'nullable|string|min:8|confirmed',
+            'status' => 'nullable|string|in:active,inactive',
+            'role' => [
                 'nullable',
                 'string',
                 Rule::exists('roles', 'name')
@@ -233,18 +230,16 @@ class UserController extends Controller
             ],
         ]);
 
-
-        //Get the User
+        // Get the User
         $user = User::find($validated['id']);
 
         // Roles that must be unique among ACTIVE users
         $uniqueRoles = ['accounting head', 'admin', 'svp', 'auditor'];
         // Only check uniqueness if role is provided and in uniqueRoles
-        if (!empty($validated['role']) && in_array($validated['role'], $uniqueRoles)) {
+        if (! empty($validated['role']) && in_array($validated['role'], $uniqueRoles)) {
             $exists = User::where('status', 'active')
                 ->where('id', '!=', $user->id) // exclude current user
-                ->whereHas('roles', fn ($q) =>
-                    $q->where('name', $validated['role'])
+                ->whereHas('roles', fn ($q) => $q->where('name', $validated['role'])
                 )
                 ->exists();
 
@@ -253,10 +248,10 @@ class UserController extends Controller
                     'message' => 'The given data was invalid.',
                     'errors' => [
                         'role' => [
-                            "There can only be one active {$validated['role']}."
+                            "There can only be one active {$validated['role']}.",
                         ],
                     ],
-                ],422);
+                ], 422);
             }
         }
 
@@ -268,9 +263,9 @@ class UserController extends Controller
 
         // Update basic info
         $updateData = [
-            'name'           => $validated['name'],
+            'name' => $validated['name'],
             'account_number' => $validated['account_number'],
-            'email'          => $validated['email'],
+            'email' => $validated['email'],
         ];
 
         // Only update status if it was not unset (i.e., not self)
@@ -279,10 +274,9 @@ class UserController extends Controller
         }
 
         $user->update($updateData);
-            
 
         // Update password if provided
-        if (!empty($validated['password'])) {
+        if (! empty($validated['password'])) {
             $user->update([
                 'password' => Hash::make($validated['password']),
             ]);
@@ -299,13 +293,12 @@ class UserController extends Controller
         // If role is provided, sync it. If null (and explicitly sent as null/empty), remove roles?
         // Let's assume sending empty role means 'no role'
         if (array_key_exists('role', $validated)) {
-             if ($validated['role']) {
+            if ($validated['role']) {
                 $user->syncRoles([$validated['role']]);
-             } else {
+            } else {
                 $user->syncRoles([]); // Remove all roles
-             }
+            }
         }
-
 
         AuditTrail::log(
             'user_updated',
@@ -322,13 +315,13 @@ class UserController extends Controller
         if ($request->wantsJson()) {
             return response()->json([
                 'message' => 'User updated successfully.',
-                'data'    => [
-                    'id'             => $user->id,
-                    'name'           => $user->name,
+                'data' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
                     'account_number' => $user->account_number,
-                    'email'          => $user->email,
-                    'status'         => $user->status,
-                    'roles'          => $user->getRoleNames(),
+                    'email' => $user->email,
+                    'status' => $user->status,
+                    'roles' => $user->getRoleNames(),
                 ],
             ]);
         }

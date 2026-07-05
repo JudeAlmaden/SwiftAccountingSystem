@@ -21,7 +21,7 @@ export default function AppSidebarLayout({
             const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
             const csrfToken = meta?.content || '';
             
-            await fetch(route('notifications.mark-read', { id: notificationId }), {
+            await fetch(route('notifications.markRead', { id: notificationId }), {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': csrfToken,

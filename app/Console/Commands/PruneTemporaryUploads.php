@@ -32,10 +32,10 @@ class PruneTemporaryUploads extends Command
 
         foreach ($uploads as $upload) {
             $folder = $upload->folder;
-            
+
             // Delete the entire unique folder for this temp upload
-            if (\Illuminate\Support\Facades\Storage::disk('public')->exists('attachments/tmp/' . $folder)) {
-                \Illuminate\Support\Facades\Storage::disk('public')->deleteDirectory('attachments/tmp/' . $folder);
+            if (\Illuminate\Support\Facades\Storage::disk('public')->exists('attachments/tmp/'.$folder)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->deleteDirectory('attachments/tmp/'.$folder);
             }
 
             $upload->delete();

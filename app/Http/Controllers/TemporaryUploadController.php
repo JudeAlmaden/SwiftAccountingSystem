@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\TemporaryUpload;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class TemporaryUploadController extends Controller
@@ -20,19 +20,19 @@ class TemporaryUploadController extends Controller
         if ($request->hasFile('file')) {
             $file = $request->file('file');
             $filename = $file->getClientOriginalName();
-            $folder = uniqid() . '-' . now()->timestamp;
-            
+            $folder = uniqid().'-'.now()->timestamp;
+
             // Store in a unique temporary folder
-            $path = $file->storeAs('attachments/tmp/' . $folder, $filename, 'public');
+            $path = $file->storeAs('attachments/tmp/'.$folder, $filename, 'public');
 
             TemporaryUpload::create([
                 'folder' => $folder,
-                'filename' => $filename
+                'filename' => $filename,
             ]);
 
             return response()->json([
                 'id' => $folder, // We use the folder name as the unique id
-                'filename' => $filename
+                'filename' => $filename,
             ]);
         }
 
@@ -45,12 +45,13 @@ class TemporaryUploadController extends Controller
     public function revert(Request $request)
     {
         $folder = $request->getContent(); // Standard FilePond/Async revert often sends raw string
-        
+
         $temporaryUpload = TemporaryUpload::where('folder', $folder)->first();
 
         if ($temporaryUpload) {
-            Storage::disk('public')->deleteDirectory('attachments/tmp/' . $folder);
+            Storage::disk('public')->deleteDirectory('attachments/tmp/'.$folder);
             $temporaryUpload->delete();
+
             return response()->json(['message' => 'File reverted successfully']);
         }
 

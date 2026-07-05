@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Account;
 use App\Models\JournalItem;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -18,9 +17,9 @@ class AccountReportController extends Controller
     public function index(Request $request)
     {
         $validated = $request->validate([
-            'period'    => 'nullable|string|in:daily,monthly,yearly',
+            'period' => 'nullable|string|in:daily,monthly,yearly',
             'date_from' => 'nullable|date',
-            'date_to'   => 'nullable|date|after_or_equal:date_from',
+            'date_to' => 'nullable|date|after_or_equal:date_from',
         ]);
 
         $dateFrom = $validated['date_from'] ?? null;
@@ -64,27 +63,28 @@ class AccountReportController extends Controller
             ->get(['id', 'account_name', 'account_code', 'account_type', 'status'])
             ->map(function ($account) use ($usageAndAmounts) {
                 $row = $usageAndAmounts->get($account->id);
+
                 return [
-                    'id'            => $account->id,
-                    'account_name'  => $account->account_name,
-                    'account_code'  => $account->account_code,
-                    'account_type'  => $account->account_type,
-                    'status'        => $account->status,
-                    'usage_count'   => (int) ($row->usage_count ?? 0),
-                    'total_debit'   => round((float) ($row->total_debit ?? 0), 2),
-                    'total_credit'  => round((float) ($row->total_credit ?? 0), 2),
+                    'id' => $account->id,
+                    'account_name' => $account->account_name,
+                    'account_code' => $account->account_code,
+                    'account_type' => $account->account_type,
+                    'status' => $account->status,
+                    'usage_count' => (int) ($row->usage_count ?? 0),
+                    'total_debit' => round((float) ($row->total_debit ?? 0), 2),
+                    'total_credit' => round((float) ($row->total_credit ?? 0), 2),
                 ];
             });
 
         $responseData = [
-            'period'    => $period,
+            'period' => $period,
             'date_from' => $dateFrom,
-            'date_to'   => $dateTo,
-            'summary'   => [
-                'total'    => Account::count(),
-                'active'   => (int) ($byStatus['active'] ?? 0),
+            'date_to' => $dateTo,
+            'summary' => [
+                'total' => Account::count(),
+                'active' => (int) ($byStatus['active'] ?? 0),
                 'inactive' => (int) ($byStatus['inactive'] ?? 0),
-                'by_type'  => $byType,
+                'by_type' => $byType,
             ],
             'accounts_with_usage' => $accountsWithUsage,
         ];
@@ -95,7 +95,7 @@ class AccountReportController extends Controller
 
         return \Inertia\Inertia::render('reports/accounts', [
             'data' => $responseData,
-            'filters' => $request->only(['period', 'date_from', 'date_to'])
+            'filters' => $request->only(['period', 'date_from', 'date_to']),
         ]);
 
     }

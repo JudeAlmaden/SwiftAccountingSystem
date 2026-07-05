@@ -25,12 +25,15 @@ interface SharedData {
     stats: any;
     specialUsers: any;
     initialUsers: any;
+    allPermissions: any[];
     [key: string]: any;
 }
-import { Shield, Briefcase, FileText, Search } from 'lucide-react';
+import { Shield, Briefcase, FileText, Search, Plus, User as UserIcon } from 'lucide-react';
 import { SpecialUserCard } from './components/special-user-card';
 import { UserFormModal } from './components/user-form-modal';
 import { UserStats } from './components/user-stats';
+import { RoleCard } from './components/role-card';
+import { RoleFormModal } from './components/role-form-modal';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -45,7 +48,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 export default function Users() {
 
-    const { user: currentUser, roles, stats, specialUsers, initialUsers: paginatedUsers, filters = {} } = usePage<SharedData>().props;
+    const { user: currentUser, roles, allPermissions, stats, specialUsers, initialUsers: paginatedUsers, filters = {} } = usePage<SharedData>().props;
 
     const userRoles = currentUser?.roles || [];
     const isAdmin = userRoles.includes('admin');
@@ -82,6 +85,69 @@ export default function Users() {
         password_confirmation: '',
     });
     const [formErrors, setFormErrors] = useState<any>({});
+
+    const [activeTab, setActiveTab] = useState('users');
+
+    // Role modal states
+    const [isRoleModalOpen, setRoleModalOpen] = useState(false);
+    const [isEditingRole, setIsEditingRole] = useState(false);
+    const [isSavingRole, setIsSavingRole] = useState(false);
+    const [roleForm, setRoleForm] = useState({
+        id: -1,
+        name: '',
+        permissions: [] as string[],
+    });
+
+    const SYSTEM_ROLES = ['admin', 'accounting assistant', 'accounting head', 'auditor', 'SVP'];
+
+    const openCreateRoleModal = () => {
+        setIsEditingRole(false);
+        setRoleForm({ id: -1, name: '', permissions: [] });
+        setFormErrors({});
+        setRoleModalOpen(true);
+    };
+
+    const openEditRoleModal = (role: Role) => {
+        setIsEditingRole(true);
+        setRoleForm({
+            id: role.id,
+            name: role.name,
+            permissions: role.permissions?.map(p => p.name) || [],
+        });
+        setFormErrors({});
+        setRoleModalOpen(true);
+    };
+
+    const handleDeleteRole = (role: Role) => {
+        if (confirm(`Are you sure you want to delete the role "${role.name}"?`)) {
+            router.delete(route('roles.destroy', role.id), { preserveScroll: true });
+        }
+    };
+
+    const handleResetRole = (role: Role) => {
+        if (confirm(`Are you sure you want to reset the role "${role.name}" to its system defaults? All custom permissions will be lost.`)) {
+            router.post(route('roles.reset', role.id), {}, { preserveScroll: true });
+        }
+    };
+
+    const handleSaveRole = (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSavingRole(true);
+        setFormErrors({});
+
+        const url = isEditingRole
+            ? route('roles.update', roleForm.id)
+            : route('roles.store');
+
+        const method = isEditingRole ? 'put' : 'post';
+
+        router[method](url, roleForm, {
+            preserveScroll: true,
+            onSuccess: () => setRoleModalOpen(false),
+            onError: (errors) => setFormErrors(errors),
+            onFinish: () => setIsSavingRole(false),
+        });
+    };
 
     // Debounce Search
     useEffect(() => {
@@ -171,141 +237,188 @@ export default function Users() {
                     <p className="text-muted-foreground">Manage user accounts, roles, and permissions here</p>
                 </div>
 
-
-                <UserStats stats={stats} />
-
-                <div className="flex flex-col gap-1 py-2">
-                    <h2 className="text-2xl text-header">Special Users</h2>
-                    <p className="text-sm text-[#737385]">Users with special roles and permissions</p>
+                <div className="flex p-1.5 bg-gray-100/70 rounded-xl w-fit border border-gray-200/60 shadow-inner mb-2">
+                    <button
+                        className={`px-6 py-2.5 font-semibold text-sm transition-all duration-300 rounded-lg flex items-center gap-2 ${activeTab === 'users' ? 'bg-white text-[#16c42d] shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-200/50'}`}
+                        onClick={() => setActiveTab('users')}
+                    >
+                        <UserIcon className="w-4 h-4" />
+                        User Accounts
+                    </button>
+                    <button
+                        className={`px-6 py-2.5 font-semibold text-sm transition-all duration-300 rounded-lg flex items-center gap-2 ${activeTab === 'roles' ? 'bg-white text-[#16c42d] shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-200/50'}`}
+                        onClick={() => setActiveTab('roles')}
+                    >
+                        <Shield className="w-4 h-4" />
+                        Roles & Permissions
+                    </button>
                 </div>
 
-                <div className="grid gap-6 md:grid-cols-3">
-                    <SpecialUserCard
-                        title="Accounting Head"
-                        icon={Briefcase}
-                        users={specialUsers.accounting_head}
-                        onEdit={openEditModal}
-                        onAssign={() => openCreateModal()}
-                    />
-                    <SpecialUserCard
-                        title="SVP"
-                        icon={Shield}
-                        users={specialUsers.svp}
-                        onEdit={openEditModal}
-                        onAssign={() => openCreateModal()}
-                    />
-                    <SpecialUserCard
-                        title="Auditor"
-                        icon={FileText}
-                        users={specialUsers.auditor}
-                        onEdit={openEditModal}
-                        onAssign={() => openCreateModal()}
-                    />
-                </div>
+                {activeTab === 'users' ? (
+                    <>
+                        <UserStats stats={stats} />
 
-                <div className="flex flex-col gap-4 py-2">
-                    <div className="flex items-center justify-between">
-                        <div className="flex flex-col gap-1">
-                            <h2 className="text-2xl text-header">User Accounts</h2>
-                            <p className="text-sm text-[#737385]">View and manage all registered users</p>
+                        <div className="flex flex-col gap-1 py-2">
+                            <h2 className="text-2xl text-header">Special Users</h2>
+                            <p className="text-sm text-[#737385]">Users with special roles and permissions</p>
                         </div>
-                    </div>
 
-                    <div className="flex justify-between items-center gap-4 relative mb-4">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                        <Input
-                            placeholder="Search users..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="max-w-lg border-gray-300 border-[1.7px] rounded-sm bg-white pl-9"
-                        />
-                        {canCreateUsers && (
-                            <Button onClick={openCreateModal} variant="default">Add User</Button>
-                        )}
-                    </div>
+                        <div className="grid gap-6 md:grid-cols-3">
+                            <SpecialUserCard
+                                title="Accounting Head"
+                                icon={Briefcase}
+                                users={specialUsers.accounting_head}
+                                onEdit={openEditModal}
+                                onAssign={() => openCreateModal()}
+                            />
+                            <SpecialUserCard
+                                title="SVP"
+                                icon={Shield}
+                                users={specialUsers.svp}
+                                onEdit={openEditModal}
+                                onAssign={() => openCreateModal()}
+                            />
+                            <SpecialUserCard
+                                title="Auditor"
+                                icon={FileText}
+                                users={specialUsers.auditor}
+                                onEdit={openEditModal}
+                                onAssign={() => openCreateModal()}
+                            />
+                        </div>
 
-                    <Card className="overflow-hidden rounded-sm py-0 pb-6">
-                        <CardContent className="p-0">
-                            <Table>
-                                <TableHeader className="border-0">
-                                    <TableRow className="bg-table-head hover:bg-table-head border-0">
-                                        <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head first:rounded-tl-sm">Name</TableHead>
-                                        <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Employee Number</TableHead>
-                                        <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Email</TableHead>
-                                        <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Role</TableHead>
-                                        <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Status</TableHead>
-                                        <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head last:rounded-tr-sm">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {users.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
-                                                {isLoading ? 'Loading...' : 'No users found.'}
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : (
-                                        users.map((user: User) => (
-                                            <TableRow key={user.id}>
-                                                <TableCell className="font-medium px-4">{user.name}</TableCell>
-                                                <TableCell className="px-4 whitespace-nowrap">{user.account_number}</TableCell>
-                                                <TableCell className="px-4">{user.email || <span className="text-muted-foreground italic">None</span>}</TableCell>
-                                                <TableCell className="px-4">
-                                                    <span className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700">
-                                                        {user.roles?.map((role: Role) => role.name).join(', ') || 'No role'}
-                                                    </span>
-                                                </TableCell>
-                                                <TableCell className="px-4">
-                                                    <StatusIndicator status={user.status as 'active' | 'inactive'} />
-                                                </TableCell>
-                                                <TableCell className="px-4">
-                                                    {canEditUsers ? (
-                                                        <Button variant="outline" size="sm" onClick={() => openEditModal(user)}>Edit</Button>
-                                                    ) : (
-                                                        <Button variant="outline" size="sm" disabled>Edit</Button>
-                                                    )}
-                                                </TableCell>
+                        <div className="flex flex-col gap-4 py-2">
+                            <div className="flex items-center justify-between">
+                                <div className="flex flex-col gap-1">
+                                    <h2 className="text-2xl text-header">User Accounts</h2>
+                                    <p className="text-sm text-[#737385]">View and manage all registered users</p>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-between items-center gap-4 relative mb-4">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                <Input
+                                    placeholder="Search users..."
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    className="max-w-lg border-gray-300 border-[1.7px] rounded-sm bg-white pl-9"
+                                />
+                                {canCreateUsers && (
+                                    <Button onClick={openCreateModal} variant="default">Add User</Button>
+                                )}
+                            </div>
+
+                            <Card className="overflow-hidden rounded-sm py-0 pb-6">
+                                <CardContent className="p-0">
+                                    <Table>
+                                        <TableHeader className="border-0">
+                                            <TableRow className="bg-table-head hover:bg-table-head border-0">
+                                                <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head first:rounded-tl-sm">Name</TableHead>
+                                                <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Employee Number</TableHead>
+                                                <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Email</TableHead>
+                                                <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Role</TableHead>
+                                                <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head">Status</TableHead>
+                                                <TableHead className="px-4 py-5 text-white text-base font-extrabold bg-table-head last:rounded-tr-sm">Actions</TableHead>
                                             </TableRow>
-                                        ))
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {users.length === 0 ? (
+                                                <TableRow>
+                                                    <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
+                                                        {isLoading ? 'Loading...' : 'No users found.'}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ) : (
+                                                users.map((user: User) => (
+                                                    <TableRow key={user.id}>
+                                                        <TableCell className="font-medium px-4">{user.name}</TableCell>
+                                                        <TableCell className="px-4 whitespace-nowrap">{user.account_number}</TableCell>
+                                                        <TableCell className="px-4">{user.email || <span className="text-muted-foreground italic">None</span>}</TableCell>
+                                                        <TableCell className="px-4">
+                                                            <span className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700">
+                                                                {user.roles?.map((role: Role) => role.name).join(', ') || 'No role'}
+                                                            </span>
+                                                        </TableCell>
+                                                        <TableCell className="px-4">
+                                                            <StatusIndicator status={user.status as 'active' | 'inactive'} />
+                                                        </TableCell>
+                                                        <TableCell className="px-4">
+                                                            {canEditUsers ? (
+                                                                <Button variant="outline" size="sm" onClick={() => openEditModal(user)}>Edit</Button>
+                                                            ) : (
+                                                                <Button variant="outline" size="sm" disabled>Edit</Button>
+                                                            )}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                            </Card>
 
-                    {/* Pagination Controls */}
-                    <div className="flex items-center justify-between space-x-2 py-4">
-                        <div className="text-sm text-muted-foreground">
-                            Showing {pagination.from} to {pagination.to} of {pagination.total} entries
+                            {/* Pagination Controls */}
+                            <div className="flex items-center justify-between space-x-2 py-4">
+                                <div className="text-sm text-muted-foreground">
+                                    Showing {pagination.from} to {pagination.to} of {pagination.total} entries
+                                </div>
+                                <div className="space-x-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                            if (pagination.prev_page_url) {
+                                                router.get(pagination.prev_page_url, {}, { preserveScroll: true, preserveState: true });
+                                            }
+                                        }}
+                                        disabled={!pagination.prev_page_url}
+                                    >
+                                        Previous
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                            if (pagination.next_page_url) {
+                                                router.get(pagination.next_page_url, {}, { preserveScroll: true, preserveState: true });
+                                            }
+                                        }}
+                                        disabled={!pagination.next_page_url}
+                                    >
+                                        Next
+                                    </Button>
+                                </div>
+                            </div>
                         </div>
-                        <div className="space-x-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                    if (pagination.prev_page_url) {
-                                        router.get(pagination.prev_page_url, {}, { preserveScroll: true, preserveState: true });
-                                    }
-                                }}
-                                disabled={!pagination.prev_page_url}
-                            >
-                                Previous
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                    if (pagination.next_page_url) {
-                                        router.get(pagination.next_page_url, {}, { preserveScroll: true, preserveState: true });
-                                    }
-                                }}
-                                disabled={!pagination.next_page_url}
-                            >
-                                Next
-                            </Button>
+                    </>
+                ) : (
+                    <div className="flex flex-col gap-6 animate-in fade-in duration-300">
+                        <div className="flex items-center justify-between">
+                            <div className="flex flex-col gap-1">
+                                <h2 className="text-2xl text-header">Roles & Permissions</h2>
+                                <p className="text-sm text-[#737385]">Manage roles and define what users can access</p>
+                            </div>
+                            {canCreateUsers && (
+                                <Button onClick={openCreateRoleModal} className="gap-2">
+                                    <Plus className="w-4 h-4" /> Add Custom Role
+                                </Button>
+                            )}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {roles.map(role => (
+                                <RoleCard
+                                    key={role.id}
+                                    role={role}
+                                    systemRoles={SYSTEM_ROLES}
+                                    onEdit={openEditRoleModal}
+                                    onDelete={handleDeleteRole}
+                                    onReset={handleResetRole}
+                                />
+                            ))}
                         </div>
                     </div>
-                </div>
+                )}
 
                 {/* User Modal */}
                 <UserFormModal
@@ -320,6 +433,20 @@ export default function Users() {
                     onSubmit={handleSaveUser}
                     onFormChange={(field, value) => setUserForm({ ...userForm, [field]: value })}
                     availableRoles={roles || []}
+                />
+
+                {/* Role Form Modal */}
+                <RoleFormModal
+                    isOpen={isRoleModalOpen}
+                    onOpenChange={setRoleModalOpen}
+                    isEditing={isEditingRole}
+                    isSaving={isSavingRole}
+                    roleForm={roleForm}
+                    systemRoles={SYSTEM_ROLES}
+                    allPermissions={allPermissions || []}
+                    formErrors={formErrors}
+                    onSubmit={handleSaveRole}
+                    onFormChange={(field, value) => setRoleForm({ ...roleForm, [field]: value })}
                 />
 
             </div>

@@ -2,12 +2,11 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\PermissionRegistrar;
-use Illuminate\Support\Facades\DB;
 use App\Models\User;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class RolesSeeder extends Seeder
 {
@@ -16,7 +15,7 @@ class RolesSeeder extends Seeder
      */
     public function run(): void
     {
-        //We will be deleting everything first to prevent duplicates while seeding 
+        // We will be deleting everything first to prevent duplicates while seeding
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
 
         // Truncate in correct order
@@ -30,7 +29,7 @@ class RolesSeeder extends Seeder
         // Re-enable FK checks
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
-        /*==========================================================================*/
+        /* ========================================================================== */
         // List of currently available roles
         $admin = Role::create(['name' => 'admin']);
         $accountingAssistant = Role::create(['name' => 'accounting assistant']);
@@ -45,7 +44,7 @@ class RolesSeeder extends Seeder
             'create users',
             'edit users',
             'delete users',
-            
+
             // Chart of Accounts
             'view accounts',
             'create accounts',
@@ -66,6 +65,12 @@ class RolesSeeder extends Seeder
             // Audit
             'view audit trails',
 
+            // Inventory
+            'view inventory',
+            'create inventory',
+            'edit inventory',
+            'verify inventory',
+
             // Reports
             'create trial balance',
         ];
@@ -74,7 +79,7 @@ class RolesSeeder extends Seeder
             Permission::create(['name' => $permission]);
         }
 
-        /*==========================================================================*/
+        /* ========================================================================== */
         // Assign Permissions to Roles
 
         // Admin: User Management and View Journals only + View Accounts + Audit Trails
@@ -91,7 +96,10 @@ class RolesSeeder extends Seeder
             'view journals',
             'create journals',
             'approve journals',
-            'release journals'
+            'release journals',
+            'view inventory',
+            'create inventory',
+            'edit inventory',
         ]);
 
         // Accounting Head: Accounts & Journals (Full access) + manage control number prefixes
@@ -99,9 +107,10 @@ class RolesSeeder extends Seeder
             'view accounts', 'create accounts', 'edit accounts', 'delete accounts',
             'view journals', 'create journals', 'edit journals', 'delete journals', 'approve journals', 'release journals',
             'manage control number prefixes',
-            'create trial balance'
+            'create trial balance',
+            'view inventory', 'create inventory', 'edit inventory',
         ]);
-                
+
         // Auditor: Read-only access + Audit Trails
         $auditor->givePermissionTo([
             'view accounts',
@@ -109,6 +118,8 @@ class RolesSeeder extends Seeder
             'approve journals',
             'create trial balance',
             'view audit trails',
+            'view inventory',
+            'verify inventory',
         ]);
 
         // SVP: View & Approve Journals
@@ -116,6 +127,7 @@ class RolesSeeder extends Seeder
             'view accounts',
             'view journals',
             'approve journals',
+            'view inventory',
         ]);
     }
 }
